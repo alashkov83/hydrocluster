@@ -46,8 +46,10 @@ class App(tk.Tk):
         lab2.grid(row=0, column=1, pady=5, padx=5)
         self.sca2 = tk.Scale(lab2, length=300, from_=1, to=10, showvalue=1, orient=tk.HORIZONTAL)
         self.sca2.pack()
-        but1 = tk.Button(fra1, text='Просчитать!', command=self.run)
+        but1 = tk.Button(fra1, text='Старт!', command=lambda: self.run(auto=False))
         but1.grid(row=0, column=2, padx=10)
+        but2 = tk.Button(fra1, text='Авто', command=lambda: self.run(auto=True))
+        but2.grid(row=0, column=3, padx=10)
         self.fra2 = tk.Frame(self, width=800, height=600)
         self.fra2.grid(row=1, column=0)
         fra3 = tk.Frame(self)
@@ -84,6 +86,15 @@ class App(tk.Tk):
         self.unbind_all('<Down>')
 
     @staticmethod
+    def _on_mousewheel(event, tx):
+        if event.num == 4 or event.keysym == 'Up':
+            tx.yview_scroll(-1, "units")
+        elif event.num == 5 or event.keysym == 'Down':
+            tx.yview_scroll(1, "units")
+        else:
+            tx.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+    @staticmethod
     def about():
         showinfo('Информация', 'Построение зависимости расстояния\nмежду центрами масс доменов белка от времени МД')
 
@@ -112,21 +123,35 @@ class App(tk.Tk):
         if askyesno('Выход', 'Вы точно хотите выйти?'):
             self.destroy()
 
-    def run(self):
+    def run(self, auto=False):
         """Основной алгоритм программы"""
         if self.run_flag:
             showerror('Ошибка!', 'Расчет уже идёт!')
             return
         self.run_flag = True
-        try:
-            self.cls.cluster(self.sca1.get(), self.sca2.get())
-        except ValueError:
-            showerror('Ошибка!', 'Не загружен файл\nили ошибка кластерного анализа!')
-            self.run_flag = False
-            return
+        if auto:
+            try:
+                eps, min_samples = self.cls.auto()
+            except ValueError:
+                showerror('Ошибка!', 'Не загружен файл\nили ошибка кластерного анализа!')
+                self.run_flag = False
+                return
+            self.sca1.set(eps)
+            self.sca2.set(min_samples)
+        else:
+            eps = self.sca1.get()
+            min_samples = self.sca2.get()
+            try:
+                self.cls.cluster(eps, min_samples)
+            except ValueError:
+                showerror('Ошибка!', 'Не загружен файл\nили ошибка кластерного анализа!')
+                self.run_flag = False
+                return
+
         self.tx.configure(state='normal')
-        self.tx.insert(tk.END, "Estimated number of clusters: {0:d}\nSilhouette Coefficient: {1:.3f}".format(
-            self.cls.n_clusters, self.cls.si_score))
+        self.tx.insert(tk.END,
+                       "Estimated number of clusters: {0:d}\nSilhouette Coefficient: {1:.3f}\nEPS: {2:.1f} \u212B\nMIN_SAMPLES: {3:d}\n".format(
+                           self.cls.n_clusters, self.cls.si_score, eps, min_samples))
         self.tx.configure(state='disabled')
         self.graph()
         self.run_flag = False
@@ -142,11 +167,11 @@ class App(tk.Tk):
         colors = [plt.cm.Spectral(each) for each in np.linspace(0, 1, self.cls.n_clusters)]
         for x, y, z, lab, mask in zip(self.cls.x, self.cls.y, self.cls.z, self.cls.labels, self.cls.core_samples_mask):
             if lab == -1:
-                ax.scatter(x, y, z, c='k', s=6, label="Noise")
+                ax.scatter(x, y, z, c='k', s=12, label="Noise")
             elif mask:
-                ax.scatter(x, y, z, c=colors[lab], s=12, label="Core Cluster № {:d}".format(lab))
+                ax.scatter(x, y, z, c=colors[lab], s=24, label="Core Cluster № {:d}".format(lab))
             else:
-                ax.scatter(x, y, z, c=colors[lab], s=6, label="Cluster № {:d}".format(lab))
+                ax.scatter(x, y, z, c=colors[lab], s=12, label="Cluster № {:d}".format(lab))
         ax.set_title("Cluster analysis\nEstimated number of clusters: {0:d}\nSilhouette Coefficient: {1:.3f}".format(
             self.cls.n_clusters, self.cls.si_score))
         ax.set_ylabel(r'$y\ \AA$')
@@ -264,11 +289,12 @@ class ClusterPdb:
         self.core_samples_mask = []
         self.n_clusters = 0
         self.si_score = -1
+        self.weight_array = []
 
     def cluster(self, eps, min_samples):
         if self.X is None:
             raise ValueError
-        db = DBSCAN(eps=eps, min_samples=min_samples).fit(self.X)
+        db = DBSCAN(eps=eps, min_samples=min_samples, n_jobs=-1).fit(self.X, sample_weight=self.weight_array)
         self.core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
         self.core_samples_mask[db.core_sample_indices_] = True
         self.labels = db.labels_
@@ -278,13 +304,37 @@ class ClusterPdb:
         except ValueError:
             self.si_score = -1
 
+    def auto(self):
+        states = []
+        for i in range(1, 11):
+            j = 1.0
+            while j < 10.0:
+                print(i, j)
+                self.cluster(eps=j, min_samples=i)
+                states.append(
+                    (self.x, self.y, self.z, self.labels, self.core_samples_mask, self.n_clusters, self.si_score, j, i))
+                j += 0.1
+        states.sort(key=lambda x: x[6], reverse=True)
+        state = states[0]
+        self.x = state[0]
+        self.y = state[1]
+        self.z = state[2]
+        self.labels = state[3]
+        self.core_samples_mask = state[4]
+        self.n_clusters = state[5]
+        self.si_score = state[6]
+        return state[7], state[8]
+
     def parser(self, strarr):
         xyz_array = []
-        hydrfob = ['ALA', 'VAL', 'PRO', 'LEU', 'ILE', 'PHE', 'MET', 'TRP']
+        # www.pnas.org/cgi/doi/10.1073/pnas.1616138113 # 1.0 - -7.55 kj/mol
+        hydrfob = {'ALA': 1.269, 'VAL': 1.094, 'PRO': 1.0, 'LEU': 1.147, 'ILE': 1.289, 'PHE': 1.223, 'MET': 1.013,
+                   'TRP': 1.142}
         for s in strarr:
             if s[0:6] == 'ATOM  ' and (s[17:20] in hydrfob) and s[12:16] == ' CA ':
                 xyz = [float(s[30:38]), float(s[38:46]), float(s[46:54])]
                 xyz_array = np.hstack((xyz_array, xyz))
+                self.weight_array.append(hydrfob[s[17:20]])
         try:
             xyz_array.shape = (-1, 3)
         except AttributeError:

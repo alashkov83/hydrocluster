@@ -8,6 +8,7 @@ Created on Thu Apr  5 13:19:39 2018
 
 import sys
 import tkinter as tk
+import tkinter.ttk as ttk
 from tkinter.filedialog import askopenfilename
 from tkinter.filedialog import asksaveasfilename
 from tkinter.messagebox import askyesno
@@ -17,6 +18,7 @@ from tkinter.messagebox import showinfo
 try:
     from sklearn.cluster import DBSCAN
     from sklearn.metrics import silhouette_score
+    from sklearn.metrics import calinski_harabaz_score
 except ImportError:
     showerror('Ошибка!', 'Библиотека scikit-learn не установлена!')
     sys.exit()
@@ -50,11 +52,17 @@ class App(tk.Tk):
         but1.grid(row=0, column=2, padx=10)
         but2 = tk.Button(fra1, text='Авто', command=lambda: self.run(auto=True))
         but2.grid(row=0, column=3, padx=10)
-        self.fra2 = tk.Frame(self, width=800, height=600)
+        lab3 = tk.LabelFrame(fra1, text='Метрика автоподбора', labelanchor='n', borderwidth=5)
+        lab3.grid(row=0, column=4, pady=5, padx=5)
+        listbox_items = ['si_score', 'calinski']
+        self.combox = ttk.Combobox(lab3, height=5, width=15, values=listbox_items)
+        self.combox.pack()
+        self.combox.set('si_score')
+        self.fra2 = tk.Frame(self, width=1024, height=600)
         self.fra2.grid(row=1, column=0)
         fra3 = tk.Frame(self)
         fra3.grid(row=2, column=0, pady=10)
-        self.tx = tk.Text(fra3, width=80, height=5)
+        self.tx = tk.Text(fra3, width=120, height=10)
         scr = tk.Scrollbar(fra3, command=self.tx.yview)
         self.tx.configure(yscrollcommand=scr.set, state='disabled')
         self.tx.pack(side=tk.LEFT)
@@ -130,8 +138,10 @@ class App(tk.Tk):
             return
         self.run_flag = True
         if auto:
+            metric = self.combox.get()
+            print(metric)
             try:
-                eps, min_samples = self.cls.auto()
+                eps, min_samples = self.cls.auto(metric=metric)
             except ValueError:
                 showerror('Ошибка!', 'Не загружен файл\nили ошибка кластерного анализа!')
                 self.run_flag = False
@@ -147,11 +157,10 @@ class App(tk.Tk):
                 showerror('Ошибка!', 'Не загружен файл\nили ошибка кластерного анализа!')
                 self.run_flag = False
                 return
-
         self.tx.configure(state='normal')
         self.tx.insert(tk.END,
-                       "Estimated number of clusters: {0:d}\nSilhouette Coefficient: {1:.3f}\nEPS: {2:.1f} \u212B\nMIN_SAMPLES: {3:d}\n".format(
-                           self.cls.n_clusters, self.cls.si_score, eps, min_samples))
+                       "Estimated number of clusters: {0:d}\nSilhouette Coefficient: {1:.3f}\nCalinski and Harabaz score: {4:.3f}\nEPS: {2:.1f} \u212B\nMIN_SAMPLES: {3:d}\n".format(
+                           self.cls.n_clusters, self.cls.si_score, eps, min_samples, self.cls.calinski))
         self.tx.configure(state='disabled')
         self.graph()
         self.run_flag = False
@@ -162,18 +171,24 @@ class App(tk.Tk):
             self.toolbar.destroy()
         except AttributeError:
             pass
-        self.fig = Figure()
+        self.fig = Figure(figsize=(8, 6), dpi=96)
         ax = axes3d.Axes3D(self.fig)
-        colors = [plt.cm.Spectral(each) for each in np.linspace(0, 1, self.cls.n_clusters)]
-        for x, y, z, lab, mask in zip(self.cls.x, self.cls.y, self.cls.z, self.cls.labels, self.cls.core_samples_mask):
-            if lab == -1:
-                ax.scatter(x, y, z, c='k', s=12, label="Noise")
-            elif mask:
-                ax.scatter(x, y, z, c=colors[lab], s=24, label="Core Cluster № {:d}".format(lab))
+        unique_labels = set(self.cls.labels)
+        colors = [plt.cm.Spectral(each) for each in np.linspace(0, 1, len(unique_labels))]
+        for k, col in zip(unique_labels, colors):
+            class_member_mask = (self.cls.labels == k)
+            if k == -1:
+                # Black used for noise.
+                xyz = self.cls.X[class_member_mask & ~self.cls.core_samples_mask]
+                ax.scatter(xyz[:, 0], xyz[:, 1], xyz[:, 2], c='k', s=12, label="Noise")
             else:
-                ax.scatter(x, y, z, c=colors[lab], s=12, label="Cluster № {:d}".format(lab))
-        ax.set_title("Cluster analysis\nEstimated number of clusters: {0:d}\nSilhouette Coefficient: {1:.3f}".format(
-            self.cls.n_clusters, self.cls.si_score))
+                xyz = self.cls.X[class_member_mask & self.cls.core_samples_mask]
+                ax.scatter(xyz[:, 0], xyz[:, 1], xyz[:, 2], c=tuple(col), s=24, label="Core Cluster No {:d}".format(k))
+                xyz = self.cls.X[class_member_mask & ~self.cls.core_samples_mask]
+                ax.scatter(xyz[:, 0], xyz[:, 1], xyz[:, 2], c=tuple(col), s=12, label="Cluster No {:d}".format(k))
+        ax.set_title(
+            "Cluster analysis\nEstimated number of clusters: {0:d}\nSilhouette Coefficient: {1:.3f}\nCalinski and Harabaz score: {2:.3f}\n".format(
+                self.cls.n_clusters, self.cls.si_score, self.cls.calinski))
         ax.set_ylabel(r'$y\ \AA$')
         ax.set_xlabel(r'$x\ \AA$')
         ax.set_zlabel(r'$z\ \AA$')
@@ -282,29 +297,56 @@ class App(tk.Tk):
 class ClusterPdb:
     def __init__(self):
         self.X = None
-        self.x = []
-        self.y = []
-        self.z = []
         self.labels = None
         self.core_samples_mask = []
         self.n_clusters = 0
         self.si_score = -1
+        self.calinski = 0
         self.weight_array = []
 
     def cluster(self, eps, min_samples):
         if self.X is None:
             raise ValueError
         db = DBSCAN(eps=eps, min_samples=min_samples, n_jobs=-1).fit(self.X, sample_weight=self.weight_array)
+        # The DBSCAN algorithm views clusters as areas of high density separated by areas of low density.
+        # Due to this rather generic view, clusters found by DBSCAN can be any shape,
+        # as opposed to k-means which assumes that clusters are convex shaped.
+        # The central component to the DBSCAN is the concept of core samples, which are samples that are in areas
+        # of high density. A cluster is therefore a set of core samples,
+        # each close to each other (measured by some distance measure) and a set of non-core samples that are close
+        # to a core sample (but are not themselves core samples).
+        # There are two parameters to the algorithm, min_samples and eps, which define formally what we mean when we say dense.
+        # Higher min_samples or lower eps indicate higher density necessary to form a cluster.
+        # Cite:
+        # “A Density-Based Algorithm for Discovering Clusters in Large Spatial Databases with Noise”
+        # Ester, M., H. P. Kriegel, J. Sander, and X. Xu,
+        # In Proceedings of the 2nd International Conference on Knowledge Discovery and Data Mining,
+        # Portland, OR, AAAI Press, pp. 226–231. 1996
         self.core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
         self.core_samples_mask[db.core_sample_indices_] = True
         self.labels = db.labels_
         self.n_clusters = len(set(self.labels)) - (1 if -1 in self.labels else 0)
         try:
             self.si_score = silhouette_score(self.X, self.labels)
+        # The Silhouette Coefficient is calculated using the mean intra-cluster distance (a)
+        # and the mean nearest-cluster distance (b) for each sample.
+        # The Silhouette Coefficient for a sample is (b - a) / max(a, b).
+        # To clarify, b is the distance between a sample and the nearest cluster that the sample is not a part of.
+        # Note that Silhouette Coefficient is only defined if number of labels is 2 <= n_labels <= n_samples - 1.
+        # Cite:
+        # Peter J. Rousseeuw (1987). “Silhouettes: a Graphical Aid to the Interpretation and Validation of Cluster Analysis”.
+        # Computational and Applied Mathematics 20: 53-65.
         except ValueError:
             self.si_score = -1
+        try:
+            self.calinski = calinski_harabaz_score(self.X, self.labels)
+            # The score is defined as ratio between the within-cluster dispersion and the between-cluster dispersion.
+            # Cite:
+            # T.Calinski and J.Harabasz, 1974. “A dendrite method for cluster analysis”.Communications in Statistics
+        except ValueError:
+            self.calinski = 0
 
-    def auto(self):
+    def auto(self, metric='si_score'):
         states = []
         for i in range(1, 11):
             j = 1.0
@@ -312,24 +354,25 @@ class ClusterPdb:
                 print(i, j)
                 self.cluster(eps=j, min_samples=i)
                 states.append(
-                    (self.x, self.y, self.z, self.labels, self.core_samples_mask, self.n_clusters, self.si_score, j, i))
+                    (self.labels, self.core_samples_mask, self.n_clusters, self.si_score, self.calinski, j, i))
                 j += 0.1
-        states.sort(key=lambda x: x[6], reverse=True)
+        if metric == 'si_score':
+            states.sort(key=lambda x: x[3], reverse=True)
+        elif metric == 'calinski':
+            states.sort(key=lambda x: x[4], reverse=True)
         state = states[0]
-        self.x = state[0]
-        self.y = state[1]
-        self.z = state[2]
-        self.labels = state[3]
-        self.core_samples_mask = state[4]
-        self.n_clusters = state[5]
-        self.si_score = state[6]
-        return state[7], state[8]
+        self.labels = state[0]
+        self.core_samples_mask = state[1]
+        self.n_clusters = state[2]
+        self.si_score = state[3]
+        self.calinski = state[4]
+        return state[5], state[6]
 
     def parser(self, strarr):
         xyz_array = []
-        # www.pnas.org/cgi/doi/10.1073/pnas.1616138113 # 1.0 - -7.55 kj/mol
+        # www.pnas.org/cgi/doi/10.1073/pnas.1616138113 # 1.0 - -7.55 kj/mol A;; residues with delta mu < 0
         hydrfob = {'ALA': 1.269, 'VAL': 1.094, 'PRO': 1.0, 'LEU': 1.147, 'ILE': 1.289, 'PHE': 1.223, 'MET': 1.013,
-                   'TRP': 1.142}
+                   'TRP': 1.142, 'CYS': 0.746, 'GLY': 0.605, 'THR': 0.472}
         for s in strarr:
             if s[0:6] == 'ATOM  ' and (s[17:20] in hydrfob) and s[12:16] == ' CA ':
                 xyz = [float(s[30:38]), float(s[38:46]), float(s[46:54])]
@@ -340,9 +383,6 @@ class ClusterPdb:
         except AttributeError:
             raise ValueError
         self.X = xyz_array
-        self.x = self.X[:, 0]
-        self.y = self.X[:, 1]
-        self.z = self.X[:, 2]
 
 
 def win():

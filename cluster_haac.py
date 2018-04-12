@@ -50,21 +50,27 @@ class App(tk.Tk):
         self.sca2.pack()
         but1 = tk.Button(fra1, text='Старт!', command=lambda: self.run(auto=False))
         but1.grid(row=0, column=2, padx=10)
-        but2 = tk.Button(fra1, text='Авто', command=lambda: self.run(auto=True))
-        but2.grid(row=0, column=3, padx=10)
-        lab3 = tk.LabelFrame(fra1, text='Метрика автоподбора', labelanchor='n', borderwidth=5)
-        lab3.grid(row=0, column=4, pady=5, padx=5)
+        fra2 = tk.Frame(self)
+        fra2.grid(row=1, column=0)
+        but2 = tk.Button(fra2, text='Авто', command=lambda: self.run(auto=True))
+        but2.grid(row=0, column=1, padx=10)
+        lab3 = tk.LabelFrame(fra2, text='Метрика автоподбора', labelanchor='n', borderwidth=5)
+        lab3.grid(row=0, column=0, pady=5, padx=5)
         listbox_items = ['si_score', 'calinski']
         self.combox = ttk.Combobox(lab3, height=5, width=15, values=listbox_items)
         self.combox.pack()
         self.combox.set('si_score')
-        self.fra2 = tk.Frame(self, width=1024, height=650)
-        self.fra2.grid(row=1, column=0)
-        self.fra2.grid_propagate(False)
-        fra3 = tk.Frame(self)
-        fra3.grid(row=2, column=0, pady=10)
-        self.tx = tk.Text(fra3, width=120, height=10)
-        scr = tk.Scrollbar(fra3, command=self.tx.yview)
+        lab4 = tk.LabelFrame(fra2, text='Progress: ', labelanchor='n', borderwidth=5)
+        lab4.grid(row=0, column=2, pady=5, padx=5)
+        self.pb = ttk.Progressbar(lab4, orient='horizontal', mode='determinate', length=450)
+        self.pb.pack()
+        self.fra3 = tk.Frame(self, width=800, height=650)
+        self.fra3.grid(row=2, column=0)
+        self.fra3.grid_propagate(False)
+        fra4 = tk.Frame(self)
+        fra4.grid(row=3, column=0, pady=10)
+        self.tx = tk.Text(fra4, width=100, height=10)
+        scr = tk.Scrollbar(fra4, command=self.tx.yview)
         self.tx.configure(yscrollcommand=scr.set, state='disabled')
         self.tx.pack(side=tk.LEFT)
         scr.pack(side=tk.RIGHT, fill=tk.Y)
@@ -105,7 +111,7 @@ class App(tk.Tk):
 
     @staticmethod
     def about():
-        showinfo('Информация', 'Построение зависимости расстояния\nмежду центрами масс доменов белка от времени МД')
+        showinfo('Информация', 'Кластерный анализ гидрофобных областей макромолекул')
 
     def menu(self):
         """Метод инициалиции меню"""
@@ -140,7 +146,13 @@ class App(tk.Tk):
         self.run_flag = True
         if auto:
             metric = self.combox.get()
+            self.pb['maximum'] = 910
             try:
+                self.cls.states.clear()
+                for n in self.cls.auto_yield():
+                    self.update()
+                    self.pb['value'] = n
+                    self.pb.update()
                 eps, min_samples = self.cls.auto(metric=metric)
             except ValueError:
                 showerror('Ошибка!', 'Не загружен файл\nили ошибка кластерного анализа!')
@@ -151,8 +163,11 @@ class App(tk.Tk):
         else:
             eps = self.sca1.get()
             min_samples = self.sca2.get()
+            self.pb['maximum'] = 1
             try:
                 self.cls.cluster(eps, min_samples)
+                self.pb['value'] = 1
+                self.pb.update()
             except ValueError:
                 showerror('Ошибка!', 'Не загружен файл\nили ошибка кластерного анализа!')
                 self.run_flag = False
@@ -196,11 +211,11 @@ class App(tk.Tk):
         ax.grid(self.grid)
         if self.legend:
             ax.legend(loc='best', frameon=False)
-        self.canvas = FigureCanvasTkAgg(self.fig, master=self.fra2)
+        self.canvas = FigureCanvasTkAgg(self.fig, master=self.fra3)
         ax.mouse_init()
         self.canvas.draw()
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-        self.toolbar = NavigationToolbar2TkAgg(self.canvas, self.fra2)
+        self.toolbar = NavigationToolbar2TkAgg(self.canvas, self.fra3)
         self.toolbar.update()
         self.canvas._tkcanvas.pack(fill=tk.BOTH, side=tk.TOP, expand=1)
 
@@ -226,6 +241,8 @@ class App(tk.Tk):
                 return
         else:
             return
+        self.pb['value'] = 0
+        self.pb.update()
         try:
             self.canvas.get_tk_widget().destroy()
             self.toolbar.destroy()
@@ -325,6 +342,7 @@ class ClusterPdb:
         self.calinski = 0
         self.weight_array = []
         self.aa_list = []
+        self.states = []
 
     def clean(self):
         self.X = None
@@ -335,6 +353,7 @@ class ClusterPdb:
         self.calinski = 0
         self.weight_array = []
         self.aa_list = []
+        self.states = []
 
     def cluster(self, eps, min_samples):
         if self.X is None:
@@ -378,21 +397,24 @@ class ClusterPdb:
         except ValueError:
             self.calinski = 0
 
-    def auto(self, metric='si_score'):
-        states = []
+    def auto_yield(self):
+        n = 1
         for i in range(1, 11):
             j = 1.0
             while j < 10.0:
-                print(i, j)
                 self.cluster(eps=j, min_samples=i)
-                states.append(
+                self.states.append(
                     (self.labels, self.core_samples_mask, self.n_clusters, self.si_score, self.calinski, j, i))
+                yield n
                 j += 0.1
+                n += 1
+
+    def auto(self, metric='si_score'):
         if metric == 'si_score':
-            states.sort(key=lambda x: x[3], reverse=True)
+            self.states.sort(key=lambda x: x[3], reverse=True)
         elif metric == 'calinski':
-            states.sort(key=lambda x: x[4], reverse=True)
-        state = states[0]
+            self.states.sort(key=lambda x: x[4], reverse=True)
+        state = self.states[0]
         self.labels = state[0]
         self.core_samples_mask = state[1]
         self.n_clusters = state[2]
@@ -440,7 +462,6 @@ class ClusterPdb:
                     xyzm_array.shape = (-1, 4)
                 except AttributeError:
                     raise ValueError
-                print(self._cmass(xyzm_array))
                 xyz_array = np.hstack((xyz_array, self._cmass(xyzm_array)))
                 xyzm_array = []
                 current_resn = int(s[22:26])

@@ -34,7 +34,7 @@ class App(tk.Tk):
 
     def __init__(self):
         super().__init__()
-        self.title('Comdom')
+        self.title('HydroCluster')
         self.resizable(False, False)
         self.protocol('WM_DELETE_WINDOW', self.close_win)
         self.menu()
@@ -58,8 +58,9 @@ class App(tk.Tk):
         self.combox = ttk.Combobox(lab3, height=5, width=15, values=listbox_items)
         self.combox.pack()
         self.combox.set('si_score')
-        self.fra2 = tk.Frame(self, width=1024, height=600)
+        self.fra2 = tk.Frame(self, width=1024, height=650)
         self.fra2.grid(row=1, column=0)
+        self.fra2.grid_propagate(False)
         fra3 = tk.Frame(self)
         fra3.grid(row=2, column=0, pady=10)
         self.tx = tk.Text(fra3, width=120, height=10)
@@ -123,7 +124,7 @@ class App(tk.Tk):
         m.add_cascade(label='Опции', menu=om)
         om.add_command(label='Сетка графика', command=self.grid_set)
         om.add_command(label='Легенда', command=self.legend_set)
-        om.add_command(label='Статистика', command=self.stat)
+        om.add_command(label='Статистика', command=self.resi)
         m.add_command(label='Справка', command=self.about)
 
     def close_win(self):
@@ -139,7 +140,6 @@ class App(tk.Tk):
         self.run_flag = True
         if auto:
             metric = self.combox.get()
-            print(metric)
             try:
                 eps, min_samples = self.cls.auto(metric=metric)
             except ValueError:
@@ -171,9 +171,12 @@ class App(tk.Tk):
             self.toolbar.destroy()
         except AttributeError:
             pass
-        self.fig = Figure(figsize=(8, 6), dpi=96)
+        self.fig = Figure(figsize=(8, 6))
+        try:
+            unique_labels = set(self.cls.labels)
+        except AttributeError:
+            return
         ax = axes3d.Axes3D(self.fig)
-        unique_labels = set(self.cls.labels)
         colors = [plt.cm.Spectral(each) for each in np.linspace(0, 1, len(unique_labels))]
         for k, col in zip(unique_labels, colors):
             class_member_mask = (self.cls.labels == k)
@@ -183,12 +186,10 @@ class App(tk.Tk):
                 ax.scatter(xyz[:, 0], xyz[:, 1], xyz[:, 2], c='k', s=12, label="Noise")
             else:
                 xyz = self.cls.X[class_member_mask & self.cls.core_samples_mask]
-                ax.scatter(xyz[:, 0], xyz[:, 1], xyz[:, 2], c=tuple(col), s=24, label="Core Cluster No {:d}".format(k))
+                ax.scatter(xyz[:, 0], xyz[:, 1], xyz[:, 2], c=tuple(col), s=32, label="Core Cluster No {:d}".format(k))
                 xyz = self.cls.X[class_member_mask & ~self.cls.core_samples_mask]
-                ax.scatter(xyz[:, 0], xyz[:, 1], xyz[:, 2], c=tuple(col), s=12, label="Cluster No {:d}".format(k))
-        ax.set_title(
-            "Cluster analysis\nEstimated number of clusters: {0:d}\nSilhouette Coefficient: {1:.3f}\nCalinski and Harabaz score: {2:.3f}\n".format(
-                self.cls.n_clusters, self.cls.si_score, self.cls.calinski))
+                ax.scatter(xyz[:, 0], xyz[:, 1], xyz[:, 2], c=tuple(col), s=12, label="Added Cluster No {:d}".format(k))
+        self.fig.suptitle("Cluster analysis\n")
         ax.set_ylabel(r'$y\ \AA$')
         ax.set_xlabel(r'$x\ \AA$')
         ax.set_zlabel(r'$z\ \AA$')
@@ -217,6 +218,7 @@ class App(tk.Tk):
                 return
             else:
                 showinfo('Информация', 'Файл прочитан!')
+                self.cls.clean()
             try:
                 self.cls.parser(s_array)
             except ValueError:
@@ -277,10 +279,10 @@ class App(tk.Tk):
             self.toolbar.destroy()
         except AttributeError:
             pass
-        self._graph()
+        self.graph()
 
     def legend_set(self):
-        self.legend = bool(askyesno('Техническая легенда', 'Отобразить?'))
+        self.legend = bool(askyesno('Легенда', 'Отобразить?'))
         if self.run_flag:
             return
         try:
@@ -290,8 +292,27 @@ class App(tk.Tk):
             pass
         self.graph()
 
-    def stat(self):
-        pass
+    def resi(self):
+        if self.run_flag:
+            showerror('Ошибка!', 'Расчет уже идёт!')
+            return
+        aa_list = self.cls.aa_list
+        if (not aa_list) or self.cls.labels is None:
+            return
+        aa_list = list(zip(aa_list, self.cls.labels, self.cls.core_samples_mask))
+        for k in sorted(set(self.cls.labels)):
+            if k != -1:
+                self.tx.configure(state='normal')
+                self.tx.insert(tk.END, "\nIn core cluster No {:d} included: ".format(k))
+                self.tx.configure(state='disabled')
+                for aa in aa_list:
+                    if aa[1] == k and aa[2]:
+                        self.tx.configure(state='normal')
+                        self.tx.insert(tk.END, "{2:s}:{1:s}{0:d} ".format(*aa[0]))
+                        self.tx.configure(state='disabled')
+        self.tx.configure(state='normal')
+        self.tx.insert(tk.END, "\n\n")
+        self.tx.configure(state='disabled')
 
 
 class ClusterPdb:
@@ -303,6 +324,17 @@ class ClusterPdb:
         self.si_score = -1
         self.calinski = 0
         self.weight_array = []
+        self.aa_list = []
+
+    def clean(self):
+        self.X = None
+        self.labels = None
+        self.core_samples_mask = []
+        self.n_clusters = 0
+        self.si_score = -1
+        self.calinski = 0
+        self.weight_array = []
+        self.aa_list = []
 
     def cluster(self, eps, min_samples):
         if self.X is None:
@@ -373,16 +405,66 @@ class ClusterPdb:
         # www.pnas.org/cgi/doi/10.1073/pnas.1616138113 # 1.0 - -7.55 kj/mol A;; residues with delta mu < 0
         hydrfob = {'ALA': 1.269, 'VAL': 1.094, 'PRO': 1.0, 'LEU': 1.147, 'ILE': 1.289, 'PHE': 1.223, 'MET': 1.013,
                    'TRP': 1.142, 'CYS': 0.746, 'GLY': 0.605, 'THR': 0.472}
+        # OLD CA-BASED PARSER
+        # for s in strarr:
+        #     if s[0:6] == 'ATOM  ' and (s[17:20] in hydrfob) and s[12:16] == ' CA ':
+        #         xyz = [float(s[30:38]), float(s[38:46]), float(s[46:54])]
+        #         xyz_array = np.hstack((xyz_array, xyz))
+        #         self.weight_array.append(hydrfob[s[17:20]])
+        xyzm_array = []
+        current_resn = None
+        current_chainn = None
+        current_resname = None
+        mass = {
+            ' H': 1.0,
+            ' C': 12.0,
+            ' N': 14.0,
+            ' O': 16.0,
+            ' P': 31.0,
+            ' S': 32.0,
+            ' F': 19.0}
         for s in strarr:
-            if s[0:6] == 'ATOM  ' and (s[17:20] in hydrfob) and s[12:16] == ' CA ':
-                xyz = [float(s[30:38]), float(s[38:46]), float(s[46:54])]
-                xyz_array = np.hstack((xyz_array, xyz))
-                self.weight_array.append(hydrfob[s[17:20]])
+            if s[0:6] == 'ATOM  ' and (s[17:20] in hydrfob) and ((current_resn is None and current_chainn is None) or (
+                    current_resn == int(s[22:26]) and current_chainn == s[21])):
+                current_resn = int(s[22:26])
+                current_chainn = s[21]
+                current_resname = s[17:20]
+                xyzm = [float(s[30:38]), float(s[38:46]), float(s[46:54]), mass[s[76:78]]]
+                xyzm_array = np.hstack((xyzm_array, xyzm))
+            elif s[0:6] == 'ATOM  ' and (s[17:20] in hydrfob) and not (
+                    (current_resn is None and current_chainn is None) or (
+                    current_resn == int(s[22:26]) and current_chainn == s[21])):
+                self.aa_list.append((current_resn, current_chainn, current_resname))
+                self.weight_array.append(hydrfob[current_resname])
+                try:
+                    xyzm_array.shape = (-1, 4)
+                except AttributeError:
+                    raise ValueError
+                print(self._cmass(xyzm_array))
+                xyz_array = np.hstack((xyz_array, self._cmass(xyzm_array)))
+                xyzm_array = []
+                current_resn = int(s[22:26])
+                current_chainn = s[21]
+                current_resname = s[17:20]
+                xyz = [float(s[30:38]), float(s[38:46]), float(s[46:54]), mass[s[76:78]]]
+                xyzm_array = np.hstack((xyzm_array, xyz))
         try:
             xyz_array.shape = (-1, 3)
         except AttributeError:
             raise ValueError
         self.X = xyz_array
+
+    @staticmethod
+    def _cmass(str_nparray: np.ndarray) -> list:
+        """Вычисление положения центра массс"""
+        mass_sum = float(str_nparray[:, 3].sum())
+        mx = (str_nparray[:, 3]) * (str_nparray[:, 0])
+        my = (str_nparray[:, 3]) * (str_nparray[:, 1])
+        mz = (str_nparray[:, 3]) * (str_nparray[:, 2])
+        c_mass_x = float(mx.sum()) / mass_sum
+        c_mass_y = float(my.sum()) / mass_sum
+        c_mass_z = float(mz.sum()) / mass_sum
+        return [c_mass_x, c_mass_y, c_mass_z]
 
 
 def win():

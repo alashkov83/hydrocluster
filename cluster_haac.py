@@ -144,6 +144,8 @@ class App(tk.Tk):
             showerror('Ошибка!', 'Расчет уже идёт!')
             return
         self.run_flag = True
+        self.pb['value'] = 0
+        self.pb.update()
         if auto:
             metric = self.combox.get()
             self.pb['maximum'] = 910

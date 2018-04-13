@@ -19,6 +19,7 @@ try:
     from sklearn.cluster import DBSCAN
     from sklearn.metrics import silhouette_score
     from sklearn.metrics import calinski_harabaz_score
+    from sklearn.metrics.pairwise import euclidean_distances
 except ImportError:
     showerror('Ошибка!', 'Библиотека scikit-learn не установлена!')
     sys.exit()
@@ -42,11 +43,11 @@ class App(tk.Tk):
         fra1.grid(row=0, column=0)
         lab1 = tk.LabelFrame(fra1, text='EPS (\u212B)', labelanchor='n', borderwidth=5)
         lab1.grid(row=0, column=0, pady=5, padx=5)
-        self.sca1 = tk.Scale(lab1, length=300, from_=1.0, to=10.0, showvalue=1, orient=tk.HORIZONTAL, resolution=0.1)
+        self.sca1 = tk.Scale(lab1, length=300, from_=1.0, to=12.0, showvalue=1, orient=tk.HORIZONTAL, resolution=0.1)
         self.sca1.pack()
         lab2 = tk.LabelFrame(fra1, text='MIN_SAMPLES', labelanchor='n', borderwidth=5)
         lab2.grid(row=0, column=1, pady=5, padx=5)
-        self.sca2 = tk.Scale(lab2, length=300, from_=1, to=10, showvalue=1, orient=tk.HORIZONTAL)
+        self.sca2 = tk.Scale(lab2, length=300, from_=1, to=20, showvalue=1, orient=tk.HORIZONTAL)
         self.sca2.pack()
         but1 = tk.Button(fra1, text='Старт!', command=lambda: self.run(auto=False))
         but1.grid(row=0, column=2, padx=10)
@@ -148,11 +149,11 @@ class App(tk.Tk):
         self.pb.update()
         if auto:
             metric = self.combox.get()
-            self.pb['maximum'] = 910
+            self.pb['maximum'] = 1748
             try:
                 self.cls.states.clear()
-                for n in self.cls.auto_yield():
-                    self.update()
+                for n in self.cls.auto_yield(min_eps=3.0, max_eps=12.0, step_eps=0.1, min_min_samples=2,
+                                             min_max_samples=20):
                     self.pb['value'] = n
                     self.pb.update()
                 eps, min_samples = self.cls.auto(metric=metric)
@@ -241,6 +242,8 @@ class App(tk.Tk):
             except ValueError:
                 showerror('Ошибка', 'Неверный формат\nлибо файл не содержит гидрофоьных остатков!')
                 return
+            else:
+                showinfo('Информация', 'Файл распарсен!')
         else:
             return
         self.pb['value'] = 0
@@ -337,6 +340,7 @@ class App(tk.Tk):
 class ClusterPdb:
     def __init__(self):
         self.X = None
+        self.pdist = None
         self.labels = None
         self.core_samples_mask = []
         self.n_clusters = 0
@@ -348,6 +352,7 @@ class ClusterPdb:
 
     def clean(self):
         self.X = None
+        self.pdist = None
         self.labels = None
         self.core_samples_mask = []
         self.n_clusters = 0
@@ -358,9 +363,10 @@ class ClusterPdb:
         self.states = []
 
     def cluster(self, eps, min_samples):
-        if self.X is None:
+        if self.X is None or self.pdist is None:
             raise ValueError
-        db = DBSCAN(eps=eps, min_samples=min_samples, n_jobs=-1).fit(self.X, sample_weight=self.weight_array)
+        db = DBSCAN(eps=eps, min_samples=min_samples, n_jobs=-1, metric='precomputed').fit(self.pdist,
+                                                                                           sample_weight=self.weight_array)
         # The DBSCAN algorithm views clusters as areas of high density separated by areas of low density.
         # Due to this rather generic view, clusters found by DBSCAN can be any shape,
         # as opposed to k-means which assumes that clusters are convex shaped.
@@ -399,17 +405,17 @@ class ClusterPdb:
         except ValueError:
             self.calinski = 0
 
-    def auto_yield(self):
+    def auto_yield(self, min_eps, max_eps, step_eps, min_min_samples, min_max_samples):
         n = 1
-        for i in range(1, 11):
-            j = 1.0
-            while j < 10.0:
+        j = min_eps
+        while j < max_eps + step_eps:
+            for i in range(min_min_samples, min_max_samples + 1):
                 self.cluster(eps=j, min_samples=i)
                 self.states.append(
                     (self.labels, self.core_samples_mask, self.n_clusters, self.si_score, self.calinski, j, i))
                 yield n
-                j += 0.1
                 n += 1
+            j += step_eps
 
     def auto(self, metric='si_score'):
         if metric == 'si_score':
@@ -448,16 +454,14 @@ class ClusterPdb:
             ' S': 32.0,
             ' F': 19.0}
         for s in strarr:
-            if s[0:6] == 'ATOM  ' and (s[17:20] in hydrfob) and ((current_resn is None and current_chainn is None) or (
+            if s[0:6] == 'ATOM  ' and (s[17:20] in hydrfob) and ((current_resn is None or current_chainn is None) or (
                     current_resn == int(s[22:26]) and current_chainn == s[21])):
                 current_resn = int(s[22:26])
                 current_chainn = s[21]
                 current_resname = s[17:20]
                 xyzm = [float(s[30:38]), float(s[38:46]), float(s[46:54]), mass[s[76:78]]]
                 xyzm_array = np.hstack((xyzm_array, xyzm))
-            elif s[0:6] == 'ATOM  ' and (s[17:20] in hydrfob) and not (
-                    (current_resn is None and current_chainn is None) or (
-                    current_resn == int(s[22:26]) and current_chainn == s[21])):
+            elif s[0:6] == 'ATOM  ' and (s[17:20] in hydrfob):
                 self.aa_list.append((current_resn, current_chainn, current_resname))
                 self.weight_array.append(hydrfob[current_resname])
                 try:
@@ -476,6 +480,7 @@ class ClusterPdb:
         except AttributeError:
             raise ValueError
         self.X = xyz_array
+        self.pdist = euclidean_distances(self.X)
 
     @staticmethod
     def _cmass(str_nparray: np.ndarray) -> list:

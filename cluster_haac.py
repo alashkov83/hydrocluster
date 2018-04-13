@@ -131,7 +131,7 @@ class App(tk.Tk):
         m.add_cascade(label='Опции', menu=om)
         om.add_command(label='Сетка графика', command=self.grid_set)
         om.add_command(label='Легенда', command=self.legend_set)
-        om.add_command(label='Статистика', command=self.resi)
+        om.add_command(label='Состав гидрофобных ядер', command=self.resi)
         m.add_command(label='Справка', command=self.about)
 
     def close_win(self):

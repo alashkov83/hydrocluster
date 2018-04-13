@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Thu Apr  5 13:19:39 2018
+"""Created on Thu Apr  5 13:19:39 2018.
 
 @author: lashkov
 """
@@ -41,29 +40,39 @@ class App(tk.Tk):
         self.menu()
         fra1 = tk.Frame(self)
         fra1.grid(row=0, column=0)
-        lab1 = tk.LabelFrame(fra1, text='EPS (\u212B)', labelanchor='n', borderwidth=5)
+        lab1 = tk.LabelFrame(fra1, text='EPS (\u212B)',
+                             labelanchor='n', borderwidth=5)
         lab1.grid(row=0, column=0, pady=5, padx=5)
-        self.sca1 = tk.Scale(lab1, length=300, from_=1.0, to=12.0, showvalue=1, orient=tk.HORIZONTAL, resolution=0.1)
+        self.sca1 = tk.Scale(lab1, length=300, from_=1.0, to=12.0,
+                             showvalue=1, orient=tk.HORIZONTAL, resolution=0.1)
         self.sca1.pack()
-        lab2 = tk.LabelFrame(fra1, text='MIN_SAMPLES', labelanchor='n', borderwidth=5)
+        lab2 = tk.LabelFrame(fra1, text='MIN_SAMPLES',
+                             labelanchor='n', borderwidth=5)
         lab2.grid(row=0, column=1, pady=5, padx=5)
-        self.sca2 = tk.Scale(lab2, length=300, from_=1, to=20, showvalue=1, orient=tk.HORIZONTAL)
+        self.sca2 = tk.Scale(lab2, length=300, from_=1,
+                             to=20, showvalue=1, orient=tk.HORIZONTAL)
         self.sca2.pack()
-        but1 = tk.Button(fra1, text='Старт!', command=lambda: self.run(auto=False))
+        but1 = tk.Button(fra1, text='Старт!',
+                         command=lambda: self.run(auto=False))
         but1.grid(row=0, column=2, padx=10)
         fra2 = tk.Frame(self)
         fra2.grid(row=1, column=0)
-        but2 = tk.Button(fra2, text='Авто', command=lambda: self.run(auto=True))
+        but2 = tk.Button(fra2, text='Авто',
+                         command=lambda: self.run(auto=True))
         but2.grid(row=0, column=1, padx=10)
-        lab3 = tk.LabelFrame(fra2, text='Метрика автоподбора', labelanchor='n', borderwidth=5)
+        lab3 = tk.LabelFrame(fra2, text='Метрика автоподбора',
+                             labelanchor='n', borderwidth=5)
         lab3.grid(row=0, column=0, pady=5, padx=5)
         listbox_items = ['si_score', 'calinski']
-        self.combox = ttk.Combobox(lab3, height=5, width=15, values=listbox_items)
+        self.combox = ttk.Combobox(
+            lab3, height=5, width=15, values=listbox_items)
         self.combox.pack()
         self.combox.set('si_score')
-        lab4 = tk.LabelFrame(fra2, text='Progress: ', labelanchor='n', borderwidth=5)
+        lab4 = tk.LabelFrame(fra2, text='Progress: ',
+                             labelanchor='n', borderwidth=5)
         lab4.grid(row=0, column=2, pady=5, padx=5)
-        self.pb = ttk.Progressbar(lab4, orient='horizontal', mode='determinate', length=450)
+        self.pb = ttk.Progressbar(
+            lab4, orient='horizontal', mode='determinate', length=450)
         self.pb.pack()
         self.fra3 = tk.Frame(self, width=800, height=650)
         self.fra3.grid(row=2, column=0)
@@ -75,7 +84,8 @@ class App(tk.Tk):
         self.tx.configure(yscrollcommand=scr.set, state='disabled')
         self.tx.pack(side=tk.LEFT)
         scr.pack(side=tk.RIGHT, fill=tk.Y)
-        self.tx.bind('<Enter>', lambda e: self._bound_to_mousewheel(e, self.tx))
+        self.tx.bind(
+            '<Enter>', lambda e: self._bound_to_mousewheel(e, self.tx))
         self.tx.bind('<Leave>', self._unbound_to_mousewheel)
         self.run_flag = False
         self.s_array = None
@@ -88,14 +98,14 @@ class App(tk.Tk):
         self.cls = ClusterPdb()
 
     def _bound_to_mousewheel(self, event, tx):
-        self.bind_all("<MouseWheel>", lambda e: self._on_mousewheel(e, tx))
+        self.bind_all('<MouseWheel>', lambda e: self._on_mousewheel(e, tx))
         self.bind_all('<Button-4>', lambda e: self._on_mousewheel(e, tx))
         self.bind_all('<Button-5>', lambda e: self._on_mousewheel(e, tx))
         self.bind_all('<Up>', lambda e: self._on_mousewheel(e, tx))
         self.bind_all('<Down>', lambda e: self._on_mousewheel(e, tx))
 
     def _unbound_to_mousewheel(self, event):
-        self.unbind_all("<MouseWheel>")
+        self.unbind_all('<MouseWheel>')
         self.unbind_all('<Button-4>')
         self.unbind_all('<Button-5>')
         self.unbind_all('<Up>')
@@ -104,21 +114,22 @@ class App(tk.Tk):
     @staticmethod
     def _on_mousewheel(event, tx):
         if event.num == 4 or event.keysym == 'Up':
-            tx.yview_scroll(-1, "units")
+            tx.yview_scroll(-1, 'units')
         elif event.num == 5 or event.keysym == 'Down':
-            tx.yview_scroll(1, "units")
+            tx.yview_scroll(1, 'units')
         else:
-            tx.yview_scroll(int(-1 * (event.delta / 120)), "units")
+            tx.yview_scroll(int(-1 * (event.delta / 120)), 'units')
 
     @staticmethod
     def about():
         showinfo('Информация', 'Кластерный анализ гидрофобных областей макромолекул')
 
     def menu(self):
-        """Метод инициалиции меню"""
+        """Метод инициалиции меню."""
         m = tk.Menu(self)  # создается объект Меню на главном окне
         self.config(menu=m)  # окно конфигурируется с указанием меню для него
-        fm = tk.Menu(m)  # создается пункт меню с размещением на основном меню (m)
+        # создается пункт меню с размещением на основном меню (m)
+        fm = tk.Menu(m)
         # пункту располагается на основном меню (m)
         m.add_cascade(label='Файл', menu=fm)
         # формируется список команд пункта меню
@@ -126,7 +137,8 @@ class App(tk.Tk):
         fm.add_command(label='Сохранить рисунок', command=self.save_graph)
         fm.add_command(label='Сохранить LOG', command=self.save_log)
         fm.add_command(label='Выход', command=self.close_win)
-        om = tk.Menu(m)  # создается пункт меню с размещением на основном меню (m)
+        # создается пункт меню с размещением на основном меню (m)
+        om = tk.Menu(m)
         # пункту располагается на основном меню (m)
         m.add_cascade(label='Опции', menu=om)
         om.add_command(label='Сетка графика', command=self.grid_set)
@@ -135,12 +147,12 @@ class App(tk.Tk):
         m.add_command(label='Справка', command=self.about)
 
     def close_win(self):
-        """Самоуничтожение с вопросом"""
+        """Самоуничтожение с вопросом."""
         if askyesno('Выход', 'Вы точно хотите выйти?'):
             self.destroy()
 
     def run(self, auto=False):
-        """Основной алгоритм программы"""
+        """Основной алгоритм программы."""
         if self.run_flag:
             showerror('Ошибка!', 'Расчет уже идёт!')
             return
@@ -158,7 +170,8 @@ class App(tk.Tk):
                     self.pb.update()
                 eps, min_samples = self.cls.auto(metric=metric)
             except ValueError:
-                showerror('Ошибка!', 'Не загружен файл\nили ошибка кластерного анализа!')
+                showerror(
+                    'Ошибка!', 'Не загружен файл\nили ошибка кластерного анализа!')
                 self.run_flag = False
                 return
             self.sca1.set(eps)
@@ -176,9 +189,9 @@ class App(tk.Tk):
                 self.run_flag = False
                 return
         self.tx.configure(state='normal')
-        self.tx.insert(tk.END,
-                       "Estimated number of clusters: {0:d}\nSilhouette Coefficient: {1:.3f}\nCalinski and Harabaz score: {4:.3f}\nEPS: {2:.1f} \u212B\nMIN_SAMPLES: {3:d}\n".format(
-                           self.cls.n_clusters, self.cls.si_score, eps, min_samples, self.cls.calinski))
+        self.tx.insert(tk.END, ('Estimated number of clusters: {0:d}\nSilhouette Coefficient: {1:.3f}\n'
+                                'Calinski and Harabaz score: {4:.3f}\nEPS: {2:.1f} \u212B\nMIN_SAMPLES: {3:d}\n').format(
+            self.cls.n_clusters, self.cls.si_score, eps, min_samples, self.cls.calinski))
         self.tx.configure(state='disabled')
         self.graph()
         self.run_flag = False
@@ -195,19 +208,22 @@ class App(tk.Tk):
         except AttributeError:
             return
         ax = axes3d.Axes3D(self.fig)
-        colors = [plt.cm.Spectral(each) for each in np.linspace(0, 1, len(unique_labels))]
+        colors = [plt.cm.Spectral(each)
+                  for each in np.linspace(0, 1, len(unique_labels))]
         for k, col in zip(unique_labels, colors):
             class_member_mask = (self.cls.labels == k)
             if k == -1:
                 # Black used for noise.
                 xyz = self.cls.X[class_member_mask & ~self.cls.core_samples_mask]
-                ax.scatter(xyz[:, 0], xyz[:, 1], xyz[:, 2], c='k', s=12, label="Noise")
+                ax.scatter(xyz[:, 0], xyz[:, 1], xyz[:, 2], c='k', s=12, label='Noise')
             else:
                 xyz = self.cls.X[class_member_mask & self.cls.core_samples_mask]
-                ax.scatter(xyz[:, 0], xyz[:, 1], xyz[:, 2], c=tuple(col), s=32, label="Core Cluster No {:d}".format(k))
+                ax.scatter(xyz[:, 0], xyz[:, 1], xyz[:, 2], c=tuple(
+                    col), s=32, label='Core Cluster No {:d}'.format(k))
                 xyz = self.cls.X[class_member_mask & ~self.cls.core_samples_mask]
-                ax.scatter(xyz[:, 0], xyz[:, 1], xyz[:, 2], c=tuple(col), s=12, label="Added Cluster No {:d}".format(k))
-        self.fig.suptitle("Cluster analysis\n")
+                ax.scatter(xyz[:, 0], xyz[:, 1], xyz[:, 2], c=tuple(
+                    col), s=12, label='Added Cluster No {:d}'.format(k))
+        self.fig.suptitle('Cluster analysis\n')
         ax.set_ylabel(r'$y\ \AA$')
         ax.set_xlabel(r'$x\ \AA$')
         ax.set_zlabel(r'$z\ \AA$')
@@ -276,10 +292,9 @@ class App(tk.Tk):
         if self.fig is None:
             showerror('Ошибка!', 'График недоступен!')
             return
-        opt = {'parent': self, 'filetypes': [('Все поддерживаесые форматы', (
+        opt = dict(parent=self, filetypes=[('Все поддерживаесые форматы', (
             '.eps', '.jpeg', '.jpg', '.pdf', '.pgf', '.png', '.ps', '.raw', '.rgba', '.svg', '.svgz', '.tif',
-            '.tiff')), ],
-               'initialfile': 'myfile.png', 'title': 'Сохранить график'}
+            '.tiff')), ], initialfile='myfile.png', title='Сохранить график')
         sa = asksaveasfilename(**opt)
         if sa:
             try:
@@ -325,15 +340,15 @@ class App(tk.Tk):
         for k in sorted(set(self.cls.labels)):
             if k != -1:
                 self.tx.configure(state='normal')
-                self.tx.insert(tk.END, "\nIn core cluster No {:d} included: ".format(k))
+                self.tx.insert(tk.END, '\nIn core cluster No {:d} included: '.format(k))
                 self.tx.configure(state='disabled')
                 for aa in aa_list:
                     if aa[1] == k and aa[2]:
                         self.tx.configure(state='normal')
-                        self.tx.insert(tk.END, "{2:s}:{1:s}{0:d} ".format(*aa[0]))
+                        self.tx.insert(tk.END, '{2:s}:{1:s}{0:d} '.format(*aa[0]))
                         self.tx.configure(state='disabled')
         self.tx.configure(state='normal')
-        self.tx.insert(tk.END, "\n\n")
+        self.tx.insert(tk.END, '\n\n')
         self.tx.configure(state='disabled')
 
 
@@ -384,7 +399,8 @@ class ClusterPdb:
         self.core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
         self.core_samples_mask[db.core_sample_indices_] = True
         self.labels = db.labels_
-        self.n_clusters = len(set(self.labels)) - (1 if -1 in self.labels else 0)
+        self.n_clusters = len(set(self.labels)) - \
+                          (1 if -1 in self.labels else 0)
         try:
             self.si_score = silhouette_score(self.X, self.labels)
         # The Silhouette Coefficient is calculated using the mean intra-cluster distance (a)
@@ -459,10 +475,12 @@ class ClusterPdb:
                 current_resn = int(s[22:26])
                 current_chainn = s[21]
                 current_resname = s[17:20]
-                xyzm = [float(s[30:38]), float(s[38:46]), float(s[46:54]), mass[s[76:78]]]
+                xyzm = [float(s[30:38]), float(s[38:46]),
+                        float(s[46:54]), mass[s[76:78]]]
                 xyzm_array = np.hstack((xyzm_array, xyzm))
             elif s[0:6] == 'ATOM  ' and (s[17:20] in hydrfob):
-                self.aa_list.append((current_resn, current_chainn, current_resname))
+                self.aa_list.append(
+                    (current_resn, current_chainn, current_resname))
                 self.weight_array.append(hydrfob[current_resname])
                 try:
                     xyzm_array.shape = (-1, 4)
@@ -473,7 +491,8 @@ class ClusterPdb:
                 current_resn = int(s[22:26])
                 current_chainn = s[21]
                 current_resname = s[17:20]
-                xyz = [float(s[30:38]), float(s[38:46]), float(s[46:54]), mass[s[76:78]]]
+                xyz = [float(s[30:38]), float(s[38:46]),
+                       float(s[46:54]), mass[s[76:78]]]
                 xyzm_array = np.hstack((xyzm_array, xyz))
         try:
             xyz_array.shape = (-1, 3)
@@ -484,7 +503,7 @@ class ClusterPdb:
 
     @staticmethod
     def _cmass(str_nparray: np.ndarray) -> list:
-        """Вычисление положения центра массс"""
+        """Вычисление положения центра массс."""
         mass_sum = float(str_nparray[:, 3].sum())
         mx = (str_nparray[:, 3]) * (str_nparray[:, 0])
         my = (str_nparray[:, 3]) * (str_nparray[:, 1])
@@ -496,7 +515,7 @@ class ClusterPdb:
 
 
 def win():
-    """Главная функция окна"""
+    """Главная функция окна."""
     app = App()
     app.mainloop()
 

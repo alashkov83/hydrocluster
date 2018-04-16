@@ -9,6 +9,7 @@ import io
 import sys
 import tkinter as tk
 import tkinter.ttk as ttk
+import urllib
 from tkinter.filedialog import askopenfilename
 from tkinter.filedialog import asksaveasfilename
 from tkinter.messagebox import askyesno
@@ -33,8 +34,11 @@ from mpl_toolkits.mplot3d import axes3d
 
 
 class App(tk.Tk):
+    """
 
-    def __init__(self):
+    """
+
+    def __init__(self) -> None:
         super().__init__()
         self.title('HydroCluster')
         self.resizable(False, False)
@@ -45,14 +49,14 @@ class App(tk.Tk):
         lab1 = tk.LabelFrame(fra1, text='EPS (\u212B)',
                              labelanchor='n', borderwidth=5)
         lab1.grid(row=0, column=0, pady=5, padx=5)
-        self.sca1 = tk.Scale(lab1, length=300, from_=1.0, to=12.0,
+        self.sca1 = tk.Scale(lab1, length=300, from_=1.0, to=15.0,
                              showvalue=1, orient=tk.HORIZONTAL, resolution=0.1)
         self.sca1.pack()
         lab2 = tk.LabelFrame(fra1, text='MIN_SAMPLES',
                              labelanchor='n', borderwidth=5)
         lab2.grid(row=0, column=1, pady=5, padx=5)
         self.sca2 = tk.Scale(lab2, length=300, from_=1,
-                             to=20, showvalue=1, orient=tk.HORIZONTAL)
+                             to=50, showvalue=1, orient=tk.HORIZONTAL)
         self.sca2.pack()
         but1 = tk.Button(fra1, text='Старт!',
                          command=lambda: self.run(auto=False))
@@ -65,11 +69,11 @@ class App(tk.Tk):
         lab3 = tk.LabelFrame(fra2, text='Метрика автоподбора',
                              labelanchor='n', borderwidth=5)
         lab3.grid(row=0, column=0, pady=5, padx=5)
-        listbox_items = ['si_score', 'calinski']
+        listbox_items = ['calinski', 'si_score']
         self.combox = ttk.Combobox(
             lab3, height=5, width=15, values=listbox_items)
         self.combox.pack()
-        self.combox.set('si_score')
+        self.combox.set('calinski')
         lab4 = tk.LabelFrame(fra2, text='Progress: ',
                              labelanchor='n', borderwidth=5)
         lab4.grid(row=0, column=2, pady=5, padx=5)
@@ -124,9 +128,12 @@ class App(tk.Tk):
 
     @staticmethod
     def about():
+        """
+
+        """
         showinfo('Информация', 'Кластерный анализ гидрофобных областей макромолекул')
 
-    def menu(self):
+    def menu(self) -> None:
         """Метод инициалиции меню."""
         m = tk.Menu(self)  # создается объект Меню на главном окне
         self.config(menu=m)  # окно конфигурируется с указанием меню для него
@@ -150,12 +157,12 @@ class App(tk.Tk):
         om.add_command(label='Состав гидрофобных ядер', command=self.resi)
         m.add_command(label='Справка', command=self.about)
 
-    def close_win(self):
+    def close_win(self) -> None:
         """Самоуничтожение с вопросом."""
         if askyesno('Выход', 'Вы точно хотите выйти?'):
             self.destroy()
 
-    def run(self, auto=False):
+    def run(self, auto: bool = False) -> None:
         """Основной алгоритм программы."""
         if self.run_flag:
             showerror('Ошибка!', 'Расчет уже идёт!')
@@ -165,19 +172,20 @@ class App(tk.Tk):
         self.pb.update()
         if auto:
             metric = self.combox.get()
-            self.pb['maximum'] = 1748
-            try:
-                self.cls.states.clear()
-                for n in self.cls.auto_yield(min_eps=3.0, max_eps=12.0, step_eps=0.1, min_min_samples=2,
-                                             min_max_samples=20):
-                    self.pb['value'] = n
-                    self.pb.update()
+            if self.cls.states:
                 eps, min_samples = self.cls.auto(metric=metric)
-            except ValueError:
-                showerror(
-                    'Ошибка!', 'Не загружен файл\nили ошибка кластерного анализа!')
-                self.run_flag = False
-                return
+            else:
+                self.pb['maximum'] = 5978
+                try:
+                    for n in self.cls.auto_yield(min_eps=3.0, max_eps=15.0, step_eps=0.1, min_min_samples=2,
+                                                 min_max_samples=50):
+                        self.pb['value'] = n
+                        self.pb.update()
+                    eps, min_samples = self.cls.auto(metric=metric)
+                except ValueError:
+                    showerror('Ошибка!', 'Не загружен файл\nили ошибка кластерного анализа!')
+                    self.run_flag = False
+                    return
             self.sca1.set(eps)
             self.sca2.set(min_samples)
         else:
@@ -194,8 +202,9 @@ class App(tk.Tk):
                 return
         self.tx.configure(state='normal')
         self.tx.insert(tk.END, ('Estimated number of clusters: {0:d}\nSilhouette Coefficient: {1:.3f}\n'
-                                'Calinski and Harabaz score: {4:.3f}\nEPS: {2:.1f} \u212B\nMIN_SAMPLES: {3:d}\n').format(
-            self.cls.n_clusters, self.cls.si_score, eps, min_samples, self.cls.calinski))
+                                'Calinski and Harabaz score: {4:.3f}\nEPS: {2:.1f} \u212B\n'
+                                'MIN_SAMPLES: {3:d}\n').format(self.cls.n_clusters,
+                                                               self.cls.si_score, eps, min_samples, self.cls.calinski))
         self.tx.configure(state='disabled')
         self.graph()
         self.run_flag = False
@@ -223,10 +232,10 @@ class App(tk.Tk):
             else:
                 xyz = self.cls.X[class_member_mask & self.cls.core_samples_mask]
                 ax.scatter(xyz[:, 0], xyz[:, 1], xyz[:, 2], c=tuple(
-                    col), s=32, label='Core Cluster No {:d}'.format(k))
+                    col), s=32, label='Core Cluster No {:d}'.format(k + 1))
                 xyz = self.cls.X[class_member_mask & ~self.cls.core_samples_mask]
                 ax.scatter(xyz[:, 0], xyz[:, 1], xyz[:, 2], c=tuple(
-                    col), s=12, label='Added Cluster No {:d}'.format(k))
+                    col), s=12, label='Added Cluster No {:d}'.format(k + 1))
         self.fig.suptitle('Cluster analysis\n')
         ax.set_ylabel(r'$y\ \AA$')
         ax.set_xlabel(r'$x\ \AA$')
@@ -252,7 +261,11 @@ class App(tk.Tk):
         self.toolbar.update()
         self.canvas._tkcanvas.pack(fill=tk.BOTH, side=tk.TOP, expand=1)
 
-    def open_pdb(self):
+    def open_pdb(self) -> None:
+        """
+
+        :return:
+        """
         if self.run_flag:
             showerror('Ошибка!', 'Расчет уже идёт!')
             return
@@ -270,7 +283,7 @@ class App(tk.Tk):
         else:
             return
 
-    def open_url(self):
+    def open_url(self) -> None:
         try:
             import Bio.PDB as PDB
             from Bio.PDB.mmtf import MMTFParser
@@ -298,6 +311,10 @@ class App(tk.Tk):
                     self.parse_pdb(s_array)
 
     def open_cif(self):
+        """
+
+        :return:
+        """
         try:
             import Bio.PDB as PDB
             from Bio.PDB.mmtf import MMTFParser
@@ -322,14 +339,14 @@ class App(tk.Tk):
                 with io.StringIO() as f:
                     iopdb = PDB.PDBIO()
                     iopdb.set_structure(structure)
-                    io.save(f)
+                    iopdb.save(f)
                     f.flush()
                     f.seek(0, 0)
                     s_array = f.readlines()
                     showinfo('Информация', 'Файл прочитан!')
                     self.parse_pdb(s_array)
 
-    def parse_pdb(self, s_array):
+    def parse_pdb(self, s_array) -> None:
         self.cls.clean()
         try:
             self.cls.parser(s_array)
@@ -351,6 +368,9 @@ class App(tk.Tk):
         self.tx.configure(state='disabled')
 
     def save_log(self):
+        """
+
+        """
         opt = {'parent': self, 'filetypes': [('LOG', '.log'), ], 'initialfile': 'myfile.log', 'title': 'Сохранить LOG'}
         sa = asksaveasfilename(**opt)
         if sa:
@@ -384,6 +404,10 @@ class App(tk.Tk):
                           'Поддреживаемые форматы: eps, jpeg, jpg, pdf, pgf, png, ps, raw, rgba, svg, svgz, tif, tiff.')
 
     def grid_set(self):
+        """
+
+        :return:
+        """
         self.grid = bool(askyesno('Cетка', 'Отобразить?'))
         if self.run_flag:
             return
@@ -406,6 +430,10 @@ class App(tk.Tk):
         self.graph()
 
     def resi(self):
+        """
+
+        :return:
+        """
         if self.run_flag:
             showerror('Ошибка!', 'Расчет уже идёт!')
             return
@@ -415,13 +443,27 @@ class App(tk.Tk):
         aa_list = list(zip(aa_list, self.cls.labels, self.cls.core_samples_mask))
         for k in sorted(set(self.cls.labels)):
             if k != -1:
-                self.tx.configure(state='normal')
-                self.tx.insert(tk.END, '\nIn core cluster No {:d} included: '.format(k))
-                self.tx.configure(state='disabled')
+                core_aa_list = []
+                uncore_aa_list = []
                 for aa in aa_list:
                     if aa[1] == k and aa[2]:
+                        core_aa_list.append(aa[0])
+                    elif aa[1] == k and not aa[2]:
+                        uncore_aa_list.append(aa[0])
+                self.tx.configure(state='normal')
+                self.tx.insert(tk.END, '\nIn Core cluster No {:d} included: '.format(k + 1))
+                self.tx.configure(state='disabled')
+                for aac in core_aa_list:
+                    self.tx.configure(state='normal')
+                    self.tx.insert(tk.END, '{2:s}:{1:s}{0:d} '.format(*aac))
+                    self.tx.configure(state='disabled')
+                if uncore_aa_list:
+                    self.tx.configure(state='normal')
+                    self.tx.insert(tk.END, '\nIn UNcore cluster No {:d} included: '.format(k + 1))
+                    self.tx.configure(state='disabled')
+                    for aac in uncore_aa_list:
                         self.tx.configure(state='normal')
-                        self.tx.insert(tk.END, '{2:s}:{1:s}{0:d} '.format(*aa[0]))
+                        self.tx.insert(tk.END, '{2:s}:{1:s}{0:d} '.format(*aac))
                         self.tx.configure(state='disabled')
         self.tx.configure(state='normal')
         self.tx.insert(tk.END, '\n\n')
@@ -429,7 +471,7 @@ class App(tk.Tk):
 
 
 class ClusterPdb:
-    def __init__(self):
+    def __init__(self) -> None:
         self.X = None
         self.pdist = None
         self.labels = None
@@ -441,7 +483,10 @@ class ClusterPdb:
         self.aa_list = []
         self.states = []
 
-    def clean(self):
+    def clean(self) -> None:
+        """
+
+        """
         self.X = None
         self.pdist = None
         self.labels = None
@@ -449,15 +494,15 @@ class ClusterPdb:
         self.n_clusters = 0
         self.si_score = -1
         self.calinski = 0
-        self.weight_array = []
-        self.aa_list = []
-        self.states = []
+        self.weight_array.clear()
+        self.aa_list.clear()
+        self.states.clear()
 
     def cluster(self, eps, min_samples):
         if self.X is None or self.pdist is None:
             raise ValueError
-        db = DBSCAN(eps=eps, min_samples=min_samples, n_jobs=-1, metric='precomputed').fit(self.pdist,
-                                                                                           sample_weight=self.weight_array)
+        db = DBSCAN(eps=eps, min_samples=min_samples, n_jobs=-1, metric='precomputed'
+                    ).fit(self.pdist, sample_weight=self.weight_array)
         # The DBSCAN algorithm views clusters as areas of high density separated by areas of low density.
         # Due to this rather generic view, clusters found by DBSCAN can be any shape,
         # as opposed to k-means which assumes that clusters are convex shaped.
@@ -465,7 +510,8 @@ class ClusterPdb:
         # of high density. A cluster is therefore a set of core samples,
         # each close to each other (measured by some distance measure) and a set of non-core samples that are close
         # to a core sample (but are not themselves core samples).
-        # There are two parameters to the algorithm, min_samples and eps, which define formally what we mean when we say dense.
+        # There are two parameters to the algorithm, min_samples and eps,
+        #  which define formally what we mean when we say dense.
         # Higher min_samples or lower eps indicate higher density necessary to form a cluster.
         # Cite:
         # “A Density-Based Algorithm for Discovering Clusters in Large Spatial Databases with Noise”
@@ -475,8 +521,7 @@ class ClusterPdb:
         self.core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
         self.core_samples_mask[db.core_sample_indices_] = True
         self.labels = db.labels_
-        self.n_clusters = len(set(self.labels)) - \
-                          (1 if -1 in self.labels else 0)
+        self.n_clusters = len(set(self.labels)) - (1 if -1 in self.labels else 0)
         try:
             self.si_score = silhouette_score(self.X, self.labels)
         # The Silhouette Coefficient is calculated using the mean intra-cluster distance (a)
@@ -485,7 +530,8 @@ class ClusterPdb:
         # To clarify, b is the distance between a sample and the nearest cluster that the sample is not a part of.
         # Note that Silhouette Coefficient is only defined if number of labels is 2 <= n_labels <= n_samples - 1.
         # Cite:
-        # Peter J. Rousseeuw (1987). “Silhouettes: a Graphical Aid to the Interpretation and Validation of Cluster Analysis”.
+        # Peter J. Rousseeuw (1987).
+        # “Silhouettes: a Graphical Aid to the Interpretation and Validation of Cluster Analysis”.
         # Computational and Applied Mathematics 20: 53-65.
         except ValueError:
             self.si_score = -1
@@ -498,6 +544,14 @@ class ClusterPdb:
             self.calinski = 0
 
     def auto_yield(self, min_eps, max_eps, step_eps, min_min_samples, min_max_samples):
+        """
+
+        :param min_eps:
+        :param max_eps:
+        :param step_eps:
+        :param min_min_samples:
+        :param min_max_samples:
+        """
         n = 1
         j = min_eps
         while j < max_eps + step_eps:
@@ -509,7 +563,7 @@ class ClusterPdb:
                 n += 1
             j += step_eps
 
-    def auto(self, metric='si_score'):
+    def auto(self, metric: str = 'si_score') -> None:
         if metric == 'si_score':
             self.states.sort(key=lambda x: x[3], reverse=True)
         elif metric == 'calinski':
@@ -522,7 +576,11 @@ class ClusterPdb:
         self.calinski = state[4]
         return state[5], state[6]
 
-    def parser(self, strarr):
+    def parser(self, strarr) -> None:
+        """
+
+        :param strarr:
+        """
         xyz_array = []
         # www.pnas.org/cgi/doi/10.1073/pnas.1616138113 # 1.0 - -7.55 kj/mol A;; residues with delta mu < 0
         hydrfob = {'ALA': 1.269, 'VAL': 1.094, 'PRO': 1.0, 'LEU': 1.147, 'ILE': 1.289, 'PHE': 1.223, 'MET': 1.013,
@@ -590,7 +648,7 @@ class ClusterPdb:
         return [c_mass_x, c_mass_y, c_mass_z]
 
 
-def win():
+def win() -> None:
     """Главная функция окна."""
     app = App()
     app.mainloop()

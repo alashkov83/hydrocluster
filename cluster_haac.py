@@ -5,6 +5,7 @@
 @author: lashkov
 """
 
+import io
 import sys
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -13,6 +14,7 @@ from tkinter.filedialog import asksaveasfilename
 from tkinter.messagebox import askyesno
 from tkinter.messagebox import showerror
 from tkinter.messagebox import showinfo
+from tkinter.simpledialog import askstring
 
 try:
     from sklearn.cluster import DBSCAN
@@ -26,7 +28,7 @@ except ImportError:
 import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
 from matplotlib.figure import Figure
-import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 from mpl_toolkits.mplot3d import axes3d
 
 
@@ -134,6 +136,8 @@ class App(tk.Tk):
         m.add_cascade(label='Файл', menu=fm)
         # формируется список команд пункта меню
         fm.add_command(label='Открыть PDB', command=self.open_pdb)
+        fm.add_command(label='Открыть CIF', command=self.open_cif)
+        fm.add_command(label='Открыть ID PDB', command=self.open_url)
         fm.add_command(label='Сохранить рисунок', command=self.save_graph)
         fm.add_command(label='Сохранить LOG', command=self.save_log)
         fm.add_command(label='Выход', command=self.close_win)
@@ -208,7 +212,7 @@ class App(tk.Tk):
         except AttributeError:
             return
         ax = axes3d.Axes3D(self.fig)
-        colors = [plt.cm.Spectral(each)
+        colors = [cm.get_cmap('rainbow')(each)
                   for each in np.linspace(0, 1, len(unique_labels))]
         for k, col in zip(unique_labels, colors):
             class_member_mask = (self.cls.labels == k)
@@ -228,6 +232,16 @@ class App(tk.Tk):
         ax.set_xlabel(r'$x\ \AA$')
         ax.set_zlabel(r'$z\ \AA$')
         ax.grid(self.grid)
+        ax.set_aspect('equal')
+        max_range = np.array([self.cls.X[:, 0].max() - self.cls.X[:, 0].min(),
+                              self.cls.X[:, 1].max() - self.cls.X[:, 1].min(),
+                              self.cls.X[:, 2].max() - self.cls.X[:, 2].min()]).max() / (2.0 * 0.8)
+        mid_x = (self.cls.X[:, 0].max() + self.cls.X[:, 0].min()) * 0.5
+        mid_y = (self.cls.X[:, 1].max() + self.cls.X[:, 1].min()) * 0.5
+        mid_z = (self.cls.X[:, 2].max() + self.cls.X[:, 2].min()) * 0.5
+        ax.set_xlim(mid_x - max_range, mid_x + max_range)
+        ax.set_ylim(mid_y - max_range, mid_y + max_range)
+        ax.set_zlim(mid_z - max_range, mid_z + max_range)
         if self.legend:
             ax.legend(loc='best', frameon=False)
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.fra3)
@@ -252,16 +266,78 @@ class App(tk.Tk):
                 return
             else:
                 showinfo('Информация', 'Файл прочитан!')
-                self.cls.clean()
-            try:
-                self.cls.parser(s_array)
-            except ValueError:
-                showerror('Ошибка', 'Неверный формат\nлибо файл не содержит гидрофоьных остатков!')
-                return
-            else:
-                showinfo('Информация', 'Файл распарсен!')
+                self.parse_pdb(s_array)
         else:
             return
+
+    def open_url(self):
+        try:
+            import Bio.PDB as PDB
+            from Bio.PDB.mmtf import MMTFParser
+        except ImportError:
+            showerror('Ошибка импорта',
+                      'BioPython недоступен!'
+                      '\nДля исправления установите biopython и mmtf!')
+            return
+        url = askstring('Загрузить', 'ID PDB:')
+        if url is not None:
+            try:
+                structure = MMTFParser.get_structure_from_url(url)
+            except urllib.error.HTTPError as e:
+                showerror('Ошибка!', ('{1:s}\nID PDB: {0:s} не найден'
+                                      ' или ссылается на некорректный файл!').format(url, str(e)))
+            else:
+                with io.StringIO() as f:
+                    iopdb = PDB.PDBIO()
+                    iopdb.set_structure(structure)
+                    iopdb.save(f)
+                    f.flush()
+                    f.seek(0, 0)
+                    s_array = f.readlines()
+                    showinfo('Информация', 'Файл загружен')
+                    self.parse_pdb(s_array)
+
+    def open_cif(self):
+        try:
+            import Bio.PDB as PDB
+            from Bio.PDB.mmtf import MMTFParser
+        except ImportError:
+            showerror('Ошибка импорта',
+                      'BioPython недоступен!'
+                      '\nДля исправления установите biopython и mmtf!')
+            return
+        parser = PDB.MMCIFParser()
+        opt = {'filetypes': [
+            ('Файлы mmCIF', ('.cif', '.CIF')), ('Все файлы', '.*')]}
+        cif_f = askopenfilename(**opt)
+        if cif_f:
+            try:
+                structure = parser.get_structure('X', cif_f)
+            except FileNotFoundError:
+                return
+            except (KeyError, ValueError, AssertionError):
+                showerror('Ошибка!', 'Некорректный CIF файл: {0:s}!'.format(cif_f))
+                return
+            else:
+                with io.StringIO() as f:
+                    iopdb = PDB.PDBIO()
+                    iopdb.set_structure(structure)
+                    io.save(f)
+                    f.flush()
+                    f.seek(0, 0)
+                    s_array = f.readlines()
+                    showinfo('Информация', 'Файл прочитан!')
+                    self.parse_pdb(s_array)
+
+    def parse_pdb(self, s_array):
+        self.cls.clean()
+        try:
+            self.cls.parser(s_array)
+        except ValueError:
+            showerror('Ошибка', 'Неверный формат\nлибо файл не содержит гидрофоьных остатков!')
+            return
+        else:
+            showinfo('Информация', 'Файл распарсен!')
         self.pb['value'] = 0
         self.pb.update()
         try:

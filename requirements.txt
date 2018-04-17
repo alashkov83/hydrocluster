@@ -1,3 +1,6 @@
-matplotlib==1.5.1
-numpy==1.14.2
-scikit_learn==0.19.1
+matplotlib>=1.5.1
+numpy>=1.14.2
+scikit_learn>=0.19.1
+biopython>=1.71
+mmtf-python>=1.1.0
+msgpack>=0.5.6

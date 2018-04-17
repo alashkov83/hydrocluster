@@ -6,6 +6,7 @@
 """
 
 import io
+import pickle
 import sys
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -155,6 +156,7 @@ class App(tk.Tk):
         om.add_command(label='Сетка графика', command=self.grid_set)
         om.add_command(label='Легенда', command=self.legend_set)
         om.add_command(label='Состав гидрофобных ядер', command=self.resi)
+        om.add_command(label='Цветовая карта автонастройки', command=self.colormao)
         m.add_command(label='Справка', command=self.about)
 
     def close_win(self) -> None:
@@ -175,10 +177,16 @@ class App(tk.Tk):
             if self.cls.states:
                 eps, min_samples = self.cls.auto(metric=metric)
             else:
-                self.pb['maximum'] = 5978
+                min_eps = 3.0
+                max_eps = 15.0
+                step_eps = 0.1
+                min_min_samples = 2
+                max_min_samples = 50
+                nstep_eps = round((max_eps - min_eps) / step_eps)
+                self.pb['maximum'] = (max_min_samples - min_min_samples + 1) * nstep_eps
                 try:
-                    for n in self.cls.auto_yield(min_eps=3.0, max_eps=15.0, step_eps=0.1, min_min_samples=2,
-                                                 min_max_samples=50):
+                    for n in self.cls.auto_yield(min_eps=min_eps, max_eps=max_eps, nstep_eps=nstep_eps,
+                                                 min_min_samples=min_min_samples, max_min_samples=max_min_samples):
                         self.pb['value'] = n
                         self.pb.update()
                     eps, min_samples = self.cls.auto(metric=metric)
@@ -469,6 +477,49 @@ class App(tk.Tk):
         self.tx.insert(tk.END, '\n\n')
         self.tx.configure(state='disabled')
 
+    def colormao(self):
+        if self.run_flag:
+            showerror('Ошибка!', 'Расчет не закончен!')
+            return
+        if not self.cls.states:
+            showinfo('Информация', 'Данные недоступны')
+            return
+        colormap_data = [(state[6], state[5], state[4], state[3]) for state in self.cls.states]
+        colormap_data.sort(key=lambda i: i[0])
+        colormap_data.sort(key=lambda i: i[1])
+        X = np.array(sorted(list({data[0] for data in colormap_data})), ndmin=1)
+        Y = np.array(sorted(list({data[1] for data in colormap_data})), ndmin=1)
+        Z = np.array([data[2] for data in colormap_data])
+        Z.shape = (Y.size, X.size)
+        fig = Figure(figsize=(7, 8))
+        ax1 = fig.add_subplot(211)
+        ax1.set_title('Calinski-Harabaz_score')
+        ax1.set_ylabel('EPS, \u212B')
+        ax1.grid(self.grid)
+        pc1 = ax1.pcolor(X, Y, Z, cmap='gnuplot')
+        fig.colorbar(pc1, ax=ax1, extend='max', extendfrac=0.1)
+        ax2 = fig.add_subplot(212)
+        ax2.set_title('Silhouette score')
+        ax2.set_xlabel('MIN SAMPLES')
+        ax2.set_ylabel('EPS, \u212B')
+        ax2.grid(self.grid)
+        Z = np.array([data[3] for data in colormap_data])
+        Z.shape = (Y.size, X.size)
+        pc2 = ax2.pcolor(X, Y, Z, cmap='gnuplot')
+        fig.colorbar(pc2, ax=ax2, extend='max', extendfrac=0.1)
+        win_cls = tk.Toplevel(self)
+        win_cls.title("ColorMaps")
+        win_cls.minsize(width=600, height=600)
+        win_cls.resizable(False, False)
+        fra4 = ttk.Frame(win_cls)
+        fra4.grid(row=0, column=0)
+        canvas = FigureCanvasTkAgg(fig, master=fra4)
+        canvas.draw()
+        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+        toolbar = NavigationToolbar2TkAgg(canvas, fra4)
+        toolbar.update()
+        canvas._tkcanvas.pack(fill=tk.BOTH, side=tk.TOP, expand=1)
+
 
 class ClusterPdb:
     def __init__(self) -> None:
@@ -543,27 +594,17 @@ class ClusterPdb:
         except ValueError:
             self.calinski = 0
 
-    def auto_yield(self, min_eps, max_eps, step_eps, min_min_samples, min_max_samples):
-        """
-
-        :param min_eps:
-        :param max_eps:
-        :param step_eps:
-        :param min_min_samples:
-        :param min_max_samples:
-        """
+    def auto_yield(self, min_eps, max_eps, nstep_eps, min_min_samples, max_min_samples):
         n = 1
-        j = min_eps
-        while j < max_eps + step_eps:
-            for i in range(min_min_samples, min_max_samples + 1):
+        for j in np.linspace(min_eps, max_eps, nstep_eps):
+            for i in range(min_min_samples, max_min_samples + 1):
                 self.cluster(eps=j, min_samples=i)
                 self.states.append(
                     (self.labels, self.core_samples_mask, self.n_clusters, self.si_score, self.calinski, j, i))
                 yield n
                 n += 1
-            j += step_eps
 
-    def auto(self, metric: str = 'si_score') -> None:
+    def auto(self, metric: str = 'si_score') -> tuple:
         if metric == 'si_score':
             self.states.sort(key=lambda x: x[3], reverse=True)
         elif metric == 'calinski':
@@ -646,6 +687,35 @@ class ClusterPdb:
         c_mass_y = float(my.sum()) / mass_sum
         c_mass_z = float(mz.sum()) / mass_sum
         return [c_mass_x, c_mass_y, c_mass_z]
+
+    def savestate(self, file):
+        glob_state = {
+            'X': self.X,
+            'pdist': self.pdist,
+            'labels': self.labels,
+            'core_samples_mask': self.core_samples_mask,
+            'n_clusters': self.n_clusters,
+            'si_score': self.si_score,
+            'calinski': self.calinski,
+            'weight_array': self.weight_array,
+            'aa_list': self.aa_list,
+            'states': self.states}
+        with open(file, 'wb') as f:
+            pickle.dump(glob_state, f)
+
+    def loadstate(self, file):
+        with open(file, 'rb') as f:
+            global_state = pickle.load(f)
+        self.X = global_state['X']
+        self.pdist = global_state['pdist']
+        self.labels = global_state['labels']
+        self.core_samples_mask = global_state['core_samples_mask']
+        self.n_clusters = global_state['n_clusters']
+        self.si_score = global_state['si_score']
+        self.calinski = global_state['calinski']
+        self.weight_array = global_state['weight_array']
+        self.aa_list = global_state['aa_list']
+        self.states = global_state['states']
 
 
 def win() -> None:

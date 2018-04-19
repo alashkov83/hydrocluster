@@ -5,6 +5,7 @@
 @author: lashkov
 """
 
+import gzip
 import io
 import pickle
 import sys
@@ -146,6 +147,8 @@ class App(tk.Tk):
         fm.add_command(label='Открыть PDB', command=self.open_pdb)
         fm.add_command(label='Открыть CIF', command=self.open_cif)
         fm.add_command(label='Открыть ID PDB', command=self.open_url)
+        fm.add_command(label='Открыть состояние', command=self.open_state)
+        fm.add_command(label='Сохранить состояние', command=self.save_state)
         fm.add_command(label='Сохранить рисунок', command=self.save_graph)
         fm.add_command(label='Сохранить LOG', command=self.save_log)
         fm.add_command(label='Выход', command=self.close_win)
@@ -218,6 +221,10 @@ class App(tk.Tk):
         self.run_flag = False
 
     def graph(self):
+        """
+
+        :return:
+        """
         try:
             self.canvas.get_tk_widget().destroy()
             self.toolbar.destroy()
@@ -292,6 +299,10 @@ class App(tk.Tk):
             return
 
     def open_url(self) -> None:
+        """
+
+        :return:
+        """
         try:
             import Bio.PDB as PDB
             from Bio.PDB.mmtf import MMTFParser
@@ -332,8 +343,7 @@ class App(tk.Tk):
                       '\nДля исправления установите biopython и mmtf!')
             return
         parser = PDB.MMCIFParser()
-        opt = {'filetypes': [
-            ('Файлы mmCIF', ('.cif', '.CIF')), ('Все файлы', '.*')]}
+        opt = {'filetypes': [('Файлы mmCIF', ('.cif', '.CIF')), ('Все файлы', '.*')]}
         cif_f = askopenfilename(**opt)
         if cif_f:
             try:
@@ -355,6 +365,11 @@ class App(tk.Tk):
                     self.parse_pdb(s_array)
 
     def parse_pdb(self, s_array) -> None:
+        """
+
+        :param s_array:
+        :return:
+        """
         self.cls.clean()
         try:
             self.cls.parser(s_array)
@@ -375,11 +390,51 @@ class App(tk.Tk):
         self.tx.delete('1.0', tk.END)
         self.tx.configure(state='disabled')
 
+    def open_state(self):
+        """
+
+        :return:
+        """
+        if self.run_flag:
+            showerror('Ошибка!', 'Расчет уже идёт!')
+            return
+        opt = {'filetypes': [('Файл данных', ('.dat', '.DAT')), ('Все файлы', '.*')],
+               'title': 'Загрузить состояние'}
+        state = askopenfilename(**opt)
+        try:
+            self.cls.loadstate(state)
+        except FileNotFoundError:
+            return
+        except (ValueError, OSError):
+            showerror("Ошибка!", "Файл неверного формата!")
+            return
+        else:
+            self.run(auto=True)
+
+    def save_state(self):
+        """
+
+        :return:
+        """
+        if self.run_flag:
+            showerror('Ошибка!', 'Расчет уже идёт!')
+            return
+        opt = {'filetypes': [('Файл данных', ('.dat', '.DAT')), ('Все файлы', '.*')],
+               'initialfile': 'myfile.dat',
+               'title': 'Сохранить состояние'}
+        state = asksaveasfilename(**opt)
+        try:
+            self.cls.savestate(state)
+        except FileNotFoundError:
+            return
+
     def save_log(self):
         """
 
         """
-        opt = {'parent': self, 'filetypes': [('LOG', '.log'), ], 'initialfile': 'myfile.log', 'title': 'Сохранить LOG'}
+        opt = {'parent': self, 'filetypes': [('LOG', '.log'), ],
+               'initialfile': 'myfile.log',
+               'title': 'Сохранить LOG'}
         sa = asksaveasfilename(**opt)
         if sa:
             letter = self.tx.get(1.0, tk.END)
@@ -390,15 +445,21 @@ class App(tk.Tk):
                 pass
 
     def save_graph(self):
+        """
+
+        :return:
+        """
         if self.run_flag:
             showerror('Ошибка!', 'Расчет не закончен!')
             return
         if self.fig is None:
             showerror('Ошибка!', 'График недоступен!')
             return
-        opt = dict(parent=self, filetypes=[('Все поддерживаесые форматы', (
-            '.eps', '.jpeg', '.jpg', '.pdf', '.pgf', '.png', '.ps', '.raw', '.rgba', '.svg', '.svgz', '.tif',
-            '.tiff')), ], initialfile='myfile.png', title='Сохранить график')
+        opt = {'parent': self,
+               'filetypes': [('Все поддерживаесые форматы', ('.eps', '.jpeg', '.jpg', '.pdf', '.pgf', '.png', '.ps',
+                                                             '.raw', '.rgba', '.svg', '.svgz', '.tif', '.tiff')), ],
+               'initialfile': 'myfile.png',
+               'title': 'Сохранить график'}
         sa = asksaveasfilename(**opt)
         if sa:
             try:
@@ -427,6 +488,10 @@ class App(tk.Tk):
         self.graph()
 
     def legend_set(self):
+        """
+
+        :return:
+        """
         self.legend = bool(askyesno('Легенда', 'Отобразить?'))
         if self.run_flag:
             return
@@ -478,6 +543,10 @@ class App(tk.Tk):
         self.tx.configure(state='disabled')
 
     def colormao(self):
+        """
+
+        :return:
+        """
         if self.run_flag:
             showerror('Ошибка!', 'Расчет не закончен!')
             return
@@ -487,25 +556,25 @@ class App(tk.Tk):
         colormap_data = [(state[6], state[5], state[4], state[3]) for state in self.cls.states]
         colormap_data.sort(key=lambda i: i[0])
         colormap_data.sort(key=lambda i: i[1])
-        X = np.array(sorted(list({data[0] for data in colormap_data})), ndmin=1)
-        Y = np.array(sorted(list({data[1] for data in colormap_data})), ndmin=1)
-        Z = np.array([data[2] for data in colormap_data])
-        Z.shape = (Y.size, X.size)
+        x = np.array(sorted(list({data[0] for data in colormap_data})), ndmin=1)
+        y = np.array(sorted(list({data[1] for data in colormap_data})), ndmin=1)
+        z = np.array([data[2] for data in colormap_data])
+        z.shape = (y.size, x.size)
         fig = Figure(figsize=(7, 8))
         ax1 = fig.add_subplot(211)
         ax1.set_title('Calinski-Harabaz_score')
         ax1.set_ylabel('EPS, \u212B')
         ax1.grid(self.grid)
-        pc1 = ax1.pcolor(X, Y, Z, cmap='gnuplot')
+        pc1 = ax1.pcolor(x, y, z, cmap='gnuplot')
         fig.colorbar(pc1, ax=ax1, extend='max', extendfrac=0.1)
         ax2 = fig.add_subplot(212)
         ax2.set_title('Silhouette score')
         ax2.set_xlabel('MIN SAMPLES')
         ax2.set_ylabel('EPS, \u212B')
         ax2.grid(self.grid)
-        Z = np.array([data[3] for data in colormap_data])
-        Z.shape = (Y.size, X.size)
-        pc2 = ax2.pcolor(X, Y, Z, cmap='gnuplot')
+        z = np.array([data[3] for data in colormap_data])
+        z.shape = (y.size, x.size)
+        pc2 = ax2.pcolor(x, y, z, cmap='gnuplot')
         fig.colorbar(pc2, ax=ax2, extend='max', extendfrac=0.1)
         win_cls = tk.Toplevel(self)
         win_cls.title("ColorMaps")
@@ -522,6 +591,9 @@ class App(tk.Tk):
 
 
 class ClusterPdb:
+    """
+
+    """
     def __init__(self) -> None:
         self.X = None
         self.pdist = None
@@ -550,6 +622,11 @@ class ClusterPdb:
         self.states.clear()
 
     def cluster(self, eps, min_samples):
+        """
+
+        :param eps:
+        :param min_samples:
+        """
         if self.X is None or self.pdist is None:
             raise ValueError
         db = DBSCAN(eps=eps, min_samples=min_samples, n_jobs=-1, metric='precomputed'
@@ -595,6 +672,14 @@ class ClusterPdb:
             self.calinski = 0
 
     def auto_yield(self, min_eps, max_eps, nstep_eps, min_min_samples, max_min_samples):
+        """
+
+        :param min_eps:
+        :param max_eps:
+        :param nstep_eps:
+        :param min_min_samples:
+        :param max_min_samples:
+        """
         n = 1
         for j in np.linspace(min_eps, max_eps, nstep_eps):
             for i in range(min_min_samples, max_min_samples + 1):
@@ -605,6 +690,11 @@ class ClusterPdb:
                 n += 1
 
     def auto(self, metric: str = 'si_score') -> tuple:
+        """
+
+        :param metric:
+        :return:
+        """
         if metric == 'si_score':
             self.states.sort(key=lambda x: x[3], reverse=True)
         elif metric == 'calinski':
@@ -689,6 +779,10 @@ class ClusterPdb:
         return [c_mass_x, c_mass_y, c_mass_z]
 
     def savestate(self, file):
+        """
+
+        :param file:
+        """
         glob_state = {
             'X': self.X,
             'pdist': self.pdist,
@@ -700,12 +794,17 @@ class ClusterPdb:
             'weight_array': self.weight_array,
             'aa_list': self.aa_list,
             'states': self.states}
-        with open(file, 'wb') as f:
+        with gzip.open(file, 'wb') as f:
             pickle.dump(glob_state, f)
 
     def loadstate(self, file):
-        with open(file, 'rb') as f:
+        """
+
+        :param file:
+        """
+        with gzip.open(file) as f:
             global_state = pickle.load(f)
+            self.clean()
         self.X = global_state['X']
         self.pdist = global_state['pdist']
         self.labels = global_state['labels']

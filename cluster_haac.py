@@ -11,13 +11,13 @@ import pickle
 import sys
 import tkinter as tk
 import tkinter.ttk as ttk
-import urllib
 from tkinter.filedialog import askopenfilename
 from tkinter.filedialog import asksaveasfilename
 from tkinter.messagebox import askyesno
 from tkinter.messagebox import showerror
 from tkinter.messagebox import showinfo
 from tkinter.simpledialog import askstring
+from urllib.error import HTTPError
 
 try:
     from sklearn.cluster import DBSCAN
@@ -160,6 +160,7 @@ class App(tk.Tk):
         om.add_command(label='Легенда', command=self.legend_set)
         om.add_command(label='Состав гидрофобных ядер', command=self.resi)
         om.add_command(label='Цветовая карта автонастройки', command=self.colormao)
+        om.add_command(label='Очистить LOG', command=self.clean_txt)
         m.add_command(label='Справка', command=self.about)
 
     def close_win(self) -> None:
@@ -187,14 +188,28 @@ class App(tk.Tk):
                 max_min_samples = 50
                 nstep_eps = round((max_eps - min_eps) / step_eps)
                 self.pb['maximum'] = (max_min_samples - min_min_samples + 1) * nstep_eps
+                self.tx.configure(state='normal')
+                self.tx.insert(tk.END, ('Starting Autoscan (range EPS: {0:.2f} - {1:.2f} \u212B,'
+                                        'step EPS = {2:.2f} \u212B, range min_samples: {3:d} - {4:d}...\n').format(
+                    min_eps, max_eps, step_eps, min_min_samples, max_min_samples))
                 try:
-                    for n in self.cls.auto_yield(min_eps=min_eps, max_eps=max_eps, nstep_eps=nstep_eps,
-                                                 min_min_samples=min_min_samples, max_min_samples=max_min_samples):
+                    for n, j, i in self.cls.auto_yield(min_eps=min_eps, max_eps=max_eps, nstep_eps=nstep_eps,
+                                                       min_min_samples=min_min_samples,
+                                                       max_min_samples=max_min_samples):
+                        self.tx.insert(tk.END, ('Step No {0:d}: EPS = {1:.2f} \u212B, '
+                                                'min_samples = {2:d}, No clusters = {3:d}, '
+                                                'Silhouette score = {4:.3f} '
+                                                'Calinski score = {5:.3f}\n').format(
+                            n, j, i, self.cls.n_clusters, self.cls.si_score, self.cls.calinski))
                         self.pb['value'] = n
                         self.pb.update()
                     eps, min_samples = self.cls.auto(metric=metric)
+                    self.tx.insert(tk.END, 'Autoscan done... \n')
+                    self.tx.configure(state='disabled')
                 except ValueError:
                     showerror('Ошибка!', 'Не загружен файл\nили ошибка кластерного анализа!')
+                    self.tx.insert(tk.END, 'Ошибка! Не загружен файл или ошибка кластерного анализа!\n')
+                    self.tx.configure(state='disabled')
                     self.run_flag = False
                     return
             self.sca1.set(eps)
@@ -315,7 +330,7 @@ class App(tk.Tk):
         if url is not None:
             try:
                 structure = MMTFParser.get_structure_from_url(url)
-            except urllib.error.HTTPError as e:
+            except HTTPError as e:
                 showerror('Ошибка!', ('{1:s}\nID PDB: {0:s} не найден'
                                       ' или ссылается на некорректный файл!').format(url, str(e)))
             else:
@@ -386,6 +401,9 @@ class App(tk.Tk):
         except AttributeError:
             pass
         self.fig = None
+        self.clean_txt()
+
+    def clean_txt(self):
         self.tx.configure(state='normal')
         self.tx.delete('1.0', tk.END)
         self.tx.configure(state='disabled')
@@ -686,7 +704,7 @@ class ClusterPdb:
                 self.cluster(eps=j, min_samples=i)
                 self.states.append(
                     (self.labels, self.core_samples_mask, self.n_clusters, self.si_score, self.calinski, j, i))
-                yield n
+                yield n, j, i
                 n += 1
 
     def auto(self, metric: str = 'si_score') -> tuple:

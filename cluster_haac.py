@@ -732,8 +732,12 @@ class ClusterPdb:
         """
         xyz_array = []
         # www.pnas.org/cgi/doi/10.1073/pnas.1616138113 # 1.0 - -7.55 kj/mol A;; residues with delta mu < 0
-        hydrfob = {'ALA': 1.269, 'VAL': 1.094, 'PRO': 1.0, 'LEU': 1.147, 'ILE': 1.289, 'PHE': 1.223, 'MET': 1.013,
+        hydrfob1 = {'ALA': 1.269, 'VAL': 1.094, 'PRO': 1.0, 'LEU': 1.147, 'ILE': 1.289, 'PHE': 1.223, 'MET': 1.013,
                    'TRP': 1.142, 'CYS': 0.746, 'GLY': 0.605, 'THR': 0.472}
+        # Kyte J, Doolittle RF. J Mol Biol. 1982 May 5;157(1):105-32. 1.0 - 1.8 residues with kdHydrophobicity > 0
+        hydrfob2 = {'ALA': 1.0, 'VAL': 2.333,'LEU': 2.111, 'ILE': 2.5, 'PHE': 1.556, 'MET': 1.056, 'CYS': 1.389}
+
+        hydrfob = hydrfob2
         # OLD CA-BASED PARSER
         # for s in strarr:
         #     if s[0:6] == 'ATOM  ' and (s[17:20] in hydrfob) and s[12:16] == ' CA ':

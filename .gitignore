@@ -99,3 +99,6 @@ ENV/
 
 # mypy
 .mypy_cache/
+Будет удалено .idea/
+Будет удалено PDB/6b7q.pdb
+Будет удалено PDB/6eri.cif

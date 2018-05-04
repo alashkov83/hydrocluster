@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """Created by lashkov on 04.05.18"""
 
+import os
 import sys
 from urllib.error import HTTPError
 
@@ -22,7 +23,16 @@ except ImportError:
 class Cli():
     def __init__(self, namespace) -> None:
         self.namespace = namespace
-        self.log = []
+        if self.namespace.output:
+            self.newdir = self.namespace.output
+        else:
+            self.newdir = 'output'
+        try:
+            os.makedirs(self.newdir, exist_ok=True)
+        except OSError:
+            print('Невозможно создать каталог ' + self.newdir)
+            sys.exit(-1)
+        self.log_name = os.path.join(self.newdir, '{:s}'.format(self.output))
         self.fig = None
         self.cls = ClusterPdb()
         self.open_file()
@@ -32,12 +42,12 @@ class Cli():
 
     def log_append(self, line):
         print(line)
-        self.log.append()
+        with open(self.log_name, 'at') as f:
+            f.write(line)
 
     def run(self) -> None:
         """Основной алгоритм программы."""
-        self.pb['value'] = 0
-        self.pb.update()
+
         metric = self.namespace.score
         min_eps = self.namespace.emin
         max_eps = self.namespace.emax
@@ -45,8 +55,6 @@ class Cli():
         min_min_samples = self.namespace.smin
         max_min_samples = self.namespace.smax
         nstep_eps = round((max_eps - min_eps) / step_eps)
-        self.pb['maximum'] = (max_min_samples - min_min_samples + 1) * nstep_eps
-        self.tx.configure(state='normal')
         self.log_append(('Starting Autoscan (range EPS: {0:.2f} - {1:.2f} \u212B,'
                          'step EPS = {2:.2f} \u212B, range min_samples: {3:d} - {4:d}...\n').format(
             min_eps, max_eps, step_eps, min_min_samples, max_min_samples))
@@ -72,7 +80,6 @@ class Cli():
                              'Calinski and Harabaz score: {4:.3f}\nEPS: {2:.1f} \u212B\n'
                              'MIN_SAMPLES: {3:d}\n').format(self.cls.n_clusters,
                                                             self.cls.si_score, eps, min_samples, self.cls.calinski))
-
             self.graph()
 
     def graph(self):
@@ -83,14 +90,11 @@ class Cli():
             self.log_append()
 
     def open_file(self):
-        pass
-
-    def open_pdb(self):
-        if self.run_flag:
-            showerror('Ошибка!', 'Расчет уже идёт!')
-            return
-        opt = {'filetypes': [('Файлы PDB', ('.pdb', '.PDB', '.ent')), ('Все файлы', '.*')]}
-        pdb = askopenfilename(**opt)
+        if not self.namespace.input:
+            print('File not defined')
+            sys.exit(-1)
+        if self.namespace.input.split('.')
+            pdb = askopenfilename(**opt)
         if pdb:
             try:
                 self.cls.open_pdb(pdb)

@@ -79,8 +79,6 @@ class TkGui(tk.Tk):
             '<Enter>', lambda e: self._bound_to_mousewheel(e, self.tx))
         self.tx.bind('<Leave>', self._unbound_to_mousewheel)
         self.run_flag = False
-        self.s_array = None
-        self.run_flag = False
         self.fig = None
         self.canvas = None
         self.toolbar = None

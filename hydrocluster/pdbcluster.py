@@ -10,6 +10,11 @@ from urllib.error import HTTPError
 
 warnings.filterwarnings("ignore")
 
+import numpy as np
+from matplotlib.figure import Figure
+import matplotlib.cm as cm
+from mpl_toolkits.mplot3d import axes3d
+
 try:
     from sklearn.cluster import DBSCAN
     from sklearn.metrics import silhouette_score
@@ -17,11 +22,6 @@ try:
     from sklearn.metrics.pairwise import euclidean_distances
 except ImportError:
     raise ImportError
-
-import numpy as np
-from matplotlib.figure import Figure
-import matplotlib.cm as cm
-from mpl_toolkits.mplot3d import axes3d
 
 
 class ClusterPdb:
@@ -167,7 +167,7 @@ class ClusterPdb:
         try:
             structure = MMTFParser.get_structure_from_url(url)
         except HTTPError as e:
-            raise HTTPError
+            raise e
         else:
             with io.StringIO() as f:
                 iopdb = PDB.PDBIO()
@@ -203,15 +203,18 @@ class ClusterPdb:
                 f.seek(0, 0)
                 self.s_array = f.readlines()
 
-    def parser(self):
+    def parser(self, htable='hydropathy'):
         self.clean()
         xyz_array = []
         # www.pnas.org/cgi/doi/10.1073/pnas.1616138113 # 1.0 - -7.55 kj/mol A;; residues with delta mu < 0
-        hydropathy = {'ALA': 1.269, 'VAL': 1.094, 'PRO': 1.0, 'LEU': 1.147, 'ILE': 1.289, 'PHE': 1.223, 'MET': 1.013,
-                    'TRP': 1.142, 'CYS': 0.746, 'GLY': 0.605, 'THR': 0.472}
+        nanodroplet = {'ALA': 1.269, 'VAL': 1.094, 'PRO': 1.0, 'LEU': 1.147, 'ILE': 1.289, 'PHE': 1.223, 'MET': 1.013,
+                       'TRP': 1.142, 'CYS': 0.746, 'GLY': 0.605, 'THR': 0.472}
         # Kyte J, Doolittle RF. J Mol Biol. 1982 May 5;157(1):105-32. 1.0 - 1.8 residues with kdHydrophobicity > 0
         hydropathy = {'ALA': 1.0, 'VAL': 2.333, 'LEU': 2.111, 'ILE': 2.5, 'PHE': 1.556, 'MET': 1.056, 'CYS': 1.389}
-        hydrfob = hydropathy
+        if htable == 'hydropathy':
+            hydrfob = hydropathy
+        elif htable == 'nanodroplet':
+            hydrfob = nanodroplet
         # OLD CA-BASED PARSER
         # for s in strarr:
         #     if s[0:6] == 'ATOM  ' and (s[17:20] in hydrfob) and s[12:16] == ' CA ':

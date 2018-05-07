@@ -24,15 +24,15 @@ class Parser(argparse.ArgumentParser):
         self.add_argument('-o', '--output', type=str, default='', help='Output directory name')
         self.add_argument('-sc', '--score', choices=['si_score', 'calinski'], type=str, default='calinski',
                           help='Score coefficient')
-        self.add_argument('-ht', '--htable', choices=['hydropathy', 'hydropathy'], type=str, default='tkgui',
+        self.add_argument('-ht', '--htable', choices=['hydropathy', 'nanodroplet'], type=str, default='hydropathy',
                           help='Hydrophobity table for weighting')
+
 
 if __name__ == '__main__':
     parser = Parser()
     namespace = parser.parse_args()
     if namespace.gui == 'tkgui':
         from hydrocluster.tkgui import TkGui
-
         gui = TkGui(namespace)
         gui.mainloop()
     elif namespace.gui == 'cli':

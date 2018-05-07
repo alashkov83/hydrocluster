@@ -7,10 +7,8 @@ import shutil
 import sys
 from urllib.error import HTTPError
 
-import matplotlib
-
-matplotlib.use('Agg')
 from matplotlib.backends.backend_agg import FigureCanvasAgg
+
 try:
     from .pdbcluster import ClusterPdb
 except ImportError:
@@ -27,8 +25,14 @@ class Cli:
         self.namespace = namespace
         if self.namespace.output:
             self.newdir = self.namespace.output
+            self.basefile = self.namespace.output
         else:
-            self.newdir = 'output'
+            if self.namespace.input.count('.') > 0:
+                self.newdir = self.namespace.input.split('.')[-2]
+                self.basefile = os.path.basename(self.namespace.input).split('.')[-2]
+            else:
+                self.newdir = self.namespace.input
+                self.basefile = self.namespace.input
         if os.path.exists(self.newdir):
             shutil.rmtree(self.newdir)
         try:
@@ -36,7 +40,7 @@ class Cli:
         except OSError:
             print('Невозможно создать каталог ' + self.newdir)
             sys.exit(-1)
-        self.log_name = os.path.join(self.newdir, '{:s}'.format(self.namespace.output + '.log'))
+        self.log_name = os.path.join(self.newdir, '{:s}'.format(self.basefile + '.log'))
         self.cls = ClusterPdb()
         self.open_file()
         self.parse_pdb()
@@ -45,7 +49,6 @@ class Cli:
         self.save_state()
         self.graph()
         self.colormap()
-
 
     def log_append(self, line):
         print(line, end='')
@@ -90,17 +93,18 @@ class Cli:
 
     def graph(self):
         grid, legend = True, True
-        sa = os.path.join(self.newdir, '{:s}'.format(self.namespace.output + '.png'))
+        sa = os.path.join(self.newdir, '{:s}'.format(self.basefile + '.png'))
         try:
             fig, ax = self.cls.graph(grid, legend)
             canvas = FigureCanvasAgg(fig)
             canvas.print_png(sa)
         except AttributeError:
             self.log_append('Ошибка график не построен!\n')
+            return
 
     def open_file(self):
         if not self.namespace.input:
-            self.log_append('Filename not defined')
+            self.log_append('Filename not defined\n')
             sys.exit(-1)
         if self.namespace.input.split('.')[-1].strip().lower() == 'pdb':
             pdb_f = self.namespace.input
@@ -132,24 +136,25 @@ class Cli:
             try:
                 self.cls.open_url(url)
             except ImportError:
-                self.log_append('Ошибка импорта! BioPython недоступен!\nДля исправления установите biopython и mmtf!')
-                return
+                self.log_append('Ошибка импорта! BioPython недоступен!\nДля исправления установите biopython и mmtf!\n')
+                sys.exit(-1)
             except HTTPError as e:
-                self.log_append('Ошибка! {1:s}\nID PDB: {0:s} не найден или ссылается на некорректный файл!').format(
-                    url, str(e))
+                self.log_append('Ошибка! {1:s}\nID PDB: {0:s} не найден или ссылается на некорректный файл!\n'.format(
+                    url, str(e)))
+                sys.exit(-1)
             else:
                 self.log_append('Файл загружен\n')
                 self.parse_pdb()
 
     def parse_pdb(self):
         try:
-            self.cls.parser()
+            self.cls.parser(htable=self.namespace.htable)
         except ValueError:
             self.log_append('Ошибка! Неверный формат\nлибо файл не содержит гидрофоьных остатков!\n')
             return
 
     def save_state(self):
-        st = os.path.join(self.newdir, '{:s}'.format(self.namespace.output + '.bin'))
+        st = os.path.join(self.newdir, '{:s}'.format(self.basefile + '.bin'))
         try:
             self.cls.savestate(st)
         except FileNotFoundError:
@@ -179,10 +184,11 @@ class Cli:
         self.log_append('\n\n')
 
     def colormap(self):
-        sa = os.path.join(self.newdir, '{:s}'.format(self.namespace.output + '.cm.png'))
+        sa = os.path.join(self.newdir, '{:s}'.format(self.basefile + '.cm.png'))
         try:
             fig = self.cls.colormap(grid_state=True)
             canvas = FigureCanvasAgg(fig)
             canvas.print_png(sa)
         except AttributeError:
             self.log_append('Ошибка график не построен!\n')
+            return

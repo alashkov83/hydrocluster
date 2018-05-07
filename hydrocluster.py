@@ -37,5 +37,4 @@ if __name__ == '__main__':
         gui.mainloop()
     elif namespace.gui == 'cli':
         from hydrocluster.cli import Cli
-
         cli = Cli(namespace)

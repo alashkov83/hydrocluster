@@ -5,7 +5,10 @@
 import gzip
 import io
 import pickle
+import warnings
 from urllib.error import HTTPError
+
+warnings.filterwarnings("ignore")
 
 try:
     from sklearn.cluster import DBSCAN

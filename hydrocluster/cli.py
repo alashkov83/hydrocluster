@@ -3,12 +3,14 @@
 """Created by lashkov on 04.05.18"""
 
 import os
+import shutil
 import sys
 from urllib.error import HTTPError
 
 import matplotlib
 
 matplotlib.use('Agg')
+from matplotlib.backends.backend_agg import FigureCanvasAgg
 try:
     from .pdbcluster import ClusterPdb
 except ImportError:
@@ -20,28 +22,33 @@ except ImportError:
     import progressbar
 
 
-class Cli():
+class Cli:
     def __init__(self, namespace) -> None:
         self.namespace = namespace
         if self.namespace.output:
             self.newdir = self.namespace.output
         else:
             self.newdir = 'output'
+        if os.path.exists(self.newdir):
+            shutil.rmtree(self.newdir)
         try:
             os.makedirs(self.newdir, exist_ok=True)
         except OSError:
             print('Невозможно создать каталог ' + self.newdir)
             sys.exit(-1)
-        self.log_name = os.path.join(self.newdir, '{:s}'.format(self.output))
-        self.fig = None
+        self.log_name = os.path.join(self.newdir, '{:s}'.format(self.namespace.output + '.log'))
         self.cls = ClusterPdb()
         self.open_file()
         self.parse_pdb()
         self.run()
+        self.resi()
+        self.save_state()
         self.graph()
+        self.colormap()
+
 
     def log_append(self, line):
-        print(line)
+        print(line, end='')
         with open(self.log_name, 'at') as f:
             f.write(line)
 
@@ -80,67 +87,58 @@ class Cli():
                              'Calinski and Harabaz score: {4:.3f}\nEPS: {2:.1f} \u212B\n'
                              'MIN_SAMPLES: {3:d}\n').format(self.cls.n_clusters,
                                                             self.cls.si_score, eps, min_samples, self.cls.calinski))
-            self.graph()
 
     def graph(self):
         grid, legend = True, True
+        sa = os.path.join(self.newdir, '{:s}'.format(self.namespace.output + '.png'))
         try:
-            self.fig, ax = self.cls.graph(grid, legend)
+            fig, ax = self.cls.graph(grid, legend)
+            canvas = FigureCanvasAgg(fig)
+            canvas.print_png(sa)
         except AttributeError:
-            self.log_append()
+            self.log_append('Ошибка график не построен!\n')
 
     def open_file(self):
         if not self.namespace.input:
-            print('File not defined')
+            self.log_append('Filename not defined')
             sys.exit(-1)
-        if self.namespace.input.split('.')
-            pdb = askopenfilename(**opt)
-        if pdb:
+        if self.namespace.input.split('.')[-1].strip().lower() == 'pdb':
+            pdb_f = self.namespace.input
             try:
-                self.cls.open_pdb(pdb)
+                self.cls.open_pdb(pdb_f)
             except FileNotFoundError:
-                return
+                self.log_append('File {:s} not found!\n'.format(pdb_f))
+                sys.exit(-1)
             else:
-                showinfo('Информация', 'Файл прочитан!')
+                self.log_append('Файл {:s} прочитан!\n'.format(pdb_f))
                 self.parse_pdb()
-        else:
-            return
-
-    def open_url(self):
-        url = askstring('Загрузить', 'ID PDB:')
-        if url is not None:
-            try:
-                self.cls.open_url(url)
-            except ImportError:
-                showerror('Ошибка импорта',
-                          'BioPython недоступен!'
-                          '\nДля исправления установите biopython и mmtf!')
-                return
-            except HTTPError as e:
-                showerror('Ошибка!', ('{1:s}\nID PDB: {0:s} не найден'
-                                      ' или ссылается на некорректный файл!').format(url, str(e)))
-            else:
-                showinfo('Информация', 'Файл загружен')
-                self.parse_pdb()
-
-    def open_cif(self):
-        opt = {'filetypes': [('Файлы mmCIF', ('.cif', '.CIF')), ('Все файлы', '.*')]}
-        cif_f = askopenfilename(**opt)
-        if cif_f:
+        elif self.namespace.input.split('.')[-1].strip().lower() == 'cif':
+            cif_f = self.namespace.input
             try:
                 self.cls.open_cif(cif_f)
             except ImportError:
-                showerror('Ошибка импорта',
-                          'BioPython недоступен!'
-                          '\nДля исправления установите biopython и mmtf!')
-                return
+                self.log_append('Ошибка импорта! BioPython недоступен!\nДля исправления установите biopython и mmtf!\n')
+                sys.exit(-1)
             except FileNotFoundError:
-                return
+                sys.exit(-1)
             except ValueError:
-                showerror('Ошибка!', 'Некорректный CIF файл: {0:s}!'.format(cif_f))
-                return
+                self.log_append('Ошибка! Некорректный CIF файл: {0:s}!\n'.format(cif_f))
+                sys.exit(-1)
             else:
-                showinfo('Информация', 'Файл прочитан!')
+                self.log_append('Файл {:s} прочитан!\n')
+                self.parse_pdb()
+        else:
+            url = self.namespace.input
+            try:
+                self.cls.open_url(url)
+            except ImportError:
+                self.log_append('Ошибка импорта! BioPython недоступен!\nДля исправления установите biopython и mmtf!')
+                return
+            except HTTPError as e:
+                self.log_append('Ошибка! {1:s}\nID PDB: {0:s} не найден или ссылается на некорректный файл!').format(
+                    url, str(e))
+            else:
+                self.log_append('Файл загружен\n')
                 self.parse_pdb()
 
     def parse_pdb(self):
@@ -150,104 +148,14 @@ class Cli():
             self.log_append('Ошибка! Неверный формат\nлибо файл не содержит гидрофоьных остатков!\n')
             return
 
-    def clean_txt(self):
-        self.tx.configure(state='normal')
-        self.tx.delete('1.0', tk.END)
-        self.tx.configure(state='disabled')
-
-    def open_state(self):
-        if self.run_flag:
-            showerror('Ошибка!', 'Расчет уже идёт!')
-            return
-        opt = {'filetypes': [('Файл данных', ('.dat', '.DAT')), ('Все файлы', '.*')],
-               'title': 'Загрузить состояние'}
-        state = askopenfilename(**opt)
-        try:
-            self.cls.loadstate(state)
-        except FileNotFoundError:
-            return
-        except (ValueError, OSError):
-            showerror("Ошибка!", "Файл неверного формата!")
-            return
-        else:
-            self.run(auto=True)
-
     def save_state(self):
-        if self.run_flag:
-            showerror('Ошибка!', 'Расчет уже идёт!')
-            return
-        opt = {'filetypes': [('Файл данных', ('.dat', '.DAT')), ('Все файлы', '.*')],
-               'initialfile': 'myfile.dat',
-               'title': 'Сохранить состояние'}
-        state = asksaveasfilename(**opt)
+        st = os.path.join(self.newdir, '{:s}'.format(self.namespace.output + '.bin'))
         try:
-            self.cls.savestate(state)
+            self.cls.savestate(st)
         except FileNotFoundError:
             return
-
-    def save_log(self):
-        opt = {'parent': self, 'filetypes': [('LOG', '.log'), ],
-               'initialfile': 'myfile.log',
-               'title': 'Сохранить LOG'}
-        sa = asksaveasfilename(**opt)
-        if sa:
-            letter = self.tx.get(1.0, tk.END)
-            try:
-                with open(sa, 'w') as f:
-                    f.write(letter)
-            except FileNotFoundError:
-                pass
-
-    def save_graph(self):
-        if self.run_flag:
-            showerror('Ошибка!', 'Расчет не закончен!')
-            return
-        if self.fig is None:
-            showerror('Ошибка!', 'График недоступен!')
-            return
-        opt = {'parent': self,
-               'filetypes': [('Все поддерживаесые форматы', ('.eps', '.jpeg', '.jpg', '.pdf', '.pgf', '.png', '.ps',
-                                                             '.raw', '.rgba', '.svg', '.svgz', '.tif', '.tiff')), ],
-               'initialfile': 'myfile.png',
-               'title': 'Сохранить график'}
-        sa = asksaveasfilename(**opt)
-        if sa:
-            try:
-                self.fig.savefig(sa, dpi=600)
-            except FileNotFoundError:
-                return
-            except AttributeError:
-                showerror('Ошибка!', 'График недоступен!')
-            except ValueError:
-                showerror('Неподдерживаемый формат файла рисунка!',
-                          'Поддреживаемые форматы: eps, jpeg, jpg, pdf, pgf, png, ps, raw, rgba, svg, svgz, tif, tiff.')
-
-    def grid_set(self):
-        self.grid = bool(askyesno('Cетка', 'Отобразить?'))
-        if self.run_flag:
-            return
-        try:
-            self.canvas.get_tk_widget().destroy()
-            self.toolbar.destroy()
-        except AttributeError:
-            pass
-        self.graph()
-
-    def legend_set(self):
-        self.legend = bool(askyesno('Легенда', 'Отобразить?'))
-        if self.run_flag:
-            return
-        try:
-            self.canvas.get_tk_widget().destroy()
-            self.toolbar.destroy()
-        except AttributeError:
-            pass
-        self.graph()
 
     def resi(self):
-        if self.run_flag:
-            showerror('Ошибка!', 'Расчет уже идёт!')
-            return
         aa_list = self.cls.aa_list
         if (not aa_list) or self.cls.labels is None:
             return
@@ -261,44 +169,20 @@ class Cli():
                         core_aa_list.append(aa[0])
                     elif aa[1] == k and not aa[2]:
                         uncore_aa_list.append(aa[0])
-                self.tx.configure(state='normal')
-                self.tx.insert(tk.END, '\nIn Core cluster No {:d} included: '.format(k + 1))
-                self.tx.configure(state='disabled')
+                self.log_append('\nIn Core cluster No {:d} included: '.format(k + 1))
                 for aac in core_aa_list:
-                    self.tx.configure(state='normal')
-                    self.tx.insert(tk.END, '{2:s}:{1:s}{0:d} '.format(*aac))
-                    self.tx.configure(state='disabled')
+                    self.log_append('{2:s}:{1:s}{0:d} '.format(*aac))
                 if uncore_aa_list:
-                    self.tx.configure(state='normal')
-                    self.tx.insert(tk.END, '\nIn UNcore cluster No {:d} included: '.format(k + 1))
-                    self.tx.configure(state='disabled')
+                    self.log_append('\nIn UNcore cluster No {:d} included: '.format(k + 1))
                     for aac in uncore_aa_list:
-                        self.tx.configure(state='normal')
-                        self.tx.insert(tk.END, '{2:s}:{1:s}{0:d} '.format(*aac))
-                        self.tx.configure(state='disabled')
-        self.tx.configure(state='normal')
-        self.tx.insert(tk.END, '\n\n')
-        self.tx.configure(state='disabled')
+                        self.log_append('{2:s}:{1:s}{0:d} '.format(*aac))
+        self.log_append('\n\n')
 
     def colormap(self):
-        if self.run_flag:
-            showerror('Ошибка!', 'Расчет не закончен!')
-            return
+        sa = os.path.join(self.newdir, '{:s}'.format(self.namespace.output + '.cm.png'))
         try:
-            grid = self.grid
-            fig = self.cls.colormap(grid)
-        except ValueError:
-            showinfo('Информация', 'Данные недоступны')
-            return
-        win_cls = tk.Toplevel(self)
-        win_cls.title("ColorMaps")
-        win_cls.minsize(width=600, height=600)
-        win_cls.resizable(False, False)
-        fra4 = ttk.Frame(win_cls)
-        fra4.grid(row=0, column=0)
-        canvas = FigureCanvasTkAgg(fig, master=fra4)
-        canvas.draw()
-        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-        toolbar = NavigationToolbar2TkAgg(canvas, fra4)
-        toolbar.update()
-        canvas._tkcanvas.pack(fill=tk.BOTH, side=tk.TOP, expand=1)
+            fig = self.cls.colormap(grid_state=True)
+            canvas = FigureCanvasAgg(fig)
+            canvas.print_png(sa)
+        except AttributeError:
+            self.log_append('Ошибка график не построен!\n')

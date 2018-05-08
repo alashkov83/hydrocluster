@@ -38,6 +38,9 @@ class ClusterPdb:
         self.si_score = -1
         self.calinski = 0
         self.s_array = []
+        self.htable = 'hydropathy'
+        self.parse_results = (0, 0.0, 0.0, 0.0)
+        self.auto_params = (0.0, 0.0, 0.0, 0, 0)
         self.weight_array = []
         self.aa_list = []
         self.states = []
@@ -49,6 +52,9 @@ class ClusterPdb:
         self.X = None
         self.pdist = None
         self.labels = None
+        self.htable = 'hydropathy'
+        self.parse_results = (0, 0.0, 0.0, 0.0)
+        self.auto_params = (0.0, 0.0, 0.0, 0, 0)
         self.core_samples_mask = []
         self.n_clusters = 0
         self.si_score = -1
@@ -107,17 +113,16 @@ class ClusterPdb:
         except ValueError:
             self.calinski = 0
 
-    def auto_yield(self, min_eps, max_eps, nstep_eps, min_min_samples, max_min_samples):
-        """
+    def init_cycles(self, min_eps, max_eps, step_eps, min_min_samples, max_min_samples):
+        self.auto_params = min_eps, max_eps, step_eps, min_min_samples, max_min_samples
+        return (max_min_samples - min_min_samples + 1) * np.arange(min_eps, max_eps + step_eps, step_eps).size
 
-        :param min_eps:
-        :param max_eps:
-        :param nstep_eps:
-        :param min_min_samples:
-        :param max_min_samples:
+    def auto_yield(self):
         """
+        """
+        min_eps, max_eps, step_eps, min_min_samples, max_min_samples = self.auto_params
         n = 1
-        for j in np.linspace(min_eps, max_eps, nstep_eps):
+        for j in np.arange(min_eps, max_eps + step_eps, step_eps):
             for i in range(min_min_samples, max_min_samples + 1):
                 self.cluster(eps=j, min_samples=i)
                 self.states.append(
@@ -205,6 +210,7 @@ class ClusterPdb:
 
     def parser(self, htable='hydropathy'):
         self.clean()
+        self.htable = htable
         xyz_array = []
         # www.pnas.org/cgi/doi/10.1073/pnas.1616138113 # 1.0 - -7.55 kj/mol A;; residues with delta mu < 0
         nanodroplet = {'ALA': 1.269, 'VAL': 1.094, 'PRO': 1.0, 'LEU': 1.147, 'ILE': 1.289, 'PHE': 1.223, 'MET': 1.013,
@@ -264,6 +270,9 @@ class ClusterPdb:
             raise ValueError
         self.X = xyz_array
         self.pdist = euclidean_distances(self.X)
+        self.parse_results = len(self.aa_list), np.min(self.pdist[np.nonzero(self.pdist)]), \
+                             np.max(self.pdist[np.nonzero(self.pdist)]), np.mean(self.pdist[np.nonzero(self.pdist)])
+        return self.parse_results
 
     def graph(self, grid_state, legend_state):
         """
@@ -370,6 +379,9 @@ class ClusterPdb:
             'weight_array': self.weight_array,
             'aa_list': self.aa_list,
             's_array': self.s_array,
+            'hteble': self.htable,
+            'parse_result': self.parse_results,
+            'auto_params': self.auto_params,
             'states': self.states}
         with gzip.open(file, 'wb') as f:
             pickle.dump(glob_state, f)
@@ -388,6 +400,9 @@ class ClusterPdb:
         self.core_samples_mask = global_state['core_samples_mask']
         self.n_clusters = global_state['n_clusters']
         self.s_array = global_state['s_array']
+        self.htable = global_state['htable'],
+        self.parse_results = global_state['parse_results']
+        self.auto_params = global_state['auto_params']
         self.si_score = global_state['si_score']
         self.calinski = global_state['calinski']
         self.weight_array = global_state['weight_array']

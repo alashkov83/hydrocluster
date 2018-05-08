@@ -30,46 +30,96 @@ class TkGui(tk.Tk):
         self.protocol('WM_DELETE_WINDOW', self.close_win)
         self.menu()
         fra1 = tk.Frame(self)
-        fra1.grid(row=0, column=0)
-        lab1 = tk.LabelFrame(fra1, text='EPS (\u212B)',
+        fra1.grid(row=0, rowspan=2, column=0)
+        lab1 = tk.LabelFrame(fra1, text='Parsing',
                              labelanchor='n', borderwidth=5)
-        lab1.grid(row=0, column=0, pady=5, padx=5)
-        self.sca1 = tk.Scale(lab1, length=300, from_=1.0, to=15.0,
+        lab1.grid(row=0, column=0, pady=10)
+        lab11 = tk.LabelFrame(lab1, text='Метрика автоподбора',
+                              labelanchor='n', borderwidth=5)
+        lab11.grid(row=0, column=0, pady=5, padx=5)
+        listbox_items = ['hydropathy', 'nanodroplet']
+        self.combox_p = ttk.Combobox(
+            lab11, height=5, width=15, values=listbox_items)
+        self.combox_p.pack()
+        self.combox_p.set('hydropathy')
+        but3 = tk.Button(lab1, text='Start',
+                         command=self.parse_pdb)
+        but3.grid(row=1, column=0, pady=5)
+        lab3 = tk.LabelFrame(fra1, text='Manual mode',
+                             labelanchor='n', borderwidth=5)
+        lab3.grid(row=2, column=0, pady=10)
+        lab31 = tk.LabelFrame(lab3, text='EPS (\u212B)',
+                              labelanchor='n', borderwidth=5)
+        lab31.grid(row=0, column=0, pady=5, padx=5)
+        self.sca1 = tk.Scale(lab31, length=200, from_=1.0, to=15.0,
                              showvalue=1, orient=tk.HORIZONTAL, resolution=0.1)
         self.sca1.pack()
-        lab2 = tk.LabelFrame(fra1, text='MIN_SAMPLES',
-                             labelanchor='n', borderwidth=5)
-        lab2.grid(row=0, column=1, pady=5, padx=5)
-        self.sca2 = tk.Scale(lab2, length=300, from_=1,
+        lab32 = tk.LabelFrame(lab3, text='MIN_SAMPLES',
+                              labelanchor='n', borderwidth=5)
+        lab32.grid(row=1, column=0, pady=5, padx=5)
+        self.sca2 = tk.Scale(lab32, length=200, from_=1,
                              to=50, showvalue=1, orient=tk.HORIZONTAL)
         self.sca2.pack()
-        but1 = tk.Button(fra1, text='Старт!',
+        but1 = tk.Button(lab3, text='Start',
                          command=lambda: self.run(auto=False))
-        but1.grid(row=0, column=2, padx=10)
-        fra2 = tk.Frame(self)
-        fra2.grid(row=1, column=0)
-        but2 = tk.Button(fra2, text='Авто',
-                         command=lambda: self.run(auto=True))
-        but2.grid(row=0, column=1, padx=10)
-        lab3 = tk.LabelFrame(fra2, text='Метрика автоподбора',
+        but1.grid(row=2, column=0, pady=5)
+        lab2 = tk.LabelFrame(fra1, text='Auto mode',
                              labelanchor='n', borderwidth=5)
-        lab3.grid(row=0, column=0, pady=5, padx=5)
+        lab2.grid(row=1, column=0, pady=10)
+        lab22 = tk.Frame(lab2)
+        lab22.grid(row=1, column=0)
+        l1 = tk.Label(lab22, text="Min EPS (\u212B):", anchor=tk.NW)
+        l1.grid(row=0, column=0, pady=5, padx=5)
+        self.ent_min_eps = tk.Entry(lab22, width=4, bd=3)
+        self.ent_min_eps.delete(0, tk.END)
+        self.ent_min_eps.insert(0, '3.0')
+        self.ent_min_eps.grid(row=0, column=1, pady=5, padx=5)
+        l2 = tk.Label(lab22, text="Max EPS (\u212B):", anchor=tk.NW)
+        l2.grid(row=1, column=0, pady=5, padx=5)
+        self.ent_max_eps = tk.Entry(lab22, width=4, bd=3)
+        self.ent_max_eps.delete(0, tk.END)
+        self.ent_max_eps.insert(0, '15.0')
+        self.ent_max_eps.grid(row=1, column=1, pady=5, padx=5)
+        l3 = tk.Label(lab22, text="Step EPS (\u212B):", anchor=tk.NW)
+        l3.grid(row=2, column=0, pady=5, padx=5)
+        self.ent_step_eps = tk.Entry(lab22, width=4, bd=3)
+        self.ent_step_eps.delete(0, tk.END)
+        self.ent_step_eps.insert(0, '0.1')
+        self.ent_step_eps.grid(row=2, column=1, pady=5, padx=5)
+        l4 = tk.Label(lab22, text="Min MIN_SAMPLES:", anchor=tk.NW)
+        l4.grid(row=3, column=0, pady=5, padx=5)
+        self.ent_min_min_samples = tk.Entry(lab22, width=4, bd=3)
+        self.ent_min_min_samples.delete(0, tk.END)
+        self.ent_min_min_samples.insert(0, '2')
+        self.ent_min_min_samples.grid(row=3, column=1, pady=5, padx=5)
+        l5 = tk.Label(lab22, text="Max MIN_SAMPLES:", anchor=tk.NW)
+        l5.grid(row=4, column=0, pady=5, padx=5)
+        self.ent_max_min_samples = tk.Entry(lab22, width=4, bd=3)
+        self.ent_max_min_samples.delete(0, tk.END)
+        self.ent_max_min_samples.insert(0, '50')
+        self.ent_max_min_samples.grid(row=4, column=1, pady=5, padx=5)
+        but2 = tk.Button(lab2, text='Start',
+                         command=lambda: self.run(auto=True))
+        but2.grid(row=3, column=0, pady=5)
+        lab21 = tk.LabelFrame(lab2, text='Метрика автоподбора',
+                              labelanchor='n', borderwidth=5)
+        lab21.grid(row=0, column=0, pady=5, padx=5)
         listbox_items = ['calinski', 'si_score']
         self.combox = ttk.Combobox(
-            lab3, height=5, width=15, values=listbox_items)
+            lab21, height=5, width=15, values=listbox_items)
         self.combox.pack()
         self.combox.set('calinski')
-        lab4 = tk.LabelFrame(fra2, text='Progress: ',
-                             labelanchor='n', borderwidth=5)
-        lab4.grid(row=0, column=2, pady=5, padx=5)
+        lab23 = tk.LabelFrame(lab2, text='Progress: ',
+                              labelanchor='n', borderwidth=5)
+        lab23.grid(row=4, column=0, pady=5, padx=5)
         self.pb = ttk.Progressbar(
-            lab4, orient='horizontal', mode='determinate', length=450)
+            lab23, orient='horizontal', mode='determinate', length=200)
         self.pb.pack()
         self.fra3 = tk.Frame(self, width=800, height=650)
-        self.fra3.grid(row=2, column=0)
+        self.fra3.grid(row=0, column=1)
         self.fra3.grid_propagate(False)
         fra4 = tk.Frame(self)
-        fra4.grid(row=3, column=0, pady=10)
+        fra4.grid(row=1, column=1, pady=10)
         self.tx = tk.Text(fra4, width=100, height=10)
         scr = tk.Scrollbar(fra4, command=self.tx.yview)
         self.tx.configure(yscrollcommand=scr.set, state='disabled')
@@ -160,21 +210,63 @@ class TkGui(tk.Tk):
             if self.cls.states:
                 eps, min_samples = self.cls.auto(metric=metric)
             else:
-                min_eps = 3.0
-                max_eps = 15.0
-                step_eps = 0.1
-                min_min_samples = 2
-                max_min_samples = 50
-                nstep_eps = round((max_eps - min_eps) / step_eps)
-                self.pb['maximum'] = (max_min_samples - min_min_samples + 1) * nstep_eps
+                try:
+                    min_eps = float(self.ent_min_eps.get())
+                    if min_eps < 0:
+                        raise ValueError
+                except ValueError:
+                    self.run_flag = True
+                    self.pb['value'] = 0
+                    self.pb.update()
+                    showerror("Error", "Non correct value for Min EPS")
+                    return
+                try:
+                    max_eps = float(self.ent_max_eps.get())
+                    if max_eps < 0:
+                        raise ValueError
+                except ValueError:
+                    self.run_flag = True
+                    self.pb['value'] = 0
+                    self.pb.update()
+                    showerror("Error", "Non correct value for Max EPS")
+                    return
+                try:
+                    step_eps = float(self.ent_step_eps.get())
+                    if step_eps < 0:
+                        raise ValueError
+                except ValueError:
+                    self.run_flag = True
+                    self.pb['value'] = 0
+                    self.pb.update()
+                    showerror("Error", "Non correct value for Step EPS")
+                    return
+                try:
+                    min_min_samples = int(self.ent_min_min_samples.get())
+                    if min_min_samples < 0:
+                        raise ValueError
+                except ValueError:
+                    self.run_flag = True
+                    self.pb['value'] = 0
+                    self.pb.update()
+                    showerror("Error", "Non correct value for Min MIN_SAMPLES")
+                    return
+                try:
+                    max_min_samples = int(self.ent_max_min_samples.get())
+                    if max_min_samples < 0:
+                        raise ValueError
+                except ValueError:
+                    self.run_flag = True
+                    self.pb['value'] = 0
+                    self.pb.update()
+                    showerror("Error", "Non correct value for Max MIN_SAMPLES")
+                    return
+                self.pb['maximum'] = self.cls.init_cycles(min_eps, max_eps, step_eps, min_min_samples, max_min_samples)
                 self.tx.configure(state='normal')
                 self.tx.insert(tk.END, ('Starting Autoscan (range EPS: {0:.2f} - {1:.2f} \u212B,'
                                         'step EPS = {2:.2f} \u212B, range min_samples: {3:d} - {4:d}...\n').format(
                     min_eps, max_eps, step_eps, min_min_samples, max_min_samples))
                 try:
-                    for n, j, i in self.cls.auto_yield(min_eps=min_eps, max_eps=max_eps, nstep_eps=nstep_eps,
-                                                       min_min_samples=min_min_samples,
-                                                       max_min_samples=max_min_samples):
+                    for n, j, i in self.cls.auto_yield():
                         self.tx.insert(tk.END, ('Step No {0:d}: EPS = {1:.2f} \u212B, '
                                                 'min_samples = {2:d}, No clusters = {3:d}, '
                                                 'Silhouette score = {4:.3f} '
@@ -289,12 +381,13 @@ class TkGui(tk.Tk):
 
     def parse_pdb(self):
         try:
-            self.cls.parser()
+            htable = self.combox_p.get()
+            self.cls.parser(htable=htable)
         except ValueError:
             showerror('Ошибка', 'Неверный формат\nлибо файл не содержит гидрофоьных остатков!')
             return
         else:
-            showinfo('Информация', 'Файл распарсен!')
+            showinfo('Информация', 'Файл распарсен! HTable - {:s}'.format(htable))
         self.pb['value'] = 0
         self.pb.update()
         try:

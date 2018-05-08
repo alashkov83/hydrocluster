@@ -67,16 +67,13 @@ class Cli:
         step_eps = self.namespace.estep
         min_min_samples = self.namespace.smin
         max_min_samples = self.namespace.smax
-        nstep_eps = round((max_eps - min_eps) / step_eps)
         self.log_append(('Starting Autoscan (range EPS: {0:.2f} - {1:.2f} \u212B,'
                          'step EPS = {2:.2f} \u212B, range min_samples: {3:d} - {4:d}...\n').format(
             min_eps, max_eps, step_eps, min_min_samples, max_min_samples))
-        bar1 = progressbar.ProgressBar(maxval=(max_min_samples - min_min_samples + 1) * nstep_eps,
-                                       redirect_stdout=True).start()
+        bar1 = progressbar.ProgressBar(maxval=self.cls.init_cycles(
+            min_eps, max_eps, step_eps, min_min_samples, max_min_samples), redirect_stdout=True).start()
         try:
-            for n, j, i in self.cls.auto_yield(min_eps=min_eps, max_eps=max_eps, nstep_eps=nstep_eps,
-                                               min_min_samples=min_min_samples,
-                                               max_min_samples=max_min_samples):
+            for n, j, i in self.cls.auto_yield():
                 self.log_append(('Step No {0:d}: EPS = {1:.2f} \u212B, '
                                  'min_samples = {2:d}, No clusters = {3:d}, '
                                  'Silhouette score = {4:.3f} Calinski score = {5:.3f}\n').format(
@@ -160,10 +157,13 @@ class Cli:
 
     def parse_pdb(self, htable):
         try:
-            self.cls.parser(htable=htable)
+            parse_results = self.cls.parser(htable=htable)
         except ValueError:
             self.log_append('Ошибка! Неверный формат\nлибо файл не содержит гидрофоьных остатков!\n')
             return
+        else:
+            self.log_append("No of hydrophobic residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
+                            "Maximum distance = {:.3f} \u212B\nMean distance = {:.3f} \u212B\n".format(*parse_results))
 
     def save_state(self, newdir, basefile):
         st = os.path.join(newdir, '{:s}'.format(basefile + '.bin'))

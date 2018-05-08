@@ -26,6 +26,10 @@ class Parser(argparse.ArgumentParser):
                           help='Score coefficient')
         self.add_argument('-ht', '--htable', choices=['hydropathy', 'nanodroplet'], type=str, default='hydropathy',
                           help='Hydrophobity table for weighting')
+        self.add_argument('-na', '--noauto', action='store_const', const=True, default=False,
+                          help='No automatic mode. --eps and --min_samples options are required')
+        self.add_argument('-eps', '--eps', type=float, default=0, help='EPS value (A)')
+        self.add_argument('-min_samples', '--min_samples', type=int, default=0, help='MIN SAMPLES')
 
 
 if __name__ == '__main__':

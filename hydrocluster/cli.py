@@ -23,32 +23,35 @@ except ImportError:
 class Cli:
     def __init__(self, namespace) -> None:
         self.namespace = namespace
-        if self.namespace.output:
-            self.newdir = self.namespace.output
-            self.basefile = self.namespace.output
+        if namespace.output:
+            newdir = namespace.output
+            basefile = namespace.output
         else:
-            if self.namespace.input.count('.') > 0:
-                self.newdir = self.namespace.input.split('.')[-2]
-                self.basefile = os.path.basename(self.namespace.input).split('.')[-2]
+            if namespace.input.count('.') > 0:
+                newdir = namespace.input.split('.')[-2]
+                basefile = os.path.basename(namespace.input).split('.')[-2]
             else:
-                self.newdir = self.namespace.input
-                self.basefile = self.namespace.input
-        if os.path.exists(self.newdir):
-            shutil.rmtree(self.newdir)
+                newdir = namespace.input
+                basefile = namespace.input
+        if os.path.exists(newdir):
+            shutil.rmtree(newdir)
         try:
-            os.makedirs(self.newdir, exist_ok=True)
+            os.makedirs(newdir, exist_ok=True)
         except OSError:
-            print('Невозможно создать каталог ' + self.newdir)
+            print('Невозможно создать каталог ' + newdir)
             sys.exit(-1)
-        self.log_name = os.path.join(self.newdir, '{:s}'.format(self.basefile + '.log'))
+        self.log_name = os.path.join(newdir, '{:s}'.format(basefile + '.log'))
         self.cls = ClusterPdb()
-        self.open_file()
-        self.parse_pdb()
-        self.run()
+        self.open_file(namespace.input)
+        self.parse_pdb(namespace.htable)
+        if namespace.noauto:
+            self.noauto(namespace.eps, namespace.min_samples)
+        else:
+            self.run()
+            self.save_state(newdir, basefile)
+            self.colormap(newdir, basefile)
         self.resi()
-        self.save_state()
-        self.graph()
-        self.colormap()
+        self.graph(newdir, basefile)
 
     def log_append(self, line):
         print(line, end='')
@@ -91,9 +94,24 @@ class Cli:
                              'MIN_SAMPLES: {3:d}\n').format(self.cls.n_clusters,
                                                             self.cls.si_score, eps, min_samples, self.cls.calinski))
 
-    def graph(self):
+    def noauto(self, eps, min_samples):
+        if min_samples <= 0 or eps <= 0:
+            print("--eps and --min samples options are required and it's values > 0")
+            sys.exit(-1)
+        try:
+            self.cls.cluster(eps, min_samples)
+        except ValueError:
+            self.log_append('Ошибка! Не загружен файл\nили ошибка кластерного анализа!\n')
+            sys.exit(-1)
+        else:
+            self.log_append(('Estimated number of clusters: {0:d}\nSilhouette Coefficient: {1:.3f}\n'
+                             'Calinski and Harabaz score: {4:.3f}\nEPS: {2:.1f} \u212B\n'
+                             'MIN_SAMPLES: {3:d}\n').format(self.cls.n_clusters,
+                                                            self.cls.si_score, eps, min_samples, self.cls.calinski))
+
+    def graph(self, newdir, basefile):
         grid, legend = True, True
-        sa = os.path.join(self.newdir, '{:s}'.format(self.basefile + '.png'))
+        sa = os.path.join(newdir, '{:s}'.format(basefile + '.png'))
         try:
             fig, ax = self.cls.graph(grid, legend)
             canvas = FigureCanvasAgg(fig)
@@ -102,59 +120,53 @@ class Cli:
             self.log_append('Ошибка график не построен!\n')
             return
 
-    def open_file(self):
-        if not self.namespace.input:
+    def open_file(self, filename):
+        if not filename:
             self.log_append('Filename not defined\n')
             sys.exit(-1)
-        if self.namespace.input.split('.')[-1].strip().lower() == 'pdb':
-            pdb_f = self.namespace.input
+        if filename.split('.')[-1].strip().lower() == 'pdb':
             try:
-                self.cls.open_pdb(pdb_f)
+                self.cls.open_pdb(filename)
             except FileNotFoundError:
-                self.log_append('File {:s} not found!\n'.format(pdb_f))
+                self.log_append('File {:s} not found!\n'.format(filename))
                 sys.exit(-1)
             else:
-                self.log_append('Файл {:s} прочитан!\n'.format(pdb_f))
-                self.parse_pdb()
-        elif self.namespace.input.split('.')[-1].strip().lower() == 'cif':
-            cif_f = self.namespace.input
+                self.log_append('Файл {:s} прочитан!\n'.format(filename))
+        elif filename.split('.')[-1].strip().lower() == 'cif':
             try:
-                self.cls.open_cif(cif_f)
+                self.cls.open_cif(filename)
             except ImportError:
                 self.log_append('Ошибка импорта! BioPython недоступен!\nДля исправления установите biopython и mmtf!\n')
                 sys.exit(-1)
             except FileNotFoundError:
                 sys.exit(-1)
             except ValueError:
-                self.log_append('Ошибка! Некорректный CIF файл: {0:s}!\n'.format(cif_f))
+                self.log_append('Ошибка! Некорректный CIF файл: {0:s}!\n'.format(filename))
                 sys.exit(-1)
             else:
                 self.log_append('Файл {:s} прочитан!\n')
-                self.parse_pdb()
         else:
-            url = self.namespace.input
             try:
-                self.cls.open_url(url)
+                self.cls.open_url(filename)
             except ImportError:
                 self.log_append('Ошибка импорта! BioPython недоступен!\nДля исправления установите biopython и mmtf!\n')
                 sys.exit(-1)
             except HTTPError as e:
                 self.log_append('Ошибка! {1:s}\nID PDB: {0:s} не найден или ссылается на некорректный файл!\n'.format(
-                    url, str(e)))
+                    filename, str(e)))
                 sys.exit(-1)
             else:
                 self.log_append('Файл загружен\n')
-                self.parse_pdb()
 
-    def parse_pdb(self):
+    def parse_pdb(self, htable):
         try:
-            self.cls.parser(htable=self.namespace.htable)
+            self.cls.parser(htable=htable)
         except ValueError:
             self.log_append('Ошибка! Неверный формат\nлибо файл не содержит гидрофоьных остатков!\n')
             return
 
-    def save_state(self):
-        st = os.path.join(self.newdir, '{:s}'.format(self.basefile + '.bin'))
+    def save_state(self, newdir, basefile):
+        st = os.path.join(newdir, '{:s}'.format(basefile + '.bin'))
         try:
             self.cls.savestate(st)
         except FileNotFoundError:
@@ -183,8 +195,8 @@ class Cli:
                         self.log_append('{2:s}:{1:s}{0:d} '.format(*aac))
         self.log_append('\n\n')
 
-    def colormap(self):
-        sa = os.path.join(self.newdir, '{:s}'.format(self.basefile + '.cm.png'))
+    def colormap(self, newdir, basefile):
+        sa = os.path.join(newdir, '{:s}'.format(basefile + '.cm.png'))
         try:
             fig = self.cls.colormap(grid_state=True)
             canvas = FigureCanvasAgg(fig)

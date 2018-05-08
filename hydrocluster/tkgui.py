@@ -18,7 +18,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 try:
     from .pdbcluster import ClusterPdb
 except ImportError:
-    showerror('Ошибка!', 'Библиотека scikit-learn не установлена!')
+    showerror('Error!', 'Scikit-learn is not installed!')
     sys.exit()
 
 
@@ -33,8 +33,8 @@ class TkGui(tk.Tk):
         fra1.grid(row=0, rowspan=2, column=0)
         lab1 = tk.LabelFrame(fra1, text='Parsing',
                              labelanchor='n', borderwidth=5)
-        lab1.grid(row=0, column=0, pady=10)
-        lab11 = tk.LabelFrame(lab1, text='Метрика автоподбора',
+        lab1.grid(row=0, column=0, pady=5)
+        lab11 = tk.LabelFrame(lab1, text='Hydrophobity table',
                               labelanchor='n', borderwidth=5)
         lab11.grid(row=0, column=0, pady=5, padx=5)
         listbox_items = ['hydropathy', 'nanodroplet']
@@ -45,9 +45,27 @@ class TkGui(tk.Tk):
         but3 = tk.Button(lab1, text='Start',
                          command=self.parse_pdb)
         but3.grid(row=1, column=0, pady=5)
+        fra11 = tk.Frame(lab1)
+        fra11.grid(row=2, column=0, pady=5, padx=5)
+        l11 = tk.Label(fra11, text="No of residues:", anchor=tk.NW)
+        l11.grid(row=0, column=0, pady=5, padx=5)
+        self.l11 = tk.Label(fra11, text="{0:>5d}".format(0), anchor=tk.NW)
+        self.l11.grid(row=0, column=1, pady=5, padx=5)
+        l12 = tk.Label(fra11, text="Min distance (\u212B): ", anchor=tk.NW)
+        l12.grid(row=1, column=0, pady=5, padx=5)
+        self.l12 = tk.Label(fra11, text="{0:>5.3f}".format(0), anchor=tk.NW)
+        self.l12.grid(row=1, column=1, pady=5, padx=5)
+        l13 = tk.Label(fra11, text="Max distance (\u212B): ", anchor=tk.NW)
+        l13.grid(row=2, column=0, pady=5, padx=5)
+        self.l13 = tk.Label(fra11, text="{0:>5.3f}".format(0), anchor=tk.NW)
+        self.l13.grid(row=2, column=1, pady=5, padx=5)
+        l14 = tk.Label(fra11, text="Mean distance (\u212B): ", anchor=tk.NW)
+        l14.grid(row=3, column=0, pady=5, padx=5)
+        self.l14 = tk.Label(fra11, text="{0:>5.3f}".format(0), anchor=tk.NW)
+        self.l14.grid(row=3, column=1, pady=5, padx=5)
         lab3 = tk.LabelFrame(fra1, text='Manual mode',
                              labelanchor='n', borderwidth=5)
-        lab3.grid(row=2, column=0, pady=10)
+        lab3.grid(row=2, column=0, pady=5)
         lab31 = tk.LabelFrame(lab3, text='EPS (\u212B)',
                               labelanchor='n', borderwidth=5)
         lab31.grid(row=0, column=0, pady=5, padx=5)
@@ -65,7 +83,7 @@ class TkGui(tk.Tk):
         but1.grid(row=2, column=0, pady=5)
         lab2 = tk.LabelFrame(fra1, text='Auto mode',
                              labelanchor='n', borderwidth=5)
-        lab2.grid(row=1, column=0, pady=10)
+        lab2.grid(row=1, column=0, pady=5)
         lab22 = tk.Frame(lab2)
         lab22.grid(row=1, column=0)
         l1 = tk.Label(lab22, text="Min EPS (\u212B):", anchor=tk.NW)
@@ -101,7 +119,7 @@ class TkGui(tk.Tk):
         but2 = tk.Button(lab2, text='Start',
                          command=lambda: self.run(auto=True))
         but2.grid(row=3, column=0, pady=5)
-        lab21 = tk.LabelFrame(lab2, text='Метрика автоподбора',
+        lab21 = tk.LabelFrame(lab2, text='Metric shrink',
                               labelanchor='n', borderwidth=5)
         lab21.grid(row=0, column=0, pady=5, padx=5)
         listbox_items = ['calinski', 'si_score']
@@ -115,12 +133,12 @@ class TkGui(tk.Tk):
         self.pb = ttk.Progressbar(
             lab23, orient='horizontal', mode='determinate', length=200)
         self.pb.pack()
-        self.fra3 = tk.Frame(self, width=800, height=650)
+        self.fra3 = tk.Frame(self, width=800, height=700)
         self.fra3.grid(row=0, column=1)
         self.fra3.grid_propagate(False)
         fra4 = tk.Frame(self)
         fra4.grid(row=1, column=1, pady=10)
-        self.tx = tk.Text(fra4, width=100, height=10)
+        self.tx = tk.Text(fra4, width=100, height=8)
         scr = tk.Scrollbar(fra4, command=self.tx.yview)
         self.tx.configure(yscrollcommand=scr.set, state='disabled')
         self.tx.pack(side=tk.LEFT)
@@ -162,104 +180,105 @@ class TkGui(tk.Tk):
 
     @staticmethod
     def about():
-        showinfo('Информация', 'Кластерный анализ гидрофобных областей макромолекул')
+        showinfo('Information', 'Cluster analysis of hydrophobic regions of macromolecules')
 
     def menu(self) -> None:
-        """Метод инициалиции меню."""
-        m = tk.Menu(self)  # создается объект Меню на главном окне
-        self.config(menu=m)  # окно конфигурируется с указанием меню для него
-        # создается пункт меню с размещением на основном меню (m)
+        """The method of initialize menu."""
+        m = tk.Menu(self)  # creates a Menu object for main window
+        self.config(menu=m)  # the window is configured with the indication of the menu for it
+        # creates a menu item with the placement on the main menu (m)
         fm = tk.Menu(m)
-        # пункту располагается на основном меню (m)
-        m.add_cascade(label='Файл', menu=fm)
-        # формируется список команд пункта меню
-        fm.add_command(label='Открыть PDB', command=self.open_pdb)
-        fm.add_command(label='Открыть CIF', command=self.open_cif)
-        fm.add_command(label='Открыть ID PDB', command=self.open_url)
-        fm.add_command(label='Открыть состояние', command=self.open_state)
-        fm.add_command(label='Сохранить состояние', command=self.save_state)
-        fm.add_command(label='Сохранить рисунок', command=self.save_graph)
-        fm.add_command(label='Сохранить LOG', command=self.save_log)
-        fm.add_command(label='Выход', command=self.close_win)
-        # создается пункт меню с размещением на основном меню (m)
+        # item is located on the main menu (m)
+        m.add_cascade(label='File', menu=fm)
+        # a list of commands of a menu item
+        fm.add_command(label='Open PDB', command=self.open_pdb)
+        fm.add_command(label='Open CIF', command=self.open_cif)
+        fm.add_command(label='Open ID PDB', command=self.open_url)
+        fm.add_command(label='Load state', command=self.open_state)
+        fm.add_command(label='Save state', command=self.save_state)
+        fm.add_command(label='Save picture', command=self.save_graph)
+        fm.add_command(label='Save LOG', command=self.save_log)
+        fm.add_command(label='Exit', command=self.close_win)
+        # creates a menu item with the placement on the main menu (m)
         om = tk.Menu(m)
-        # пункту располагается на основном меню (m)
-        m.add_cascade(label='Опции', menu=om)
-        om.add_command(label='Сетка графика', command=self.grid_set)
-        om.add_command(label='Легенда', command=self.legend_set)
-        om.add_command(label='Состав гидрофобных ядер', command=self.resi)
-        om.add_command(label='Цветовая карта автонастройки', command=self.colormap)
-        om.add_command(label='Очистить LOG', command=self.clean_txt)
-        m.add_command(label='Справка', command=self.about)
+        # item is located on the main menu (m)
+        m.add_cascade(label='Options', menu=om)
+        om.add_command(label='Graph grid', command=self.grid_set)
+        om.add_command(label='Legend', command=self.legend_set)
+        om.add_command(label='Hydrophobic cores content', command=self.resi)
+        om.add_command(label='Autotune colorbar', command=self.colormap)
+        om.add_command(label='Clear LOG', command=self.clean_txt)
+        m.add_command(label='About', command=self.about)
 
     def close_win(self) -> None:
-        """Самоуничтожение с вопросом."""
-        if askyesno('Выход', 'Вы точно хотите выйти?'):
+        """Self-destruct with the ask."""
+        if askyesno('Exit', 'Are your sure?'):
             self.destroy()
 
     def run(self, auto: bool = False) -> None:
-        """Основной алгоритм программы."""
+        """The main algorithm of the program."""
         if self.run_flag:
-            showerror('Ошибка!', 'Расчет уже идёт!')
+            showerror('Error!', 'The calculation is already running!')
             return
         self.run_flag = True
         self.pb['value'] = 0
         self.pb.update()
         if auto:
             metric = self.combox.get()
-            if self.cls.states:
+            try:
+                min_eps = float(self.ent_min_eps.get())
+                if min_eps < 0:
+                    raise ValueError
+            except ValueError:
+                self.run_flag = True
+                self.pb['value'] = 0
+                self.pb.update()
+                showerror("Error", "Non correct value for Min EPS")
+                return
+            try:
+                max_eps = float(self.ent_max_eps.get())
+                if max_eps < 0:
+                    raise ValueError
+            except ValueError:
+                self.run_flag = True
+                self.pb['value'] = 0
+                self.pb.update()
+                showerror("Error", "Non correct value for Max EPS")
+                return
+            try:
+                step_eps = float(self.ent_step_eps.get())
+                if step_eps < 0:
+                    raise ValueError
+            except ValueError:
+                self.run_flag = True
+                self.pb['value'] = 0
+                self.pb.update()
+                showerror("Error", "Non correct value for Step EPS")
+                return
+            try:
+                min_min_samples = int(self.ent_min_min_samples.get())
+                if min_min_samples < 0:
+                    raise ValueError
+            except ValueError:
+                self.run_flag = True
+                self.pb['value'] = 0
+                self.pb.update()
+                showerror("Error", "Non correct value for Min MIN_SAMPLES")
+                return
+            try:
+                max_min_samples = int(self.ent_max_min_samples.get())
+                if max_min_samples < 0:
+                    raise ValueError
+            except ValueError:
+                self.run_flag = True
+                self.pb['value'] = 0
+                self.pb.update()
+                showerror("Error", "Non correct value for Max MIN_SAMPLES")
+                return
+            if self.cls.states and self.cls.auto_params == (
+            min_eps, max_eps, step_eps, min_min_samples, max_min_samples):
                 eps, min_samples = self.cls.auto(metric=metric)
             else:
-                try:
-                    min_eps = float(self.ent_min_eps.get())
-                    if min_eps < 0:
-                        raise ValueError
-                except ValueError:
-                    self.run_flag = True
-                    self.pb['value'] = 0
-                    self.pb.update()
-                    showerror("Error", "Non correct value for Min EPS")
-                    return
-                try:
-                    max_eps = float(self.ent_max_eps.get())
-                    if max_eps < 0:
-                        raise ValueError
-                except ValueError:
-                    self.run_flag = True
-                    self.pb['value'] = 0
-                    self.pb.update()
-                    showerror("Error", "Non correct value for Max EPS")
-                    return
-                try:
-                    step_eps = float(self.ent_step_eps.get())
-                    if step_eps < 0:
-                        raise ValueError
-                except ValueError:
-                    self.run_flag = True
-                    self.pb['value'] = 0
-                    self.pb.update()
-                    showerror("Error", "Non correct value for Step EPS")
-                    return
-                try:
-                    min_min_samples = int(self.ent_min_min_samples.get())
-                    if min_min_samples < 0:
-                        raise ValueError
-                except ValueError:
-                    self.run_flag = True
-                    self.pb['value'] = 0
-                    self.pb.update()
-                    showerror("Error", "Non correct value for Min MIN_SAMPLES")
-                    return
-                try:
-                    max_min_samples = int(self.ent_max_min_samples.get())
-                    if max_min_samples < 0:
-                        raise ValueError
-                except ValueError:
-                    self.run_flag = True
-                    self.pb['value'] = 0
-                    self.pb.update()
-                    showerror("Error", "Non correct value for Max MIN_SAMPLES")
-                    return
                 self.pb['maximum'] = self.cls.init_cycles(min_eps, max_eps, step_eps, min_min_samples, max_min_samples)
                 self.tx.configure(state='normal')
                 self.tx.insert(tk.END, ('Starting Autoscan (range EPS: {0:.2f} - {1:.2f} \u212B,'
@@ -278,8 +297,8 @@ class TkGui(tk.Tk):
                     self.tx.insert(tk.END, 'Autoscan done... \n')
                     self.tx.configure(state='disabled')
                 except ValueError:
-                    showerror('Ошибка!', 'Не загружен файл\nили ошибка кластерного анализа!')
-                    self.tx.insert(tk.END, 'Ошибка! Не загружен файл или ошибка кластерного анализа!\n')
+                    showerror('Error!', 'File not parsed\n or cluster analysis fail!')
+                    self.tx.insert(tk.END, 'Error! File not parsed or cluster analysis fail!\n')
                     self.tx.configure(state='disabled')
                     self.run_flag = False
                     return
@@ -294,7 +313,7 @@ class TkGui(tk.Tk):
                 self.pb['value'] = 1
                 self.pb.update()
             except ValueError:
-                showerror('Ошибка!', 'Не загружен файл\nили ошибка кластерного анализа!')
+                showerror('Error!', 'File not parsed\n or cluster analysis fail!')
                 self.run_flag = False
                 return
         self.tx.configure(state='normal')
@@ -327,9 +346,9 @@ class TkGui(tk.Tk):
 
     def open_pdb(self):
         if self.run_flag:
-            showerror('Ошибка!', 'Расчет уже идёт!')
+            showerror('Error!', 'The calculation is already running!')
             return
-        opt = {'filetypes': [('Файлы PDB', ('.pdb', '.PDB', '.ent')), ('Все файлы', '.*')]}
+        opt = {'filetypes': [('Files PDB', ('.pdb', '.PDB', '.ent')), ('All files', '.*')]}
         pdb = askopenfilename(**opt)
         if pdb:
             try:
@@ -337,57 +356,72 @@ class TkGui(tk.Tk):
             except FileNotFoundError:
                 return
             else:
-                showinfo('Информация', 'Файл прочитан!')
+                showinfo('Information', 'File is read!')
                 self.parse_pdb()
         else:
             return
 
     def open_url(self):
-        url = askstring('Загрузить', 'ID PDB:')
+        if self.run_flag:
+            showerror('Error!', 'The calculation is already running!')
+            return
+        url = askstring('Download', 'ID PDB:')
         if url is not None:
             try:
                 self.cls.open_url(url)
             except ImportError:
-                showerror('Ошибка импорта',
-                          'BioPython недоступен!'
-                          '\nДля исправления установите biopython и mmtf!')
+                showerror('Import error',
+                          'Bio Python is not available!'
+                          '\nInstall biopython and mmtf!')
                 return
             except HTTPError as e:
-                showerror('Ошибка!', ('{1:s}\nID PDB: {0:s} не найден'
-                                      ' или ссылается на некорректный файл!').format(url, str(e)))
+                showerror('Error!!', ('{1:s}\nID PDB: {0:s} not found'
+                                      ' or refers to an incorrect file!').format(url, str(e)))
             else:
-                showinfo('Информация', 'Файл загружен')
+                showinfo('Information', 'File is downloaded')
                 self.parse_pdb()
 
     def open_cif(self):
+        if self.run_flag:
+            showerror('Error!', 'The calculation is already running!')
+            return
         opt = {'filetypes': [('Файлы mmCIF', ('.cif', '.CIF')), ('Все файлы', '.*')]}
         cif_f = askopenfilename(**opt)
         if cif_f:
             try:
                 self.cls.open_cif(cif_f)
             except ImportError:
-                showerror('Ошибка импорта',
-                          'BioPython недоступен!'
-                          '\nДля исправления установите biopython и mmtf!')
+                showerror('Import error',
+                          'Bio Python is not available!'
+                          '\nInstall biopython and mmtf!')
                 return
             except FileNotFoundError:
                 return
             except ValueError:
-                showerror('Ошибка!', 'Некорректный CIF файл: {0:s}!'.format(cif_f))
+                showerror('Error', 'Incorrect CIF file: {0:s}!'.format(cif_f))
                 return
             else:
-                showinfo('Информация', 'Файл прочитан!')
+                showinfo('Information', 'File is read!')
                 self.parse_pdb()
 
     def parse_pdb(self):
+        if self.run_flag:
+            showerror('Error!', 'The calculation is already running!')
+            return
         try:
             htable = self.combox_p.get()
-            self.cls.parser(htable=htable)
+            parse_results = self.cls.parser(htable=htable)
         except ValueError:
-            showerror('Ошибка', 'Неверный формат\nлибо файл не содержит гидрофоьных остатков!')
+            showerror('Error!', 'Invalid file format\nor file does not contain hydophobic resides')
             return
         else:
-            showinfo('Информация', 'Файл распарсен! HTable - {:s}'.format(htable))
+            showinfo('Information', 'File parsed!\nHTable - {:s}\n'.format(htable) +
+                     "No of hydrophobic residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
+                     "Maximum distance = {:.3f} \u212B\nMean distance = {:.3f} \u212B\n".format(*parse_results))
+            self.l11.configure(text="{0:>5d}".format(parse_results[0]))
+            self.l12.configure(text="{0:>5.3f}".format(parse_results[1]))
+            self.l13.configure(text="{0:>5.3f}".format(parse_results[2]))
+            self.l14.configure(text="{0:>5.3f}".format(parse_results[3]))
         self.pb['value'] = 0
         self.pb.update()
         try:
@@ -397,6 +431,11 @@ class TkGui(tk.Tk):
             pass
         self.fig = None
         self.clean_txt()
+        self.tx.configure(state='normal')
+        self.tx.insert(tk.END, "No of hydrophobic residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
+                               "Maximum distance = {:.3f} \u212B\nMean distance = {:.3f} \u212B\n\n".format(
+            *parse_results))
+        self.tx.configure(state='disabled')
 
     def clean_txt(self):
         self.tx.configure(state='normal')
@@ -405,28 +444,28 @@ class TkGui(tk.Tk):
 
     def open_state(self):
         if self.run_flag:
-            showerror('Ошибка!', 'Расчет уже идёт!')
+            showerror('Error!', 'The calculation is already running!')
             return
-        opt = {'filetypes': [('Файл данных', ('.dat', '.DAT')), ('Все файлы', '.*')],
-               'title': 'Загрузить состояние'}
+        opt = {'filetypes': [('Data file', ('.bin', '.BIN')), ('All files', '.*')],
+               'title': 'Load state'}
         state = askopenfilename(**opt)
         try:
             self.cls.loadstate(state)
         except FileNotFoundError:
             return
         except (ValueError, OSError):
-            showerror("Ошибка!", "Файл неверного формата!")
+            showerror("Error!", "The file is an invalid format!")
             return
         else:
             self.run(auto=True)
 
     def save_state(self):
         if self.run_flag:
-            showerror('Ошибка!', 'Расчет уже идёт!')
+            showerror('Error!', 'The calculation is already running!')
             return
-        opt = {'filetypes': [('Файл данных', ('.dat', '.DAT')), ('Все файлы', '.*')],
+        opt = {'filetypes': [('Data file', ('.bin', '.BIN')), ('All files', '.*')],
                'initialfile': 'myfile.dat',
-               'title': 'Сохранить состояние'}
+               'title': 'Save state'}
         state = asksaveasfilename(**opt)
         try:
             self.cls.savestate(state)
@@ -436,7 +475,7 @@ class TkGui(tk.Tk):
     def save_log(self):
         opt = {'parent': self, 'filetypes': [('LOG', '.log'), ],
                'initialfile': 'myfile.log',
-               'title': 'Сохранить LOG'}
+               'title': 'Save LOG'}
         sa = asksaveasfilename(**opt)
         if sa:
             letter = self.tx.get(1.0, tk.END)
@@ -448,13 +487,13 @@ class TkGui(tk.Tk):
 
     def save_graph(self):
         if self.run_flag:
-            showerror('Ошибка!', 'Расчет не закончен!')
+            showerror('Error!', 'The calculation is already running!')
             return
         if self.fig is None:
-            showerror('Ошибка!', 'График недоступен!')
+            showerror('Error!', 'Graph is unavailable!')
             return
         opt = {'parent': self,
-               'filetypes': [('Все поддерживаесые форматы', ('.eps', '.jpeg', '.jpg', '.pdf', '.pgf', '.png', '.ps',
+               'filetypes': [('All support formats', ('.eps', '.jpeg', '.jpg', '.pdf', '.pgf', '.png', '.ps',
                                                              '.raw', '.rgba', '.svg', '.svgz', '.tif', '.tiff')), ],
                'initialfile': 'myfile.png',
                'title': 'Сохранить график'}

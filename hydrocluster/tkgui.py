@@ -36,8 +36,7 @@ class TkGui(tk.Tk):
         lab11 = tk.LabelFrame(lab1, text='Hydrophobity table', labelanchor='n', borderwidth=5)
         lab11.grid(row=0, column=0, pady=5, padx=5)
         listbox_items = ['hydropathy', 'nanodroplet']
-        self.combox_p = ttk.Combobox(
-            lab11, height=5, width=15, values=listbox_items)
+        self.combox_p = ttk.Combobox(lab11, height=5, width=15, values=listbox_items)
         self.combox_p.pack()
         self.combox_p.set('hydropathy')
         but3 = tk.Button(lab1, text='Start', command=self.parse_pdb)
@@ -303,9 +302,8 @@ class TkGui(tk.Tk):
                 return
         self.tx.configure(state='normal')
         self.tx.insert(tk.END, ('Estimated number of clusters: {0:d}\nSilhouette Coefficient: {1:.3f}\n'
-                                'Calinski and Harabaz score: {4:.3f}\nEPS: {2:.1f} \u212B\n'
-                                'MIN_SAMPLES: {3:d}\n').format(self.cls.n_clusters,
-                                                               self.cls.si_score, eps, min_samples, self.cls.calinski))
+                                'Calinski and Harabaz score: {4:.3f}\nEPS: {2:.1f} \u212B\nMIN_SAMPLES: {3:d}\n'
+                                ).format(self.cls.n_clusters, self.cls.si_score, eps, min_samples, self.cls.calinski))
         self.tx.configure(state='disabled')
         self.graph()
         self.run_flag = False
@@ -374,8 +372,7 @@ class TkGui(tk.Tk):
             try:
                 self.cls.open_cif(cif_f)
             except ImportError:
-                showerror('Import error',
-                          'Bio Python is not available!\nInstall biopython and mmtf!')
+                showerror('Import error', 'Bio Python is not available!\nInstall biopython and mmtf!')
                 return
             except FileNotFoundError:
                 return
@@ -416,8 +413,7 @@ class TkGui(tk.Tk):
         self.tx.configure(state='normal')
         self.tx.insert(tk.END, 'HTable: {:s}\n'.format(htable) +
                        "No of hydrophobic residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
-                       "Maximum distance = {:.3f} \u212B\n"
-                       "Mean distance = {:.3f} \u212B\n\n".format(*parse_results))
+                       "Maximum distance = {:.3f} \u212B\nMean distance = {:.3f} \u212B\n\n".format(*parse_results))
         self.tx.configure(state='disabled')
 
     def clean_txt(self):
@@ -429,8 +425,7 @@ class TkGui(tk.Tk):
         if self.run_flag:
             showerror('Error!', 'The calculation is already running!')
             return
-        opt = {'filetypes': [('Data file', ('.bin', '.BIN')), ('All files', '.*')],
-               'title': 'Load state'}
+        opt = {'filetypes': [('Data file', ('.bin', '.BIN')), ('All files', '.*')], 'title': 'Load state'}
         state = askopenfilename(**opt)
         try:
             self.cls.loadstate(state)
@@ -446,8 +441,7 @@ class TkGui(tk.Tk):
         if self.run_flag:
             showerror('Error!', 'The calculation is already running!')
             return
-        opt = {'filetypes': [('Data file', ('.bin', '.BIN')), ('All files', '.*')],
-               'initialfile': 'myfile.dat',
+        opt = {'filetypes': [('Data file', ('.bin', '.BIN')), ('All files', '.*')], 'initialfile': 'myfile.dat',
                'title': 'Save state'}
         state = asksaveasfilename(**opt)
         try:
@@ -456,9 +450,7 @@ class TkGui(tk.Tk):
             return
 
     def save_log(self):
-        opt = {'parent': self, 'filetypes': [('LOG', '.log'), ],
-               'initialfile': 'myfile.log',
-               'title': 'Save LOG'}
+        opt = {'parent': self, 'filetypes': [('LOG', '.log'), ], 'initialfile': 'myfile.log', 'title': 'Save LOG'}
         sa = asksaveasfilename(**opt)
         if sa:
             letter = self.tx.get(1.0, tk.END)

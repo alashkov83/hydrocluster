@@ -275,8 +275,8 @@ class TkGui(tk.Tk):
                 self.pb.update()
                 showerror("Error", "Non correct value for Max MIN_SAMPLES")
                 return
-            if self.cls.states and self.cls.auto_params == (
-            min_eps, max_eps, step_eps, min_min_samples, max_min_samples):
+            if self.cls.states and self.cls.auto_params == (min_eps, max_eps, step_eps,
+                                                            min_min_samples, max_min_samples):
                 eps, min_samples = self.cls.auto(metric=metric)
             else:
                 self.pb['maximum'] = self.cls.init_cycles(min_eps, max_eps, step_eps, min_min_samples, max_min_samples)
@@ -356,7 +356,7 @@ class TkGui(tk.Tk):
             except FileNotFoundError:
                 return
             else:
-                showinfo('Information', 'File is read!')
+                showinfo('Information', 'File read!')
                 self.parse_pdb()
         else:
             return
@@ -371,21 +371,21 @@ class TkGui(tk.Tk):
                 self.cls.open_url(url)
             except ImportError:
                 showerror('Import error',
-                          'Bio Python is not available!'
+                          'Bio Python unavailable!'
                           '\nInstall biopython and mmtf!')
                 return
             except HTTPError as e:
                 showerror('Error!!', ('{1:s}\nID PDB: {0:s} not found'
                                       ' or refers to an incorrect file!').format(url, str(e)))
             else:
-                showinfo('Information', 'File is downloaded')
+                showinfo('Information', 'File downloaded')
                 self.parse_pdb()
 
     def open_cif(self):
         if self.run_flag:
             showerror('Error!', 'The calculation is already running!')
             return
-        opt = {'filetypes': [('Файлы mmCIF', ('.cif', '.CIF')), ('Все файлы', '.*')]}
+        opt = {'filetypes': [('Files mmCIF', ('.cif', '.CIF')), ('Все файлы', '.*')]}
         cif_f = askopenfilename(**opt)
         if cif_f:
             try:
@@ -433,8 +433,8 @@ class TkGui(tk.Tk):
         self.clean_txt()
         self.tx.configure(state='normal')
         self.tx.insert(tk.END, "No of hydrophobic residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
-                               "Maximum distance = {:.3f} \u212B\nMean distance = {:.3f} \u212B\n\n".format(
-            *parse_results))
+                               "Maximum distance = {:.3f} \u212B\n"
+                               "Mean distance = {:.3f} \u212B\n\n".format(*parse_results))
         self.tx.configure(state='disabled')
 
     def clean_txt(self):
@@ -494,9 +494,9 @@ class TkGui(tk.Tk):
             return
         opt = {'parent': self,
                'filetypes': [('All support formats', ('.eps', '.jpeg', '.jpg', '.pdf', '.pgf', '.png', '.ps',
-                                                             '.raw', '.rgba', '.svg', '.svgz', '.tif', '.tiff')), ],
+                                                      '.raw', '.rgba', '.svg', '.svgz', '.tif', '.tiff')), ],
                'initialfile': 'myfile.png',
-               'title': 'Сохранить график'}
+               'title': 'Save graph'}
         sa = asksaveasfilename(**opt)
         if sa:
             try:
@@ -504,13 +504,13 @@ class TkGui(tk.Tk):
             except FileNotFoundError:
                 return
             except AttributeError:
-                showerror('Ошибка!', 'График недоступен!')
+                showerror('Error!', 'Graph unavailable!')
             except ValueError:
-                showerror('Неподдерживаемый формат файла рисунка!',
-                          'Поддреживаемые форматы: eps, jpeg, jpg, pdf, pgf, png, ps, raw, rgba, svg, svgz, tif, tiff.')
+                showerror('Unsupported file format!',
+                          'Supported formats: eps, jpeg, jpg, pdf, pgf, png, ps, raw, rgba, svg, svgz, tif, tiff.')
 
     def grid_set(self):
-        self.grid = bool(askyesno('Cетка', 'Отобразить?'))
+        self.grid = bool(askyesno('Mesh', 'Display?'))
         if self.run_flag:
             return
         try:
@@ -521,7 +521,7 @@ class TkGui(tk.Tk):
         self.graph()
 
     def legend_set(self):
-        self.legend = bool(askyesno('Легенда', 'Отобразить?'))
+        self.legend = bool(askyesno('Figure legend', 'Display?'))
         if self.run_flag:
             return
         try:
@@ -533,7 +533,7 @@ class TkGui(tk.Tk):
 
     def resi(self):
         if self.run_flag:
-            showerror('Ошибка!', 'Расчет уже идёт!')
+            showerror('Error!', 'The calculation is already running!')
             return
         aa_list = self.cls.aa_list
         if (not aa_list) or self.cls.labels is None:
@@ -569,13 +569,13 @@ class TkGui(tk.Tk):
 
     def colormap(self):
         if self.run_flag:
-            showerror('Ошибка!', 'Расчет не закончен!')
+            showerror('Error!', 'The calculation is already running!')
             return
         try:
             grid = self.grid
             fig = self.cls.colormap(grid)
         except ValueError:
-            showinfo('Информация', 'Данные недоступны')
+            showinfo('Information', 'Data unavailable')
             return
         win_cls = tk.Toplevel(self)
         win_cls.title("ColorMaps")

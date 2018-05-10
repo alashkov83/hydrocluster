@@ -12,7 +12,7 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 try:
     from .pdbcluster import ClusterPdb
 except ImportError:
-    print('Ошибка! Библиотека scikit-learn не установлена!')
+    print('Error! Scikit-learn is not installed!')
     sys.exit()
 try:
     import progressbar2 as progressbar
@@ -38,7 +38,7 @@ class Cli:
         try:
             os.makedirs(newdir, exist_ok=True)
         except OSError:
-            print('Невозможно создать каталог ' + newdir)
+            print('Unable to create folder ' + newdir)
             sys.exit(-1)
         self.log_name = os.path.join(newdir, '{:s}'.format(basefile + '.log'))
         self.cls = ClusterPdb()
@@ -59,7 +59,7 @@ class Cli:
             f.write(line)
 
     def run(self) -> None:
-        """Основной алгоритм программы."""
+        """The main algorithm of the program."""
 
         metric = self.namespace.score
         min_eps = self.namespace.emin
@@ -83,7 +83,7 @@ class Cli:
             eps, min_samples = self.cls.auto(metric=metric)
             self.log_append('Autoscan done... \n')
         except ValueError:
-            self.log_append('Не загружен файл\nили ошибка кластерного анализа!\n')
+            self.log_append('Error! File not parsed or cluster analysis fail!\n')
             sys.exit(-1)
         else:
             self.log_append(('Estimated number of clusters: {0:d}\nSilhouette Coefficient: {1:.3f}\n'
@@ -98,7 +98,7 @@ class Cli:
         try:
             self.cls.cluster(eps, min_samples)
         except ValueError:
-            self.log_append('Ошибка! Не загружен файл\nили ошибка кластерного анализа!\n')
+            self.log_append('Error! File not parsed or cluster analysis fail\n')
             sys.exit(-1)
         else:
             self.log_append(('Estimated number of clusters: {0:d}\nSilhouette Coefficient: {1:.3f}\n'
@@ -114,7 +114,7 @@ class Cli:
             canvas = FigureCanvasAgg(fig)
             canvas.print_png(sa)
         except AttributeError:
-            self.log_append('Ошибка график не построен!\n')
+            self.log_append('Error! Graph not created !!\n')
             return
 
     def open_file(self, filename):
@@ -128,29 +128,29 @@ class Cli:
                 self.log_append('File {:s} not found!\n'.format(filename))
                 sys.exit(-1)
             else:
-                self.log_append('Файл {:s} прочитан!\n'.format(filename))
+                self.log_append('File {:s} read!\n'.format(filename))
         elif filename.split('.')[-1].strip().lower() == 'cif':
             try:
                 self.cls.open_cif(filename)
             except ImportError:
-                self.log_append('Ошибка импорта! BioPython недоступен!\nДля исправления установите biopython и mmtf!\n')
+                self.log_append('Import error! Bio Python unavailable! \nInstall biopython and mmtf!\n')
                 sys.exit(-1)
             except FileNotFoundError:
                 sys.exit(-1)
             except ValueError:
-                self.log_append('Ошибка! Некорректный CIF файл: {0:s}!\n'.format(filename))
+                self.log_append('Error! Incorrect CIF file: {0:s}!\n'.format(filename))
                 sys.exit(-1)
             else:
-                self.log_append('Файл {:s} прочитан!\n')
+                self.log_append('File {:s} read!\n')
         else:
             try:
                 self.cls.open_url(filename)
             except ImportError:
-                self.log_append('Ошибка импорта! BioPython недоступен!\nДля исправления установите biopython и mmtf!\n')
+                self.log_append('Import error! Bio Python unavailable! \nInstall biopython and mmtf!\n')
                 sys.exit(-1)
             except HTTPError as e:
-                self.log_append('Ошибка! {1:s}\nID PDB: {0:s} не найден или ссылается на некорректный файл!\n'.format(
-                    filename, str(e)))
+                self.log_append('Error! ID PDB: {0:s} not found or refers to an incorrect file!'.format(filename,
+                                                                                                        str(e)))
                 sys.exit(-1)
             else:
                 self.log_append('Файл загружен\n')
@@ -159,7 +159,7 @@ class Cli:
         try:
             parse_results = self.cls.parser(htable=htable)
         except ValueError:
-            self.log_append('Ошибка! Неверный формат\nлибо файл не содержит гидрофоьных остатков!\n')
+            self.log_append('Error! Invalid file format\nor file does not contain hydophobic resides\n')
             return
         else:
             self.log_append("No of hydrophobic residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
@@ -202,5 +202,5 @@ class Cli:
             canvas = FigureCanvasAgg(fig)
             canvas.print_png(sa)
         except AttributeError:
-            self.log_append('Ошибка график не построен!\n')
+            self.log_append('Error! Graph not created !!\n')
             return

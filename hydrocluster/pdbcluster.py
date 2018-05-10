@@ -8,12 +8,12 @@ import pickle
 import warnings
 from urllib.error import HTTPError
 
-warnings.filterwarnings("ignore")
-
+import matplotlib.cm as cm
 import numpy as np
 from matplotlib.figure import Figure
-import matplotlib.cm as cm
 from mpl_toolkits.mplot3d import axes3d
+
+warnings.filterwarnings("ignore")
 
 try:
     from sklearn.cluster import DBSCAN
@@ -270,8 +270,8 @@ class ClusterPdb:
             raise ValueError
         self.X = xyz_array
         self.pdist = euclidean_distances(self.X)
-        self.parse_results = len(self.aa_list), np.min(self.pdist[np.nonzero(self.pdist)]), \
-                             np.max(self.pdist[np.nonzero(self.pdist)]), np.mean(self.pdist[np.nonzero(self.pdist)])
+        self.parse_results = len(self.aa_list), np.min(self.pdist[np.nonzero(
+            self.pdist)]), np.max(self.pdist[np.nonzero(self.pdist)]), np.mean(self.pdist[np.nonzero(self.pdist)])
         return self.parse_results
 
     def graph(self, grid_state, legend_state):
@@ -353,7 +353,7 @@ class ClusterPdb:
 
     @staticmethod
     def _cmass(str_nparray: np.ndarray) -> list:
-        """Вычисление положения центра массс."""
+        """Calculate the position of the center of mass."""
         mass_sum = float(str_nparray[:, 3].sum())
         mx = (str_nparray[:, 3]) * (str_nparray[:, 0])
         my = (str_nparray[:, 3]) * (str_nparray[:, 1])

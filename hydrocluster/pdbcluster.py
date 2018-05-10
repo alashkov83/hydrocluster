@@ -245,8 +245,7 @@ class ClusterPdb:
                 current_resn = int(s[22:26])
                 current_chainn = s[21]
                 current_resname = s[17:20]
-                xyzm = [float(s[30:38]), float(s[38:46]),
-                        float(s[46:54]), mass[s[76:78]]]
+                xyzm = [float(s[30:38]), float(s[38:46]), float(s[46:54]), mass[s[76:78]]]
                 xyzm_array = np.hstack((xyzm_array, xyzm))
             elif s[0:6] == 'ATOM  ' and (s[17:20] in hydrfob):
                 self.aa_list.append(
@@ -261,8 +260,7 @@ class ClusterPdb:
                 current_resn = int(s[22:26])
                 current_chainn = s[21]
                 current_resname = s[17:20]
-                xyz = [float(s[30:38]), float(s[38:46]),
-                       float(s[46:54]), mass[s[76:78]]]
+                xyz = [float(s[30:38]), float(s[38:46]), float(s[46:54]), mass[s[76:78]]]
                 xyzm_array = np.hstack((xyzm_array, xyz))
         try:
             xyz_array.shape = (-1, 3)
@@ -285,8 +283,7 @@ class ClusterPdb:
         except AttributeError:
             raise AttributeError
         ax = axes3d.Axes3D(fig)
-        colors = [cm.get_cmap('rainbow')(each)
-                  for each in np.linspace(0, 1, len(unique_labels))]
+        colors = [cm.get_cmap('rainbow')(each) for each in np.linspace(0, 1, len(unique_labels))]
         for k, col in zip(unique_labels, colors):
             class_member_mask = (self.labels == k)
             if k == -1:

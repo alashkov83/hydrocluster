@@ -74,8 +74,7 @@ class Cli:
             min_eps, max_eps, step_eps, min_min_samples, max_min_samples), redirect_stdout=True).start()
         try:
             for n, j, i in self.cls.auto_yield():
-                self.log_append(('Step No {0:d}: EPS = {1:.2f} \u212B, '
-                                 'min_samples = {2:d}, No clusters = {3:d}, '
+                self.log_append(('Step No {0:d}: EPS = {1:.2f} \u212B, min_samples = {2:d}, No clusters = {3:d}, '
                                  'Silhouette score = {4:.3f} Calinski score = {5:.3f}\n').format(
                     n, j, i, self.cls.n_clusters, self.cls.si_score, self.cls.calinski))
 
@@ -87,9 +86,8 @@ class Cli:
             sys.exit(-1)
         else:
             self.log_append(('Estimated number of clusters: {0:d}\nSilhouette Coefficient: {1:.3f}\n'
-                             'Calinski and Harabaz score: {4:.3f}\nEPS: {2:.1f} \u212B\n'
-                             'MIN_SAMPLES: {3:d}\n').format(self.cls.n_clusters,
-                                                            self.cls.si_score, eps, min_samples, self.cls.calinski))
+                             'Calinski and Harabaz score: {4:.3f}\nEPS: {2:.1f} \u212B\nMIN_SAMPLES: {3:d}\n').format(
+                self.cls.n_clusters, self.cls.si_score, eps, min_samples, self.cls.calinski))
 
     def noauto(self, eps, min_samples):
         if min_samples <= 0 or eps <= 0:

@@ -31,19 +31,16 @@ class TkGui(tk.Tk):
         self.menu()
         fra1 = tk.Frame(self)
         fra1.grid(row=0, rowspan=2, column=0)
-        lab1 = tk.LabelFrame(fra1, text='Parsing',
-                             labelanchor='n', borderwidth=5)
+        lab1 = tk.LabelFrame(fra1, text='Parsing', labelanchor='n', borderwidth=5)
         lab1.grid(row=0, column=0, pady=5)
-        lab11 = tk.LabelFrame(lab1, text='Hydrophobity table',
-                              labelanchor='n', borderwidth=5)
+        lab11 = tk.LabelFrame(lab1, text='Hydrophobity table', labelanchor='n', borderwidth=5)
         lab11.grid(row=0, column=0, pady=5, padx=5)
         listbox_items = ['hydropathy', 'nanodroplet']
         self.combox_p = ttk.Combobox(
             lab11, height=5, width=15, values=listbox_items)
         self.combox_p.pack()
         self.combox_p.set('hydropathy')
-        but3 = tk.Button(lab1, text='Start',
-                         command=self.parse_pdb)
+        but3 = tk.Button(lab1, text='Start', command=self.parse_pdb)
         but3.grid(row=1, column=0, pady=5)
         fra11 = tk.Frame(lab1)
         fra11.grid(row=2, column=0, pady=5, padx=5)
@@ -63,26 +60,20 @@ class TkGui(tk.Tk):
         l14.grid(row=3, column=0, pady=5, padx=5)
         self.l14 = tk.Label(fra11, text="{0:>5.3f}".format(0), anchor=tk.NW)
         self.l14.grid(row=3, column=1, pady=5, padx=5)
-        lab3 = tk.LabelFrame(fra1, text='Manual mode',
-                             labelanchor='n', borderwidth=5)
+        lab3 = tk.LabelFrame(fra1, text='Manual mode', labelanchor='n', borderwidth=5)
         lab3.grid(row=2, column=0, pady=5)
-        lab31 = tk.LabelFrame(lab3, text='EPS (\u212B)',
-                              labelanchor='n', borderwidth=5)
+        lab31 = tk.LabelFrame(lab3, text='EPS (\u212B)', labelanchor='n', borderwidth=5)
         lab31.grid(row=0, column=0, pady=5, padx=5)
         self.sca1 = tk.Scale(lab31, length=200, from_=1.0, to=15.0,
                              showvalue=1, orient=tk.HORIZONTAL, resolution=0.1)
         self.sca1.pack()
-        lab32 = tk.LabelFrame(lab3, text='MIN_SAMPLES',
-                              labelanchor='n', borderwidth=5)
+        lab32 = tk.LabelFrame(lab3, text='MIN_SAMPLES', labelanchor='n', borderwidth=5)
         lab32.grid(row=1, column=0, pady=5, padx=5)
-        self.sca2 = tk.Scale(lab32, length=200, from_=1,
-                             to=50, showvalue=1, orient=tk.HORIZONTAL)
+        self.sca2 = tk.Scale(lab32, length=200, from_=1, to=50, showvalue=1, orient=tk.HORIZONTAL)
         self.sca2.pack()
-        but1 = tk.Button(lab3, text='Start',
-                         command=lambda: self.run(auto=False))
+        but1 = tk.Button(lab3, text='Start', command=lambda: self.run(auto=False))
         but1.grid(row=2, column=0, pady=5)
-        lab2 = tk.LabelFrame(fra1, text='Auto mode',
-                             labelanchor='n', borderwidth=5)
+        lab2 = tk.LabelFrame(fra1, text='Auto mode', labelanchor='n', borderwidth=5)
         lab2.grid(row=1, column=0, pady=5)
         lab22 = tk.Frame(lab2)
         lab22.grid(row=1, column=0)
@@ -116,24 +107,19 @@ class TkGui(tk.Tk):
         self.ent_max_min_samples.delete(0, tk.END)
         self.ent_max_min_samples.insert(0, '50')
         self.ent_max_min_samples.grid(row=4, column=1, pady=5, padx=5)
-        but2 = tk.Button(lab2, text='Start',
-                         command=lambda: self.run(auto=True))
+        but2 = tk.Button(lab2, text='Start', command=lambda: self.run(auto=True))
         but2.grid(row=3, column=0, pady=5)
-        lab21 = tk.LabelFrame(lab2, text='Metric shrink',
-                              labelanchor='n', borderwidth=5)
+        lab21 = tk.LabelFrame(lab2, text='Metric shrink', labelanchor='n', borderwidth=5)
         lab21.grid(row=0, column=0, pady=5, padx=5)
         listbox_items = ['calinski', 'si_score']
-        self.combox = ttk.Combobox(
-            lab21, height=5, width=15, values=listbox_items)
+        self.combox = ttk.Combobox(lab21, height=5, width=15, values=listbox_items)
         self.combox.pack()
         self.combox.set('calinski')
-        lab23 = tk.LabelFrame(lab2, text='Progress: ',
-                              labelanchor='n', borderwidth=5)
+        lab23 = tk.LabelFrame(lab2, text='Progress: ', labelanchor='n', borderwidth=5)
         lab23.grid(row=4, column=0, pady=5, padx=5)
-        self.pb = ttk.Progressbar(
-            lab23, orient='horizontal', mode='determinate', length=200)
+        self.pb = ttk.Progressbar(lab23, orient='horizontal', mode='determinate', length=200)
         self.pb.pack()
-        self.fra3 = tk.Frame(self, width=800, height=700)
+        self.fra3 = tk.Frame(self, width=800, height=720)
         self.fra3.grid(row=0, column=1)
         self.fra3.grid_propagate(False)
         fra4 = tk.Frame(self)
@@ -143,8 +129,7 @@ class TkGui(tk.Tk):
         self.tx.configure(yscrollcommand=scr.set, state='disabled')
         self.tx.pack(side=tk.LEFT)
         scr.pack(side=tk.RIGHT, fill=tk.Y)
-        self.tx.bind(
-            '<Enter>', lambda e: self._bound_to_mousewheel(e, self.tx))
+        self.tx.bind('<Enter>', lambda e: self._bound_to_mousewheel(e, self.tx))
         self.tx.bind('<Leave>', self._unbound_to_mousewheel)
         self.run_flag = False
         self.fig = None
@@ -180,7 +165,7 @@ class TkGui(tk.Tk):
 
     @staticmethod
     def about():
-        showinfo('Information', 'Cluster analysis of hydrophobic regions of macromolecules')
+        showinfo('About', 'Cluster analysis of hydrophobic regions of macromolecules')
 
     def menu(self) -> None:
         """The method of initialize menu."""
@@ -198,7 +183,7 @@ class TkGui(tk.Tk):
         fm.add_command(label='Save state', command=self.save_state)
         fm.add_command(label='Save picture', command=self.save_graph)
         fm.add_command(label='Save LOG', command=self.save_log)
-        fm.add_command(label='Exit', command=self.close_win)
+        fm.add_command(label='Quit', command=self.close_win)
         # creates a menu item with the placement on the main menu (m)
         om = tk.Menu(m)
         # item is located on the main menu (m)
@@ -212,7 +197,7 @@ class TkGui(tk.Tk):
 
     def close_win(self) -> None:
         """Self-destruct with the ask."""
-        if askyesno('Exit', 'Are your sure?'):
+        if askyesno('Quit', 'Are your sure?'):
             self.destroy()
 
     def run(self, auto: bool = False) -> None:
@@ -370,9 +355,7 @@ class TkGui(tk.Tk):
             try:
                 self.cls.open_url(url)
             except ImportError:
-                showerror('Import error',
-                          'Bio Python unavailable!'
-                          '\nInstall biopython and mmtf!')
+                showerror('Import error', 'Bio Python unavailable!\nInstall biopython and mmtf!')
                 return
             except HTTPError as e:
                 showerror('Error!!', ('{1:s}\nID PDB: {0:s} not found'
@@ -392,8 +375,7 @@ class TkGui(tk.Tk):
                 self.cls.open_cif(cif_f)
             except ImportError:
                 showerror('Import error',
-                          'Bio Python is not available!'
-                          '\nInstall biopython and mmtf!')
+                          'Bio Python is not available!\nInstall biopython and mmtf!')
                 return
             except FileNotFoundError:
                 return
@@ -415,7 +397,7 @@ class TkGui(tk.Tk):
             showerror('Error!', 'Invalid file format\nor file does not contain hydophobic resides')
             return
         else:
-            showinfo('Information', 'File parsed!\nHTable - {:s}\n'.format(htable) +
+            showinfo('Information', 'File parsed!\nHTable: {:s}\n'.format(htable) +
                      "No of hydrophobic residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
                      "Maximum distance = {:.3f} \u212B\nMean distance = {:.3f} \u212B\n".format(*parse_results))
             self.l11.configure(text="{0:>5d}".format(parse_results[0]))
@@ -432,9 +414,10 @@ class TkGui(tk.Tk):
         self.fig = None
         self.clean_txt()
         self.tx.configure(state='normal')
-        self.tx.insert(tk.END, "No of hydrophobic residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
-                               "Maximum distance = {:.3f} \u212B\n"
-                               "Mean distance = {:.3f} \u212B\n\n".format(*parse_results))
+        self.tx.insert(tk.END, 'HTable: {:s}\n'.format(htable) +
+                       "No of hydrophobic residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
+                       "Maximum distance = {:.3f} \u212B\n"
+                       "Mean distance = {:.3f} \u212B\n\n".format(*parse_results))
         self.tx.configure(state='disabled')
 
     def clean_txt(self):
@@ -490,7 +473,7 @@ class TkGui(tk.Tk):
             showerror('Error!', 'The calculation is already running!')
             return
         if self.fig is None:
-            showerror('Error!', 'Graph is unavailable!')
+            showerror('Error!', 'Graph unavailable!')
             return
         opt = {'parent': self,
                'filetypes': [('All support formats', ('.eps', '.jpeg', '.jpg', '.pdf', '.pgf', '.png', '.ps',
@@ -510,7 +493,7 @@ class TkGui(tk.Tk):
                           'Supported formats: eps, jpeg, jpg, pdf, pgf, png, ps, raw, rgba, svg, svgz, tif, tiff.')
 
     def grid_set(self):
-        self.grid = bool(askyesno('Mesh', 'Display?'))
+        self.grid = bool(askyesno('Grid', 'Display?'))
         if self.run_flag:
             return
         try:

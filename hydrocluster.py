@@ -37,10 +37,8 @@ if __name__ == '__main__':
     namespace = parser.parse_args()
     if namespace.gui == 'tkgui':
         from hydrocluster.tkgui import TkGui
-
         gui = TkGui(namespace)
         gui.mainloop()
     elif namespace.gui == 'cli':
         from hydrocluster.cli import Cli
-
         cli = Cli(namespace)

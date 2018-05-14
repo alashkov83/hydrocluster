@@ -98,3 +98,4 @@ ENV/
 # mypy
 .mypy_cache/
 Будет удалено hydrocluster/__pycache__/
+Будет удалено .idea/

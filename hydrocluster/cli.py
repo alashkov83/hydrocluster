@@ -82,7 +82,7 @@ class Cli:
             eps, min_samples = self.cls.auto(metric=metric)
             self.log_append('Autoscan done... \n')
         except ValueError:
-            self.log_append('Error! File not parsed or cluster analysis fail!\n')
+            self.log_append('Error! File was not parse or clustering was fail\n')
             sys.exit(-1)
         else:
             self.log_append(('Estimated number of clusters: {0:d}\nSilhouette Coefficient: {1:.3f}\n'
@@ -96,7 +96,7 @@ class Cli:
         try:
             self.cls.cluster(eps, min_samples)
         except ValueError:
-            self.log_append('Error! File not parsed or cluster analysis fail\n')
+            self.log_append('Error! File was not parse or clustering was fail\n')
             sys.exit(-1)
         else:
             self.log_append(('Estimated number of clusters: {0:d}\nSilhouette Coefficient: {1:.3f}\n'
@@ -112,12 +112,12 @@ class Cli:
             canvas = FigureCanvasAgg(fig)
             canvas.print_png(sa)
         except AttributeError:
-            self.log_append('Error! Graph not created !!\n')
+            self.log_append('Error! Plot was not created!\n')
             return
 
     def open_file(self, filename):
         if not filename:
-            self.log_append('Filename not defined\n')
+            self.log_append('Filename was not defined\n')
             sys.exit(-1)
         if filename.split('.')[-1].strip().lower() == 'pdb':
             try:
@@ -126,12 +126,12 @@ class Cli:
                 self.log_append('File {:s} not found!\n'.format(filename))
                 sys.exit(-1)
             else:
-                self.log_append('File {:s} read!\n'.format(filename))
+                self.log_append('File {:s} was read!\n'.format(filename))
         elif filename.split('.')[-1].strip().lower() == 'cif':
             try:
                 self.cls.open_cif(filename)
             except ImportError:
-                self.log_append('Import error! Bio Python unavailable! \nInstall biopython and mmtf!\n')
+                self.log_append('Import error! Bio Python unavailable! \nPlease install biopython and mmtf!\n')
                 sys.exit(-1)
             except FileNotFoundError:
                 sys.exit(-1)
@@ -144,14 +144,14 @@ class Cli:
             try:
                 self.cls.open_url(filename)
             except ImportError:
-                self.log_append('Import error! Bio Python unavailable! \nInstall biopython and mmtf!\n')
+                self.log_append('Import error! Bio Python unavailable! \nPlease install biopython and mmtf\n')
                 sys.exit(-1)
             except HTTPError as e:
-                self.log_append('Error! ID PDB: {0:s} not found or refers to an incorrect file!'.format(filename,
-                                                                                                        str(e)))
+                self.log_append('Error! ID PDB: {0:s} not found or refers to an incorrect file!'.format(
+                    filename, str(e)))
                 sys.exit(-1)
             else:
-                self.log_append('Файл загружен\n')
+                self.log_append('File ID PDB: {0:s} was downloaded!\n'.format(filename))
 
     def parse_pdb(self, htable):
         try:
@@ -200,5 +200,5 @@ class Cli:
             canvas = FigureCanvasAgg(fig)
             canvas.print_png(sa)
         except AttributeError:
-            self.log_append('Error! Graph not created !!\n')
+            self.log_append('Error! Plot was not created !!\n')
             return

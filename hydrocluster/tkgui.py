@@ -187,8 +187,8 @@ class TkGui(tk.Tk):
         om = tk.Menu(m)
         # item is located on the main menu (m)
         m.add_cascade(label='Options', menu=om)
-        om.add_command(label='Graph grid', command=self.grid_set)
-        om.add_command(label='Legend', command=self.legend_set)
+        om.add_command(label='Plot grid', command=self.grid_set)
+        om.add_command(label='Plot legend', command=self.legend_set)
         om.add_command(label='Hydrophobic cores content', command=self.resi)
         om.add_command(label='Autotune colorbar', command=self.colormap)
         om.add_command(label='Clear LOG', command=self.clean_txt)
@@ -202,7 +202,7 @@ class TkGui(tk.Tk):
     def run(self, auto: bool = False) -> None:
         """The main algorithm of the program."""
         if self.run_flag:
-            showerror('Error!', 'The calculation is already running!')
+            showerror('Error!', 'The calculation is still running!')
             return
         self.run_flag = True
         self.pb['value'] = 0
@@ -281,8 +281,8 @@ class TkGui(tk.Tk):
                     self.tx.insert(tk.END, 'Autoscan done... \n')
                     self.tx.configure(state='disabled')
                 except ValueError:
-                    showerror('Error!', 'File not parsed\n or cluster analysis fail!')
-                    self.tx.insert(tk.END, 'Error! File not parsed or cluster analysis fail!\n')
+                    showerror('Error!', 'File was not parse or clustering was fail')
+                    self.tx.insert(tk.END, 'Error! File was not parse or clustering was fail\n')
                     self.tx.configure(state='disabled')
                     self.run_flag = False
                     return
@@ -297,7 +297,7 @@ class TkGui(tk.Tk):
                 self.pb['value'] = 1
                 self.pb.update()
             except ValueError:
-                showerror('Error!', 'File not parsed\n or cluster analysis fail!')
+                showerror('Error!', 'File was not parse or clustering was fail')
                 self.run_flag = False
                 return
         self.tx.configure(state='normal')
@@ -329,7 +329,7 @@ class TkGui(tk.Tk):
 
     def open_pdb(self):
         if self.run_flag:
-            showerror('Error!', 'The calculation is already running!')
+            showerror('Error!', 'The calculation is still running!')
             return
         opt = {'filetypes': [('Files PDB', ('.pdb', '.PDB', '.ent')), ('All files', '.*')]}
         pdb = askopenfilename(**opt)
@@ -339,32 +339,32 @@ class TkGui(tk.Tk):
             except FileNotFoundError:
                 return
             else:
-                showinfo('Information', 'File read!')
+                showinfo('Info', 'File was read!')
                 self.parse_pdb()
         else:
             return
 
     def open_url(self):
         if self.run_flag:
-            showerror('Error!', 'The calculation is already running!')
+            showerror('Error!', 'The calculation is still running!')
             return
         url = askstring('Download', 'ID PDB:')
         if url is not None:
             try:
                 self.cls.open_url(url)
             except ImportError:
-                showerror('Import error', 'Bio Python unavailable!\nInstall biopython and mmtf!')
+                showerror('Import error', 'Bio Python unavailable!\nPlease install biopython and mmtf!')
                 return
             except HTTPError as e:
                 showerror('Error!!', ('{1:s}\nID PDB: {0:s} not found'
                                       ' or refers to an incorrect file!').format(url, str(e)))
             else:
-                showinfo('Information', 'File downloaded')
+                showinfo('Info', 'File ID PDB: {0:s} was downloaded'.format(url))
                 self.parse_pdb()
 
     def open_cif(self):
         if self.run_flag:
-            showerror('Error!', 'The calculation is already running!')
+            showerror('Error!', 'The calculation is still running!')
             return
         opt = {'filetypes': [('Files mmCIF', ('.cif', '.CIF')), ('Все файлы', '.*')]}
         cif_f = askopenfilename(**opt)
@@ -372,7 +372,7 @@ class TkGui(tk.Tk):
             try:
                 self.cls.open_cif(cif_f)
             except ImportError:
-                showerror('Import error', 'Bio Python is not available!\nInstall biopython and mmtf!')
+                showerror('Import error', 'Bio Python is not available!\nPlease install biopython and mmtf!')
                 return
             except FileNotFoundError:
                 return
@@ -380,12 +380,12 @@ class TkGui(tk.Tk):
                 showerror('Error', 'Incorrect CIF file: {0:s}!'.format(cif_f))
                 return
             else:
-                showinfo('Information', 'File is read!')
+                showinfo('Infor', 'File {0:s} was read!'.format(cif_f))
                 self.parse_pdb()
 
     def parse_pdb(self):
         if self.run_flag:
-            showerror('Error!', 'The calculation is already running!')
+            showerror('Error!', 'The calculation is still running!')
             return
         try:
             htable = self.combox_p.get()
@@ -394,7 +394,7 @@ class TkGui(tk.Tk):
             showerror('Error!', 'Invalid file format\nor file does not contain hydophobic resides')
             return
         else:
-            showinfo('Information', 'File parsed!\nHTable: {:s}\n'.format(htable) +
+            showinfo('Info', 'File was parsed!\nHTable: {:s}\n'.format(htable) +
                      "No of hydrophobic residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
                      "Maximum distance = {:.3f} \u212B\nMean distance = {:.3f} \u212B\n".format(*parse_results))
             self.l11.configure(text="{0:>5d}".format(parse_results[0]))
@@ -423,7 +423,7 @@ class TkGui(tk.Tk):
 
     def open_state(self):
         if self.run_flag:
-            showerror('Error!', 'The calculation is already running!')
+            showerror('Error!', 'The calculation is still running!')
             return
         opt = {'filetypes': [('Data file', ('.bin', '.BIN')), ('All files', '.*')], 'title': 'Load state'}
         state = askopenfilename(**opt)
@@ -432,14 +432,14 @@ class TkGui(tk.Tk):
         except FileNotFoundError:
             return
         except (ValueError, OSError):
-            showerror("Error!", "The file is an invalid format!")
+            showerror("Error!", "Invalid file format!")
             return
         else:
             self.run(auto=True)
 
     def save_state(self):
         if self.run_flag:
-            showerror('Error!', 'The calculation is already running!')
+            showerror('Error!', 'The calculation is still running!')
             return
         opt = {'filetypes': [('Data file', ('.bin', '.BIN')), ('All files', '.*')], 'initialfile': 'myfile.dat',
                'title': 'Save state'}
@@ -462,16 +462,16 @@ class TkGui(tk.Tk):
 
     def save_graph(self):
         if self.run_flag:
-            showerror('Error!', 'The calculation is already running!')
+            showerror('Error!', 'The calculation is still running!')
             return
         if self.fig is None:
-            showerror('Error!', 'Graph unavailable!')
+            showerror('Error!', 'Plot unavailable!')
             return
         opt = {'parent': self,
                'filetypes': [('All support formats', ('.eps', '.jpeg', '.jpg', '.pdf', '.pgf', '.png', '.ps',
                                                       '.raw', '.rgba', '.svg', '.svgz', '.tif', '.tiff')), ],
                'initialfile': 'myfile.png',
-               'title': 'Save graph'}
+               'title': 'Save plot'}
         sa = asksaveasfilename(**opt)
         if sa:
             try:
@@ -479,13 +479,13 @@ class TkGui(tk.Tk):
             except FileNotFoundError:
                 return
             except AttributeError:
-                showerror('Error!', 'Graph unavailable!')
+                showerror('Error!', 'Plot unavailable!')
             except ValueError:
                 showerror('Unsupported file format!',
                           'Supported formats: eps, jpeg, jpg, pdf, pgf, png, ps, raw, rgba, svg, svgz, tif, tiff.')
 
     def grid_set(self):
-        self.grid = bool(askyesno('Grid', 'Display?'))
+        self.grid = bool(askyesno('Plot grid', 'Display?'))
         if self.run_flag:
             return
         try:
@@ -496,7 +496,7 @@ class TkGui(tk.Tk):
         self.graph()
 
     def legend_set(self):
-        self.legend = bool(askyesno('Figure legend', 'Display?'))
+        self.legend = bool(askyesno('Plot legend', 'Display?'))
         if self.run_flag:
             return
         try:
@@ -508,7 +508,7 @@ class TkGui(tk.Tk):
 
     def resi(self):
         if self.run_flag:
-            showerror('Error!', 'The calculation is already running!')
+            showerror('Error!', 'The calculation is still running!')
             return
         aa_list = self.cls.aa_list
         if (not aa_list) or self.cls.labels is None:
@@ -544,7 +544,7 @@ class TkGui(tk.Tk):
 
     def colormap(self):
         if self.run_flag:
-            showerror('Error!', 'The calculation is already running!')
+            showerror('Error!', 'The calculation is still running!')
             return
         try:
             grid = self.grid

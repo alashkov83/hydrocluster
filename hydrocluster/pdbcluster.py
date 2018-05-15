@@ -280,23 +280,28 @@ class ClusterPdb:
         fig = Figure(figsize=(8, 6))
         try:
             unique_labels = set(self.labels)
+            xyz_all = self.X
         except AttributeError:
             raise AttributeError
         ax = axes3d.Axes3D(fig)
         colors = [cm.get_cmap('rainbow')(each) for each in np.linspace(0, 1, len(unique_labels))]
         for k, col in zip(unique_labels, colors):
-            class_member_mask = (self.labels == k)
+            # Black used for noise.
             if k == -1:
-                # Black used for noise.
-                xyz = self.X[class_member_mask & ~self.core_samples_mask]
-                ax.scatter(xyz[:, 0], xyz[:, 1], xyz[:, 2], c='k', s=12, label='Noise')
+                xyz_noise = np.array([x for i, x in enumerate(xyz_all) if self.labels[i] == k])
+                if xyz_noise.any():
+                    ax.scatter(xyz_noise[:, 0], xyz_noise[:, 1], xyz_noise[:, 2], c='k', s=12, label='Noise')
             else:
-                xyz = self.X[class_member_mask & self.core_samples_mask]
-                ax.scatter(xyz[:, 0], xyz[:, 1], xyz[:, 2], c=tuple(
-                    col), s=32, label='Core Cluster No {:d}'.format(k + 1))
-                xyz = self.X[class_member_mask & ~self.core_samples_mask]
-                ax.scatter(xyz[:, 0], xyz[:, 1], xyz[:, 2], c=tuple(
-                    col), s=12, label='Added Cluster No {:d}'.format(k + 1))
+                xyz_core = np.array([x for i, x in enumerate(xyz_all) if self.labels[i] == k
+                                     and self.core_samples_mask[i]])
+                if xyz_core.any():
+                    ax.scatter(xyz_core[:, 0], xyz_core[:, 1], xyz_core[:, 2], c=col, s=32,
+                               label='Core Cluster No {:d}'.format(k + 1))
+                xyz_uncore = np.array([x for i, x in enumerate(xyz_all) if self.labels[i] == k
+                                       and not self.core_samples_mask[i]])
+                if xyz_uncore.any():
+                    ax.scatter(xyz_uncore[:, 0], xyz_uncore[:, 1], xyz_uncore[:, 2], c=col, s=12,
+                               label='Uncore Cluster No {:d}'.format(k + 1))
         fig.suptitle('Cluster analysis\n')
         ax.set_ylabel(r'$y\ \AA$')
         ax.set_xlabel(r'$x\ \AA$')

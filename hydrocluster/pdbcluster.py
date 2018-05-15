@@ -122,6 +122,7 @@ class ClusterPdb:
         """
         min_eps, max_eps, step_eps, min_min_samples, max_min_samples = self.auto_params
         n = 1
+        self.states.clear()
         for j in np.arange(min_eps, max_eps + step_eps, step_eps):
             for i in range(min_min_samples, max_min_samples + 1):
                 self.cluster(eps=j, min_samples=i)
@@ -279,7 +280,7 @@ class ClusterPdb:
         """
         fig = Figure(figsize=(8, 6))
         try:
-            unique_labels = set(self.labels)
+            unique_labels = sorted(set(self.labels))
             xyz_all = self.X
         except AttributeError:
             raise AttributeError

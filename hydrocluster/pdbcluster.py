@@ -349,8 +349,9 @@ class ClusterPdb:
         ax2.set_ylabel('EPS, \u212B')
         ax2.grid(grid_state)
         z = np.array([data[3] for data in colormap_data])
+        z_min = min([x for x in z.flat if x > -1.0])
         z.shape = (y.size, x.size)
-        pc2 = ax2.pcolor(x, y, z, cmap='gnuplot')
+        pc2 = ax2.pcolor(x, y, z, cmap='gnuplot', vmin=z_min)
         fig.colorbar(pc2, ax=ax2, extend='max', extendfrac=0.1)
         return fig
 
@@ -382,8 +383,8 @@ class ClusterPdb:
             'weight_array': self.weight_array,
             'aa_list': self.aa_list,
             's_array': self.s_array,
-            'hteble': self.htable,
-            'parse_result': self.parse_results,
+            'htable': self.htable,
+            'parse_results': self.parse_results,
             'auto_params': self.auto_params,
             'states': self.states}
         with gzip.open(file, 'wb') as f:

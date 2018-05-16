@@ -425,7 +425,7 @@ class TkGui(tk.Tk):
         if self.run_flag:
             showerror('Error!', 'The calculation is still running!')
             return
-        opt = {'filetypes': [('Data file', ('.bin', '.BIN')), ('All files', '.*')], 'title': 'Load state'}
+        opt = {'filetypes': [('Data file', ('.dat', '.DAT')), ('All files', '.*')], 'title': 'Load state'}
         state = askopenfilename(**opt)
         try:
             self.cls.loadstate(state)
@@ -435,13 +435,31 @@ class TkGui(tk.Tk):
             showerror("Error!", "Invalid file format!")
             return
         else:
+            htable = self.cls.htable
+            self.combox_p.set(htable)
+            nor, mind, maxd, meand = self.cls.parse_results
+            self.l11.configure(text="{0:>5d}".format(nor))
+            self.l12.configure(text="{0:>5.3f}".format(mind))
+            self.l13.configure(text="{0:>5.3f}".format(maxd))
+            self.l14.configure(text="{0:>5.3f}".format(meand))
+            min_eps, max_eps, step_eps, min_min_samples, max_min_samples = self.cls.auto_params
+            self.ent_min_eps.delete(0, tk.END)
+            self.ent_min_eps.insert(0, '{:.1f}'.format(min_eps))
+            self.ent_max_eps.delete(0, tk.END)
+            self.ent_max_eps.insert(0, '{:.1f}'.format(max_eps))
+            self.ent_step_eps.delete(0, tk.END)
+            self.ent_step_eps.insert(0, '{:.1f}'.format(step_eps))
+            self.ent_min_min_samples.delete(0, tk.END)
+            self.ent_min_min_samples.insert(0, '{:d}'.format(min_min_samples))
+            self.ent_max_min_samples.delete(0, tk.END)
+            self.ent_max_min_samples.insert(0, '{:d}'.format(max_min_samples))
             self.run(auto=True)
 
     def save_state(self):
         if self.run_flag:
             showerror('Error!', 'The calculation is still running!')
             return
-        opt = {'filetypes': [('Data file', ('.bin', '.BIN')), ('All files', '.*')], 'initialfile': 'myfile.dat',
+        opt = {'filetypes': [('Data file', ('.dat', '.DAT')), ('All files', '.*')], 'initialfile': 'myfile.dat',
                'title': 'Save state'}
         state = asksaveasfilename(**opt)
         try:

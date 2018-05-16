@@ -164,7 +164,7 @@ class Cli:
                             "Maximum distance = {:.3f} \u212B\nMean distance = {:.3f} \u212B\n".format(*parse_results))
 
     def save_state(self, newdir, basefile):
-        st = os.path.join(newdir, '{:s}'.format(basefile + '.bin'))
+        st = os.path.join(newdir, '{:s}'.format(basefile + '.dat'))
         try:
             self.cls.savestate(st)
         except FileNotFoundError:

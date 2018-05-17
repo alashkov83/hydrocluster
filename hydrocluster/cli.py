@@ -85,8 +85,8 @@ class Cli:
             self.log_append('Error! File was not parse or clustering was fail\n')
             sys.exit(-1)
         else:
-            self.log_append(('Estimated number of clusters: {0:d}\nSilhouette Coefficient: {1:.3f}\n'
-                             'Calinski and Harabaz score: {4:.3f}\nEPS: {2:.1f} \u212B\nMIN_SAMPLES: {3:d}\n').format(
+            self.log_append(('Number of clusters = {0:d}\nSilhouette Coefficient = {1:.3f}\n'
+                             'Calinski-Harabaz score = {4:.3f}\nEPS = {2:.1f} \u212B\nMIN_SAMPLES = {3:d}\n').format(
                 self.cls.n_clusters, self.cls.si_score, eps, min_samples, self.cls.calinski))
 
     def noauto(self, eps, min_samples):
@@ -99,10 +99,9 @@ class Cli:
             self.log_append('Error! File was not parse or clustering was fail\n')
             sys.exit(-1)
         else:
-            self.log_append(('Estimated number of clusters: {0:d}\nSilhouette Coefficient: {1:.3f}\n'
-                             'Calinski and Harabaz score: {4:.3f}\nEPS: {2:.1f} \u212B\n'
-                             'MIN_SAMPLES: {3:d}\n').format(self.cls.n_clusters,
-                                                            self.cls.si_score, eps, min_samples, self.cls.calinski))
+            self.log_append(('Number of clusters = {0:d}\nSilhouette Coefficient = {1:.3f}\n'
+                             'Calinski-Harabaz score = {4:.3f}\nEPS = {2:.1f} \u212B\nMIN_SAMPLES = {3:d}\n').format(
+                self.cls.n_clusters, self.cls.si_score, eps, min_samples, self.cls.calinski))
 
     def graph(self, newdir, basefile):
         grid, legend = True, True

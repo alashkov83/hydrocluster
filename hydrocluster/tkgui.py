@@ -300,9 +300,13 @@ class TkGui(tk.Tk):
                 showerror('Error!', 'File was not parse or clustering was fail')
                 self.run_flag = False
                 return
+        showinfo('Autoscan done', ('Number of clusters = {0:d}\nSilhouette Coefficient = {1:.3f}\n'
+                                   'Calinski-Harabaz score = {4:.3f}\nEPS = {2:.1f} \u212B\nMIN_SAMPLES = {3:d}\n'
+                                   ).format(self.cls.n_clusters, self.cls.si_score, eps, min_samples,
+                                            self.cls.calinski))
         self.tx.configure(state='normal')
-        self.tx.insert(tk.END, ('Estimated number of clusters: {0:d}\nSilhouette Coefficient: {1:.3f}\n'
-                                'Calinski and Harabaz score: {4:.3f}\nEPS: {2:.1f} \u212B\nMIN_SAMPLES: {3:d}\n'
+        self.tx.insert(tk.END, ('Number of clusters = {0:d}\nSilhouette Coefficient = {1:.3f}\n'
+                                'Calinski-Harabaz score = {4:.3f}\nEPS = {2:.1f} \u212B\nMIN_SAMPLES = {3:d}\n'
                                 ).format(self.cls.n_clusters, self.cls.si_score, eps, min_samples, self.cls.calinski))
         self.tx.configure(state='disabled')
         self.graph()

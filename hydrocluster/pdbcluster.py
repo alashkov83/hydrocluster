@@ -63,7 +63,7 @@ class ClusterPdb:
         self.aa_list.clear()
         self.states.clear()
 
-    def cluster(self, eps, min_samples):
+    def cluster(self, eps: float, min_samples: int):
         """
 
         :param eps:
@@ -113,11 +113,12 @@ class ClusterPdb:
         except ValueError:
             self.calinski = 0
 
-    def init_cycles(self, min_eps, max_eps, step_eps, min_min_samples, max_min_samples):
+    def init_cycles(self, min_eps: float, max_eps: float, step_eps: float,
+                    min_min_samples: int, max_min_samples: int) -> tuple:
         self.auto_params = min_eps, max_eps, step_eps, min_min_samples, max_min_samples
         return (max_min_samples - min_min_samples + 1) * np.arange(min_eps, max_eps + step_eps, step_eps).size
 
-    def auto_yield(self):
+    def auto_yield(self) -> iter:
         """
         """
         min_eps, max_eps, step_eps, min_min_samples, max_min_samples = self.auto_params
@@ -149,7 +150,7 @@ class ClusterPdb:
         self.calinski = state[4]
         return state[5], state[6]
 
-    def open_pdb(self, pdb) -> None:
+    def open_pdb(self, pdb: str) -> None:
         """
 
         :return:
@@ -160,7 +161,7 @@ class ClusterPdb:
         except FileNotFoundError:
             raise FileNotFoundError
 
-    def open_url(self, url) -> None:
+    def open_url(self, url: str) -> None:
         """
 
         :return:
@@ -183,7 +184,7 @@ class ClusterPdb:
                 f.seek(0, 0)
                 self.s_array = f.readlines()
 
-    def open_cif(self, cif_f):
+    def open_cif(self, cif_f: str):
         """
 
         :return:
@@ -210,7 +211,7 @@ class ClusterPdb:
                 self.s_array = f.readlines()
 
     @staticmethod
-    def dict_abs_charge(res_type, pH):
+    def dict_abs_charge(res_type: str, pH: float) -> dict:
         pKa_dict = {'ARG': 12.5, 'ASP': 3.9, 'GLU': 4.35, 'HIS': 6.5, 'LIS': 10.35, 'TYR': 9.9, 'CYS': 8.3}
         # DEXTER S MOORE Amino Acid and Peptide Net Charges: A Simple Calculational Procedure
         # BIOCHEMICAL EDUCATION 13(1) 1985
@@ -222,7 +223,7 @@ class ClusterPdb:
             return {res: 1 / (1 + 10 ** (pKa_dict[res] - pH)) for res in ['ASP', 'GLU', 'TYR', 'CYS']
                     if (1 / (1 + 10 ** (pKa_dict[res] - pH))) > shrink_value}
 
-    def parser(self, htable='hydropathy', pH=7.0):
+    def parser(self, htable: str = 'hydropathy', pH: float = 7.0) -> tuple:
         self.clean()
         self.htable = htable
         xyz_array = []
@@ -288,7 +289,7 @@ class ClusterPdb:
             self.pdist)]), np.max(self.pdist[np.nonzero(self.pdist)]), np.mean(self.pdist[np.nonzero(self.pdist)])
         return self.parse_results
 
-    def graph(self, grid_state, legend_state):
+    def graph(self, grid_state: bool, legend_state: bool) -> tuple:
         """
 
         :return:
@@ -337,7 +338,7 @@ class ClusterPdb:
             ax.legend(loc='best', frameon=False)
         return fig, ax
 
-    def colormap(self, grid_state):
+    def colormap(self, grid_state: bool) -> object:
         """
 
         :return:
@@ -382,7 +383,7 @@ class ClusterPdb:
         c_mass_z = float(mz.sum()) / mass_sum
         return [c_mass_x, c_mass_y, c_mass_z]
 
-    def savestate(self, file):
+    def savestate(self, file: str):
         """
 
         :param file:
@@ -405,7 +406,7 @@ class ClusterPdb:
         with gzip.open(file, 'wb') as f:
             pickle.dump(glob_state, f)
 
-    def loadstate(self, file):
+    def loadstate(self, file: str):
         """
 
         :param file:

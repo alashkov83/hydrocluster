@@ -10,7 +10,7 @@ from tkinter.filedialog import asksaveasfilename
 from tkinter.messagebox import askyesno
 from tkinter.messagebox import showerror
 from tkinter.messagebox import showinfo
-from tkinter.simpledialog import askstring
+from tkinter.simpledialog import askstring, askfloat
 from urllib.error import HTTPError
 
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
@@ -33,9 +33,9 @@ class TkGui(tk.Tk):
         fra1.grid(row=0, rowspan=2, column=0)
         lab1 = tk.LabelFrame(fra1, text='Parsing', labelanchor='n', borderwidth=5)
         lab1.grid(row=0, column=0, pady=5)
-        lab11 = tk.LabelFrame(lab1, text='Hydrophobity table', labelanchor='n', borderwidth=5)
+        lab11 = tk.LabelFrame(lab1, text='Property table', labelanchor='n', borderwidth=5)
         lab11.grid(row=0, column=0, pady=5, padx=5)
-        listbox_items = ['hydropathy', 'nanodroplet']
+        listbox_items = ['hydropathy', 'nanodroplet', 'positive', 'negative']
         self.combox_p = ttk.Combobox(lab11, height=5, width=15, values=listbox_items)
         self.combox_p.pack()
         self.combox_p.set('hydropathy')
@@ -63,8 +63,7 @@ class TkGui(tk.Tk):
         lab3.grid(row=2, column=0, pady=5)
         lab31 = tk.LabelFrame(lab3, text='EPS (\u212B)', labelanchor='n', borderwidth=5)
         lab31.grid(row=0, column=0, pady=5, padx=5)
-        self.sca1 = tk.Scale(lab31, length=200, from_=1.0, to=15.0,
-                             showvalue=1, orient=tk.HORIZONTAL, resolution=0.1)
+        self.sca1 = tk.Scale(lab31, length=200, from_=1.0, to=15.0, showvalue=1, orient=tk.HORIZONTAL, resolution=0.1)
         self.sca1.pack()
         lab32 = tk.LabelFrame(lab3, text='MIN_SAMPLES', labelanchor='n', borderwidth=5)
         lab32.grid(row=1, column=0, pady=5, padx=5)
@@ -164,7 +163,7 @@ class TkGui(tk.Tk):
 
     @staticmethod
     def about():
-        showinfo('About', 'Cluster analysis of hydrophobic regions of macromolecules')
+        showinfo('About', 'Cluster analysis of hydrophobic or charged regions of macromolecules')
 
     def menu(self) -> None:
         """The method of initialize menu."""
@@ -189,7 +188,7 @@ class TkGui(tk.Tk):
         m.add_cascade(label='Options', menu=om)
         om.add_command(label='Plot grid', command=self.grid_set)
         om.add_command(label='Plot legend', command=self.legend_set)
-        om.add_command(label='Hydrophobic cores content', command=self.resi)
+        om.add_command(label='Cores content', command=self.resi)
         om.add_command(label='Autotune colorbar', command=self.colormap)
         om.add_command(label='Clear LOG', command=self.clean_txt)
         m.add_command(label='About', command=self.about)
@@ -270,11 +269,10 @@ class TkGui(tk.Tk):
                     min_eps, max_eps, step_eps, min_min_samples, max_min_samples))
                 try:
                     for n, j, i in self.cls.auto_yield():
-                        self.tx.insert(tk.END, ('Step No {0:d}: EPS = {1:.2f} \u212B, '
-                                                'min_samples = {2:d}, No clusters = {3:d}, '
-                                                'Silhouette score = {4:.3f} '
-                                                'Calinski score = {5:.3f}\n').format(
-                            n, j, i, self.cls.n_clusters, self.cls.si_score, self.cls.calinski))
+                        self.tx.insert(tk.END, 'Step No {0:d}: EPS = {1:.2f} \u212B, min_s = {2:d}, '
+                                               'No cls = {3:d}, Si sc = {4:.3f}, Calinski_sc = {5:.3f}\n'
+                                       .format(n, j, i, self.cls.n_clusters,
+                                               self.cls.si_score, self.cls.calinski))
                         self.pb['value'] = n
                         self.pb.update()
                     eps, min_samples = self.cls.auto(metric=metric)
@@ -393,13 +391,17 @@ class TkGui(tk.Tk):
             return
         try:
             htable = self.combox_p.get()
-            parse_results = self.cls.parser(htable=htable)
+            if htable == 'positive' or htable == 'negative':
+                pH = askfloat('Your pH', 'pH value:', initialvalue=7.0, minvalue=0.0, maxvalue=14.0)
+                parse_results = self.cls.parser(htable=htable, pH=pH)
+            else:
+                parse_results = self.cls.parser(htable=htable)
         except ValueError:
             showerror('Error!', 'Invalid file format\nor file does not contain hydophobic resides')
             return
         else:
-            showinfo('Info', 'File was parsed!\nHTable: {:s}\n'.format(htable) +
-                     "No of hydrophobic residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
+            showinfo('Info', 'File was parsed!\nPTable: {:s}\n'.format(htable) +
+                     "No of residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
                      "Maximum distance = {:.3f} \u212B\nMean distance = {:.3f} \u212B\n".format(*parse_results))
             self.l11.configure(text="{0:>5d}".format(parse_results[0]))
             self.l12.configure(text="{0:>5.3f}".format(parse_results[1]))
@@ -415,8 +417,8 @@ class TkGui(tk.Tk):
         self.fig = None
         self.clean_txt()
         self.tx.configure(state='normal')
-        self.tx.insert(tk.END, 'HTable: {:s}\n'.format(htable) +
-                       "No of hydrophobic residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
+        self.tx.insert(tk.END, 'PTable: {:s}\n'.format(htable) +
+                       "No of residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
                        "Maximum distance = {:.3f} \u212B\nMean distance = {:.3f} \u212B\n\n".format(*parse_results))
         self.tx.configure(state='disabled')
 

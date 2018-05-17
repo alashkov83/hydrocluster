@@ -209,7 +209,20 @@ class ClusterPdb:
                 f.seek(0, 0)
                 self.s_array = f.readlines()
 
-    def parser(self, htable='hydropathy'):
+    @staticmethod
+    def dict_abs_charge(res_type, pH):
+        pKa_dict = {'ARG': 12.5, 'ASP': 3.9, 'GLU': 4.35, 'HIS': 6.5, 'LIS': 10.35, 'TYR': 9.9, 'CYS': 8.3}
+        # DEXTER S MOORE Amino Acid and Peptide Net Charges: A Simple Calculational Procedure
+        # BIOCHEMICAL EDUCATION 13(1) 1985
+        shrink_value = 0.1
+        if res_type == 'positive':
+            return {res: 1 / (1 + 10 ** (pH - pKa_dict[res])) for res in ['HIS', 'LIS', 'ARG']
+                    if (1 / (1 + 10 ** (pH - pKa_dict[res]))) > shrink_value}
+        elif res_type == 'negative':
+            return {res: 1 / (1 + 10 ** (pKa_dict[res] - pH)) for res in ['ASP', 'GLU', 'TYR', 'CYS']
+                    if (1 / (1 + 10 ** (pKa_dict[res] - pH))) > shrink_value}
+
+    def parser(self, htable='hydropathy', pH=7.0):
         self.clean()
         self.htable = htable
         xyz_array = []
@@ -222,6 +235,8 @@ class ClusterPdb:
             hydrfob = hydropathy
         elif htable == 'nanodroplet':
             hydrfob = nanodroplet
+        elif htable == 'positive' or htable == 'negative':
+            hydrfob = self.dict_abs_charge(htable, pH)
         # OLD CA-BASED PARSER
         # for s in strarr:
         #     if s[0:6] == 'ATOM  ' and (s[17:20] in hydrfob) and s[12:16] == ' CA ':
@@ -296,12 +311,12 @@ class ClusterPdb:
                 xyz_core = np.array([x for i, x in enumerate(xyz_all) if self.labels[i] == k
                                      and self.core_samples_mask[i]])
                 if xyz_core.any():
-                    ax.scatter(xyz_core[:, 0], xyz_core[:, 1], xyz_core[:, 2], c=col, s=32,
+                    ax.scatter(xyz_core[:, 0], xyz_core[:, 1], xyz_core[:, 2], c=tuple(col), s=32,
                                label='Core Cluster No {:d}'.format(k + 1))
                 xyz_uncore = np.array([x for i, x in enumerate(xyz_all) if self.labels[i] == k
                                        and not self.core_samples_mask[i]])
                 if xyz_uncore.any():
-                    ax.scatter(xyz_uncore[:, 0], xyz_uncore[:, 1], xyz_uncore[:, 2], c=col, s=12,
+                    ax.scatter(xyz_uncore[:, 0], xyz_uncore[:, 1], xyz_uncore[:, 2], c=tuple(col), s=12,
                                label='Uncore Cluster No {:d}'.format(k + 1))
         fig.suptitle('Cluster analysis\n')
         ax.set_ylabel(r'$y\ \AA$')

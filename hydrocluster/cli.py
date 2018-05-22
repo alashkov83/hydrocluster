@@ -43,7 +43,7 @@ class Cli:
         self.log_name = os.path.join(newdir, '{:s}'.format(basefile + '.log'))
         self.cls = ClusterPdb()
         self.open_file(namespace.input)
-        self.parse_pdb(namespace.htable)
+        self.parse_pdb(namespace.ptable, namespace.pH)
         if namespace.noauto:
             self.noauto(namespace.eps, namespace.min_samples)
         else:
@@ -152,14 +152,20 @@ class Cli:
             else:
                 self.log_append('File ID PDB: {0:s} was downloaded!\n'.format(filename))
 
-    def parse_pdb(self, htable):
+    def parse_pdb(self, htable, pH):
+        if htable == 'positive' or htable == 'negative':
+            if pH < 0 or pH > 14:
+                print("pH value range is 0-14")
+                sys.exit(-1)
         try:
-            parse_results = self.cls.parser(htable=htable)
+            parse_results = self.cls.parser(htable=htable, pH=pH)
         except ValueError:
-            self.log_append('Error! Invalid file format\nor file does not contain hydophobic resides\n')
+            self.log_append('Error! Invalid file format\nor file does not {:s} contain resides\n'.format(
+                'hydrophobic' if htable in ('hydropathy', 'nanodroplet')
+                else 'negative' if htable == 'negative' else 'positive'))
             return
         else:
-            self.log_append("No of hydrophobic residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
+            self.log_append("No of residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
                             "Maximum distance = {:.3f} \u212B\nMean distance = {:.3f} \u212B\n".format(*parse_results))
 
     def save_state(self, newdir, basefile):

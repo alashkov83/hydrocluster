@@ -389,15 +389,17 @@ class TkGui(tk.Tk):
         if self.run_flag:
             showerror('Error!', 'The calculation is still running!')
             return
+        htable = self.combox_p.get()
         try:
-            htable = self.combox_p.get()
             if htable == 'positive' or htable == 'negative':
                 pH = askfloat('Your pH', 'pH value:', initialvalue=7.0, minvalue=0.0, maxvalue=14.0)
                 parse_results = self.cls.parser(htable=htable, pH=pH)
             else:
                 parse_results = self.cls.parser(htable=htable)
         except ValueError:
-            showerror('Error!', 'Invalid file format\nor file does not contain hydophobic resides')
+            showerror('Error!', 'Invalid file format\nor file does not {:s} contain resides\n'.format(
+                'hydrophobic' if htable in ('hydropathy', 'nanodroplet')
+                else 'negative' if htable == 'negative' else 'positive'))
             return
         else:
             showinfo('Info', 'File was parsed!\nPTable: {:s}\n'.format(htable) +

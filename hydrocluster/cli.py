@@ -51,6 +51,8 @@ class Cli:
             self.save_state(newdir, basefile)
             self.colormap(newdir, basefile)
         self.resi()
+
+        self.save_pymol(newdir, basefile)
         self.graph(newdir, basefile)
 
     def log_append(self, line):
@@ -175,27 +177,20 @@ class Cli:
         except FileNotFoundError:
             return
 
-    def resi(self):
-        aa_list = self.cls.aa_list
-        if (not aa_list) or self.cls.labels is None:
+    def save_pymol(self, newdir, basefile):
+        pymol = os.path.join(newdir, '{:s}'.format(basefile + '.py'))
+        try:
+            self.cls.save_pymol_script(pymol)
+        except FileNotFoundError:
             return
-        aa_list = list(zip(aa_list, self.cls.labels, self.cls.core_samples_mask))
-        for k in sorted(set(self.cls.labels)):
-            if k != -1:
-                core_aa_list = []
-                uncore_aa_list = []
-                for aa in aa_list:
-                    if aa[1] == k and aa[2]:
-                        core_aa_list.append(aa[0])
-                    elif aa[1] == k and not aa[2]:
-                        uncore_aa_list.append(aa[0])
-                self.log_append('\nIn Core cluster No {:d} included: '.format(k + 1))
-                for aac in core_aa_list:
-                    self.log_append('{2:s}:{1:s}{0:d} '.format(*aac))
-                if uncore_aa_list:
-                    self.log_append('\nIn UNcore cluster No {:d} included: '.format(k + 1))
-                    for aac in uncore_aa_list:
-                        self.log_append('{2:s}:{1:s}{0:d} '.format(*aac))
+
+    def resi(self):
+        dict_aa = self.cls.get_dict_aa()
+        if not dict_aa:
+            return
+        for k, aa_list in dict_aa.items():
+            self.log_append('\nIn {:s} cluster No {:d} included: {:s}'.format(
+                ("Core" if k[0] else "Uncore"), k[1], ", ".join(['{2:s}:{1:s}{0:d}'.format(*aac) for aac in aa_list])))
         self.log_append('\n\n')
 
     def colormap(self, newdir, basefile):

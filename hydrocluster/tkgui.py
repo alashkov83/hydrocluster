@@ -122,7 +122,7 @@ class TkGui(tk.Tk):
         self.fra3.grid_propagate(False)
         fra4 = tk.Frame(self)
         fra4.grid(row=1, column=1, pady=10)
-        self.tx = tk.Text(fra4, width=100, height=8)
+        self.tx = tk.Text(fra4, width=100, height=8, wrap=tk.WORD)
         scr = tk.Scrollbar(fra4, command=self.tx.yview)
         self.tx.configure(yscrollcommand=scr.set, state='disabled')
         self.tx.pack(side=tk.LEFT)
@@ -178,6 +178,7 @@ class TkGui(tk.Tk):
         fm.add_command(label='Open CIF', command=self.open_cif)
         fm.add_command(label='Open ID PDB', command=self.open_url)
         fm.add_command(label='Load state', command=self.open_state)
+        fm.add_command(label='Save PyMOL script', command=self.save_pymol_script)
         fm.add_command(label='Save state', command=self.save_state)
         fm.add_command(label='Save picture', command=self.save_graph)
         fm.add_command(label='Save LOG', command=self.save_log)
@@ -475,6 +476,20 @@ class TkGui(tk.Tk):
         except FileNotFoundError:
             return
 
+    def save_pymol_script(self):
+        if self.run_flag:
+            showerror('Error!', 'The calculation is still running!')
+            return
+        opt = {'filetypes': [('PyMOL script', ('.py',)), ('All files', '.*')], 'initialfile': 'myfile.py',
+               'title': 'Save PyMOL script'}
+        pmlf = asksaveasfilename(**opt)
+        try:
+            self.cls.save_pymol_script(pmlf)
+        except FileNotFoundError:
+            return
+        except AttributeError:
+            showerror('Error!', 'Script unavailable!')
+
     def save_log(self):
         opt = {'parent': self, 'filetypes': [('LOG', '.log'), ], 'initialfile': 'myfile.log', 'title': 'Save LOG'}
         sa = asksaveasfilename(**opt)
@@ -536,34 +551,14 @@ class TkGui(tk.Tk):
         if self.run_flag:
             showerror('Error!', 'The calculation is still running!')
             return
-        aa_list = self.cls.aa_list
-        if (not aa_list) or self.cls.labels is None:
+        dict_aa = self.cls.get_dict_aa()
+        if not dict_aa:
             return
-        aa_list = list(zip(aa_list, self.cls.labels, self.cls.core_samples_mask))
-        for k in sorted(set(self.cls.labels)):
-            if k != -1:
-                core_aa_list = []
-                uncore_aa_list = []
-                for aa in aa_list:
-                    if aa[1] == k and aa[2]:
-                        core_aa_list.append(aa[0])
-                    elif aa[1] == k and not aa[2]:
-                        uncore_aa_list.append(aa[0])
-                self.tx.configure(state='normal')
-                self.tx.insert(tk.END, '\nIn Core cluster No {:d} included: '.format(k + 1))
-                self.tx.configure(state='disabled')
-                for aac in core_aa_list:
-                    self.tx.configure(state='normal')
-                    self.tx.insert(tk.END, '{2:s}:{1:s}{0:d} '.format(*aac))
-                    self.tx.configure(state='disabled')
-                if uncore_aa_list:
-                    self.tx.configure(state='normal')
-                    self.tx.insert(tk.END, '\nIn UNcore cluster No {:d} included: '.format(k + 1))
-                    self.tx.configure(state='disabled')
-                    for aac in uncore_aa_list:
-                        self.tx.configure(state='normal')
-                        self.tx.insert(tk.END, '{2:s}:{1:s}{0:d} '.format(*aac))
-                        self.tx.configure(state='disabled')
+        for k, aa_list in dict_aa.items():
+            self.tx.configure(state='normal')
+            self.tx.insert(tk.END, '\nIn {:s} cluster No {:d} included: {:s}'.format(
+                ("Core" if k[0] else "Uncore"), k[1], ", ".join(['{2:s}:{1:s}{0:d}'.format(*aac) for aac in aa_list])))
+            self.tx.configure(state='disabled')
         self.tx.configure(state='normal')
         self.tx.insert(tk.END, '\n\n')
         self.tx.configure(state='disabled')

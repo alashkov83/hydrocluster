@@ -6,6 +6,7 @@ import gzip
 import io
 import pickle
 import warnings
+from collections import OrderedDict
 from urllib.error import HTTPError
 
 import matplotlib.cm as cm
@@ -382,6 +383,38 @@ class ClusterPdb:
         c_mass_y = float(my.sum()) / mass_sum
         c_mass_z = float(mz.sum()) / mass_sum
         return [c_mass_x, c_mass_y, c_mass_z]
+
+    def get_dict_aa(self):
+        if (not self.aa_list) or self.labels is None:
+            return None
+        aa_list = list(zip(self.aa_list, self.labels, self.core_samples_mask))
+        dict_aa = OrderedDict()
+        for k in sorted(set(self.labels)):
+            if k != -1:
+                core_aa_list = []
+                uncore_aa_list = []
+                for aa in aa_list:
+                    if aa[1] == k and aa[2]:
+                        core_aa_list.append(aa[0])
+                    elif aa[1] == k and not aa[2]:
+                        uncore_aa_list.append(aa[0])
+                dict_aa[(1, k + 1)] = core_aa_list
+                dict_aa[(0, k + 1)] = uncore_aa_list
+        return dict_aa
+
+    def save_pymol_script(self, filename):
+        s = "from pymol import cmd\n\ncmd.set('label_color','white')\ncmd.delete ('sele')\ncmd.hide ('everything')\n" \
+            "cmd.show_as('sticks', 'all')\n"
+        dict_aa = self.get_dict_aa()
+        for k, aa_list in dict_aa.items():
+            s += "cmd.select('{:s}_cluster_{:d}', '{:s}')\n".format(
+                ("Core" if k[0] else "Uncore"), k[1], "+".join(
+                    ['(chain {1:s} and resi {0:d})'.format(*aac) for aac in aa_list]))
+            s += "cmd.color('{:s}', '{:s}_cluster_{:d}')\n".format(
+                ('forest' if k[0] else 'olive'), ("Core" if k[0] else "Uncore"), k[1])
+            s += "cmd.show_as('spheres', '{:s}_cluster_{:d}')\n".format(("Core" if k[0] else "Uncore"), k[1])
+        with open(filename, 'wt') as f:
+            f.write(s)
 
     def savestate(self, file: str):
         """

@@ -116,6 +116,15 @@ class ClusterPdb:
 
     def init_cycles(self, min_eps: float, max_eps: float, step_eps: float,
                     min_min_samples: int, max_min_samples: int) -> tuple:
+        """
+
+        :param min_eps:
+        :param max_eps:
+        :param step_eps:
+        :param min_min_samples:
+        :param max_min_samples:
+        :return:
+        """
         self.auto_params = min_eps, max_eps, step_eps, min_min_samples, max_min_samples
         return (max_min_samples - min_min_samples + 1) * np.arange(min_eps, max_eps + step_eps, step_eps).size
 
@@ -213,6 +222,12 @@ class ClusterPdb:
 
     @staticmethod
     def dict_abs_charge(res_type: str, pH: float) -> dict:
+        """
+
+        :param res_type:
+        :param pH:
+        :return:
+        """
         pKa_dict = {'ARG': 12.5, 'ASP': 3.9, 'GLU': 4.35, 'HIS': 6.5, 'LIS': 10.35, 'TYR': 9.9, 'CYS': 8.3}
         # DEXTER S MOORE Amino Acid and Peptide Net Charges: A Simple Calculational Procedure
         # BIOCHEMICAL EDUCATION 13(1) 1985
@@ -225,6 +240,12 @@ class ClusterPdb:
                     if (1 / (1 + 10 ** (pKa_dict[res] - pH))) > shrink_value}
 
     def parser(self, htable: str = 'hydropathy', pH: float = 7.0) -> tuple:
+        """
+
+        :param htable:
+        :param pH:
+        :return:
+        """
         self.clean()
         self.htable = htable
         xyz_array = []
@@ -385,6 +406,10 @@ class ClusterPdb:
         return [c_mass_x, c_mass_y, c_mass_z]
 
     def get_dict_aa(self):
+        """
+
+        :return:
+        """
         if (not self.aa_list) or self.labels is None:
             return None
         aa_list = list(zip(self.aa_list, self.labels, self.core_samples_mask))
@@ -403,6 +428,10 @@ class ClusterPdb:
         return dict_aa
 
     def save_pymol_script(self, filename):
+        """
+
+        :param filename:
+        """
         s = "from pymol import cmd\n\ncmd.set('label_color','white')\ncmd.delete ('sele')\ncmd.hide ('everything')\n" \
             "cmd.show_as('sticks', 'all')\n"
         dict_aa = self.get_dict_aa()

@@ -23,6 +23,9 @@ except ImportError:
 
 
 class TkGui(tk.Tk):
+    """
+
+    """
     def __init__(self, namespace) -> None:
         super().__init__()
         self.title('HydroCluster')
@@ -118,8 +121,8 @@ class TkGui(tk.Tk):
         self.pb = ttk.Progressbar(lab23, orient='horizontal', mode='determinate', length=200)
         self.pb.pack()
         self.fra3 = tk.Frame(self, width=800, height=720)
-        self.fra3.grid(row=0, column=1)
         self.fra3.grid_propagate(False)
+        self.fra3.grid(row=0, column=1)
         fra4 = tk.Frame(self)
         fra4.grid(row=1, column=1, pady=10)
         self.tx = tk.Text(fra4, width=100, height=8, wrap=tk.WORD)
@@ -163,6 +166,9 @@ class TkGui(tk.Tk):
 
     @staticmethod
     def about():
+        """
+
+        """
         showinfo('About', 'Cluster analysis of hydrophobic or charged regions of macromolecules')
 
     def menu(self) -> None:
@@ -190,7 +196,7 @@ class TkGui(tk.Tk):
         om.add_command(label='Plot grid', command=self.grid_set)
         om.add_command(label='Plot legend', command=self.legend_set)
         om.add_command(label='Cores content', command=self.resi)
-        om.add_command(label='Autotune colorbar', command=self.colormap)
+        om.add_command(label='Autotune colormap', command=self.colormap)
         om.add_command(label='Clear LOG', command=self.clean_txt)
         m.add_command(label='About', command=self.about)
 
@@ -312,6 +318,10 @@ class TkGui(tk.Tk):
         self.run_flag = False
 
     def graph(self):
+        """
+
+        :return:
+        """
         try:
             self.canvas.get_tk_widget().destroy()
             self.toolbar.destroy()
@@ -331,6 +341,10 @@ class TkGui(tk.Tk):
         self.canvas._tkcanvas.pack(fill=tk.BOTH, side=tk.TOP, expand=1)
 
     def open_pdb(self):
+        """
+
+        :return:
+        """
         if self.run_flag:
             showerror('Error!', 'The calculation is still running!')
             return
@@ -348,6 +362,10 @@ class TkGui(tk.Tk):
             return
 
     def open_url(self):
+        """
+
+        :return:
+        """
         if self.run_flag:
             showerror('Error!', 'The calculation is still running!')
             return
@@ -366,6 +384,10 @@ class TkGui(tk.Tk):
                 self.parse_pdb()
 
     def open_cif(self):
+        """
+
+        :return:
+        """
         if self.run_flag:
             showerror('Error!', 'The calculation is still running!')
             return
@@ -387,6 +409,10 @@ class TkGui(tk.Tk):
                 self.parse_pdb()
 
     def parse_pdb(self):
+        """
+
+        :return:
+        """
         if self.run_flag:
             showerror('Error!', 'The calculation is still running!')
             return
@@ -426,11 +452,18 @@ class TkGui(tk.Tk):
         self.tx.configure(state='disabled')
 
     def clean_txt(self):
+        """
+
+        """
         self.tx.configure(state='normal')
         self.tx.delete('1.0', tk.END)
         self.tx.configure(state='disabled')
 
     def open_state(self):
+        """
+
+        :return:
+        """
         if self.run_flag:
             showerror('Error!', 'The calculation is still running!')
             return
@@ -465,6 +498,10 @@ class TkGui(tk.Tk):
             self.run(auto=True)
 
     def save_state(self):
+        """
+
+        :return:
+        """
         if self.run_flag:
             showerror('Error!', 'The calculation is still running!')
             return
@@ -477,6 +514,10 @@ class TkGui(tk.Tk):
             return
 
     def save_pymol_script(self):
+        """
+
+        :return:
+        """
         if self.run_flag:
             showerror('Error!', 'The calculation is still running!')
             return
@@ -491,6 +532,9 @@ class TkGui(tk.Tk):
             showerror('Error!', 'Script unavailable!')
 
     def save_log(self):
+        """
+
+        """
         opt = {'parent': self, 'filetypes': [('LOG', '.log'), ], 'initialfile': 'myfile.log', 'title': 'Save LOG'}
         sa = asksaveasfilename(**opt)
         if sa:
@@ -502,6 +546,10 @@ class TkGui(tk.Tk):
                 pass
 
     def save_graph(self):
+        """
+
+        :return:
+        """
         if self.run_flag:
             showerror('Error!', 'The calculation is still running!')
             return
@@ -526,6 +574,10 @@ class TkGui(tk.Tk):
                           'Supported formats: eps, jpeg, jpg, pdf, pgf, png, ps, raw, rgba, svg, svgz, tif, tiff.')
 
     def grid_set(self):
+        """
+
+        :return:
+        """
         self.grid = bool(askyesno('Plot grid', 'Display?'))
         if self.run_flag:
             return
@@ -537,6 +589,10 @@ class TkGui(tk.Tk):
         self.graph()
 
     def legend_set(self):
+        """
+
+        :return:
+        """
         self.legend = bool(askyesno('Plot legend', 'Display?'))
         if self.run_flag:
             return
@@ -548,6 +604,10 @@ class TkGui(tk.Tk):
         self.graph()
 
     def resi(self):
+        """
+
+        :return:
+        """
         if self.run_flag:
             showerror('Error!', 'The calculation is still running!')
             return
@@ -564,6 +624,10 @@ class TkGui(tk.Tk):
         self.tx.configure(state='disabled')
 
     def colormap(self):
+        """
+
+        :return:
+        """
         if self.run_flag:
             showerror('Error!', 'The calculation is still running!')
             return

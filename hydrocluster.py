@@ -9,11 +9,17 @@ import argparse
 
 
 class Parser(argparse.ArgumentParser):
+    """
+
+    """
     def __init__(self):
         super().__init__(prog='hydrocluster.py')
         self.parser_setup()
 
     def parser_setup(self):
+        """
+
+        """
         self.add_argument('-i', '--input', type=str, default='', help='Input file name (pdb)')
         self.add_argument('-emin', '--emin', type=float, default=3.0, help='Minimum EPS value (A)')
         self.add_argument('-emax', '--emax', type=float, default=15.0, help='Maximum EPS value (A)')

@@ -21,6 +21,9 @@ except ImportError:
 
 
 class Cli:
+    """
+
+    """
     def __init__(self, namespace) -> None:
         self.namespace = namespace
         if namespace.output:
@@ -55,7 +58,11 @@ class Cli:
         self.save_pymol(newdir, basefile)
         self.graph(newdir, basefile)
 
-    def log_append(self, line):
+    def log_append(self, line: str):
+        """
+
+        :param line:
+        """
         print(line, end='')
         with open(self.log_name, 'at') as f:
             f.write(line)
@@ -91,7 +98,12 @@ class Cli:
                              'Calinski-Harabaz score = {4:.3f}\nEPS = {2:.1f} \u212B\nMIN_SAMPLES = {3:d}\n').format(
                 self.cls.n_clusters, self.cls.si_score, eps, min_samples, self.cls.calinski))
 
-    def noauto(self, eps, min_samples):
+    def noauto(self, eps: float, min_samples: int):
+        """
+
+        :param eps:
+        :param min_samples:
+        """
         if min_samples <= 0 or eps <= 0:
             print("--eps and --min samples options are required and it's values > 0")
             sys.exit(-1)
@@ -105,7 +117,13 @@ class Cli:
                              'Calinski-Harabaz score = {4:.3f}\nEPS = {2:.1f} \u212B\nMIN_SAMPLES = {3:d}\n').format(
                 self.cls.n_clusters, self.cls.si_score, eps, min_samples, self.cls.calinski))
 
-    def graph(self, newdir, basefile):
+    def graph(self, newdir: str, basefile: str):
+        """
+
+        :param newdir:
+        :param basefile:
+        :return:
+        """
         grid, legend = True, True
         sa = os.path.join(newdir, '{:s}'.format(basefile + '.png'))
         try:
@@ -114,9 +132,12 @@ class Cli:
             canvas.print_png(sa)
         except AttributeError:
             self.log_append('Error! Plot was not created!\n')
-            return
 
-    def open_file(self, filename):
+    def open_file(self, filename: str):
+        """
+
+        :param filename:
+        """
         if not filename:
             self.log_append('Filename was not defined\n')
             sys.exit(-1)
@@ -154,7 +175,13 @@ class Cli:
             else:
                 self.log_append('File ID PDB: {0:s} was downloaded!\n'.format(filename))
 
-    def parse_pdb(self, htable, pH):
+    def parse_pdb(self, htable: str, pH: float):
+        """
+
+        :param htable:
+        :param pH:
+        :return:
+        """
         if htable == 'positive' or htable == 'negative':
             if pH < 0 or pH > 14:
                 print("pH value range is 0-14")
@@ -162,22 +189,33 @@ class Cli:
         try:
             parse_results = self.cls.parser(htable=htable, pH=pH)
         except ValueError:
-            self.log_append('Error! Invalid file format\nor file does not {:s} contain resides\n'.format(
+            self.log_append('Error! Invalid file format\nor file does not contain {:s} resides\n'.format(
                 'hydrophobic' if htable in ('hydropathy', 'nanodroplet')
                 else 'negative' if htable == 'negative' else 'positive'))
-            return
         else:
             self.log_append("No of residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
                             "Maximum distance = {:.3f} \u212B\nMean distance = {:.3f} \u212B\n".format(*parse_results))
 
-    def save_state(self, newdir, basefile):
+    def save_state(self, newdir: str, basefile: str):
+        """
+
+        :param newdir:
+        :param basefile:
+        :return:
+        """
         st = os.path.join(newdir, '{:s}'.format(basefile + '.dat'))
         try:
             self.cls.savestate(st)
         except FileNotFoundError:
             return
 
-    def save_pymol(self, newdir, basefile):
+    def save_pymol(self, newdir: str, basefile: str):
+        """
+
+        :param newdir:
+        :param basefile:
+        :return:
+        """
         pymol = os.path.join(newdir, '{:s}'.format(basefile + '.py'))
         try:
             self.cls.save_pymol_script(pymol)
@@ -185,6 +223,10 @@ class Cli:
             return
 
     def resi(self):
+        """
+
+        :return:
+        """
         dict_aa = self.cls.get_dict_aa()
         if not dict_aa:
             return
@@ -193,7 +235,13 @@ class Cli:
                 ("Core" if k[0] else "Uncore"), k[1], ", ".join(['{2:s}:{1:s}{0:d}'.format(*aac) for aac in aa_list])))
         self.log_append('\n\n')
 
-    def colormap(self, newdir, basefile):
+    def colormap(self, newdir: str, basefile: str):
+        """
+
+        :param newdir:
+        :param basefile:
+        :return:
+        """
         sa = os.path.join(newdir, '{:s}'.format(basefile + '.cm.png'))
         try:
             fig = self.cls.colormap(grid_state=True)
@@ -201,4 +249,3 @@ class Cli:
             canvas.print_png(sa)
         except AttributeError:
             self.log_append('Error! Plot was not created !!\n')
-            return

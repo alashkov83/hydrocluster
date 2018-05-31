@@ -94,7 +94,7 @@ class ClusterPdb:
         self.labels = db.labels_
         self.n_clusters = len(set(self.labels)) - (1 if -1 in self.labels else 0)
         try:
-            self.si_score = silhouette_score(self.X, self.labels)
+            self.si_score = silhouette_score(self.pdist, self.labels, metric='precomputed')
         # The Silhouette Coefficient is calculated using the mean intra-cluster distance (a)
         # and the mean nearest-cluster distance (b) for each sample.
         # The Silhouette Coefficient for a sample is (b - a) / max(a, b).

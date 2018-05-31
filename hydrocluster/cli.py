@@ -81,6 +81,8 @@ class Cli:
             min_eps, max_eps, step_eps, min_min_samples, max_min_samples))
         bar1 = progressbar.ProgressBar(maxval=self.cls.init_cycles(
             min_eps, max_eps, step_eps, min_min_samples, max_min_samples), redirect_stdout=True).start()
+        #       import time
+        #       start_time = time.time()
         try:
             for n, j, i in self.cls.auto_yield():
                 self.log_append(('Step No {0:d}: EPS = {1:.2f} \u212B, min_samples = {2:d}, No clusters = {3:d}, '
@@ -88,6 +90,7 @@ class Cli:
                     n, j, i, self.cls.n_clusters, self.cls.si_score, self.cls.calinski))
 
                 bar1.update(n)
+            #           print("--- %s seconds ---" % (time.time() - start_time))
             eps, min_samples = self.cls.auto(metric=metric)
             self.log_append('Autoscan done... \n')
         except ValueError:

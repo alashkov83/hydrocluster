@@ -26,7 +26,8 @@ class Parser(argparse.ArgumentParser):
         self.add_argument('-es', '--estep', type=float, default=0.1, help='Step of EPS (A)')
         self.add_argument('-smin', '--smin', type=int, default=2, help='Minimum MIN SAMPLES')
         self.add_argument('-smax', '--smax', type=int, default=50, help='Minimum MIN SAMPLES')
-        self.add_argument('-g', '--gui', choices=['tkgui', 'cli'], type=str, default='tkgui', help='UI modes')
+        self.add_argument('-g', '--gui', choices=['tkgui', 'cli', 'testlist'], type=str, default='tkgui',
+                          help='UI modes')
         self.add_argument('-o', '--output', type=str, default='', help='Output directory name')
         self.add_argument('-sc', '--score', choices=['si_score', 'calinski'], type=str, default='calinski',
                           help='Score coefficient')
@@ -50,3 +51,7 @@ if __name__ == '__main__':
     elif namespace.gui == 'cli':
         from hydrocluster.cli import Cli
         cli = Cli(namespace)
+    elif namespace.gui == 'testlist':
+        from hydrocluster.testlist import main
+
+        main(namespace)

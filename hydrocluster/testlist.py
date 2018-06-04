@@ -3,10 +3,9 @@
 """Created by lashkov on 01.06.18"""
 import os
 import os.path
-import queue
+from multiprocessing import Queue, Process, Lock
 import sqlite3
 import sys
-import threading
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -33,6 +32,8 @@ def opendb(fiename: str):
     conn = sqlite3.connect("{:s}.db".format(fiename), check_same_thread=False)
     # Создаем курсор - это специальный объект который делает запросы и получает их результаты
     cursor = conn.cursor()
+    # cursor.execute("PRAGMA synchronous = OFF")
+    # cursor.execute("PRAGMA journal_mode = MEMORY")
     if not isDbExists:
         try:
             cursor.execute("""CREATE TABLE "Structures"  (IDPDB TEXT PRIMARY KEY UNIQUE, 
@@ -96,24 +97,20 @@ def download(filelist, q, lock, cursor, conn, dir):
             nres += len(seq)
             seqan = ProteinAnalysis(str(seq))
             mmass += int(seqan.molecular_weight())
-
-        while (1):
-            if not lock.locked():
-                lock.acquire()
-                try:
-                    cursor.execute("""INSERT INTO Structures (IDPDB, NAME, HEAD, METHOD, RESOLUTION, NCOMP, NCHAIN, 
+        lock.acquire()
+        try:
+            cursor.execute("""INSERT INTO Structures (IDPDB, NAME, HEAD, METHOD, RESOLUTION, NCOMP, NCHAIN, 
 NRES, MMASS, EC) VALUES ("{:s}", "{:s}", "{:s}", "{:s}", {:.2f}, {:d}, {:d},{:d}, {:d}, "{:s}")""".format(
-                        file, name, head, method, res, ncomp, nchain, nres, mmass, ec))
-                except sqlite3.DatabaseError as err:
-                    print("Error: ", err)
-                    break
-                else:
-                    conn.commit()
-                    q.put(file)
-                finally:
-                    lock.release()
+                file, name, head, method, res, ncomp, nchain, nres, mmass, ec))
+        except sqlite3.DatabaseError as err:
+            print("Error: ", err)
+            break
         else:
-            continue
+            print("Download Done for ID PDB: {:s}".format(file))
+            conn.commit()
+            q.put(file)
+        finally:
+            lock.release()
     q.put(None)
 
 
@@ -179,22 +176,18 @@ def save_pymol(cls, newdir: str, basefile: str):
 
 
 def db_save(con, curr, lock, file, htable, ntres, mind, maxd, meand, metric, score, eps, min_samples, n_clusters):
-    while (1):
-        if not lock.locked():
-            lock.acquire()
-            try:
-                curr.execute("""INSERT INTO Results (IDPDB, HTABLE, NTRES,
-MIND, MAXD, MEAND, SCORING_FUNCTION, SCORE_MAX, EPS, MIN_SAMPLES, N_CLUSTERS) 
-VALUES ("{:s}", "{:s}", {:d}, {:.2f}, {:.2f}, {:.2f}, "{:s}", {:.3f}, {:.2f}, {:d}, {:d} )""".format(
+    lock.acquire()
+    try:
+        curr.execute("""INSERT INTO Results (IDPDB, HTABLE, NTRES, MIND, MAXD, MEAND, SCORING_FUNCTION, SCORE_MAX, EPS, 
+MIN_SAMPLES, N_CLUSTERS) VALUES ("{:s}", "{:s}", {:d}, {:.2f}, {:.2f}, {:.2f}, "{:s}", {:.3f}, {:.2f}, {:d}, {:d} )""".format(
                     file, htable, ntres, mind, maxd, meand, metric, score, eps, min_samples, n_clusters))
-            except sqlite3.DatabaseError as err:
-                print("Error: ", err)
-                break
-            else:
-                con.commit()
-                q.put(file)
-            finally:
-                lock.release()
+    except sqlite3.DatabaseError as err:
+        print("Error: ", err)
+        return
+    else:
+        con.commit()
+    finally:
+        lock.release()
 
 
 def clusterThread(htable, file, dir, cursor, conn, lock, min_eps, max_eps, step_eps, min_min_samples, max_min_samples):
@@ -207,34 +200,46 @@ def clusterThread(htable, file, dir, cursor, conn, lock, min_eps, max_eps, step_
             'hydrophobic' if htable in ('hydropathy', 'nanodroplet')
             else 'negative' if htable == 'negative' else 'positive'))
         return
-    bar1 = progressbar.ProgressBar(maxval=cls.init_cycles(
-        min_eps, max_eps, step_eps, min_min_samples, max_min_samples), redirect_stdout=True).start()
     dir_ptable = os.path.join(dir, file, htable)
+    try:
+        os.makedirs(dir_ptable, exist_ok=True)
+    except OSError:
+        print('Unable to create folder ' + dir_ptable)
+        return
+    cls.init_cycles(min_eps, max_eps, step_eps, min_min_samples, max_min_samples)
     for metric in metrics:
         try:
-            for n, j, i in cls.auto_yield():
-                bar1.update(n)
-            eps, min_samples = cls.auto(metric=metric)
+            for n in cls.auto_yield():
+                eps, min_samples = cls.auto(metric=metric)
         except ValueError:
             print('Error! File was not parse or clustering was fail\n')
             return
-        db_save(conn, cursor, lock, file, htable, ntres, mind, maxd, meand, metric,
-                cls.si_score if metric == 'si_score' else cls.calinski, eps, min_samples, cls.n_clusters)
-        dir_metric = os.path.join(dir_ptable, metric)
-        save_pymol(cls, file, dir_metric)
-        graph(cls, file, dir_metric)
-    colormap(cls, file, dir_ptable)
-    save_state(cls, file, dir_ptable)
+        else:
+            print("Job was done for ID_PDB: {:s}, ptable: {:s}, metric: {:s}".format(file, htable, metric))
+            db_save(conn, cursor, lock, file, htable, ntres, mind, maxd, meand, metric,
+                    cls.si_score if metric == 'si_score' else cls.calinski, eps, min_samples, cls.n_clusters)
+            dir_metric = os.path.join(dir_ptable, metric)
+            try:
+                os.makedirs(dir_metric, exist_ok=True)
+            except OSError:
+                print('Unable to create folder ' + dir_metric)
+                return
+            save_pymol(cls, dir_metric, file)
+            graph(cls, dir_metric, file)
+    colormap(cls, dir_ptable, file)
+    save_state(cls,dir_ptable, file)
 
 
 def cluster(file, dir, cursor, conn, lock, min_eps, max_eps, step_eps, min_min_samples, max_min_samples):
     clusterTasks = []
     for ptable in htables:
-        p = threading.Thread(target=lambda: clusterThread(ptable, file, dir, cursor, conn, lock,
-                                                          min_eps, max_eps, step_eps, min_min_samples, max_min_samples))
+        p = Process(target=clusterThread, args=(ptable, file, dir, cursor, conn, lock,
+                                                min_eps, max_eps, step_eps, min_min_samples, max_min_samples))
         clusterTasks.append(p)
     for p in clusterTasks:
         p.start()
+    for p in clusterTasks:
+        p.join()
 
 
 def main(namespace):
@@ -269,14 +274,15 @@ def main(namespace):
     except (OSError, FileNotFoundError):
         print("File is unavailable!".format(inp))
         sys.exit()
-    q = queue.Queue()
-    lock = threading.Lock()
+    q = Queue()
+    lock = Lock()
     cursor, conn = opendb(output)
-    dTask = threading.Thread(target=lambda: download(filelist, q, lock, cursor, conn, outputDir))
+    dTask = Process(target=download, args=(filelist, q, lock, cursor, conn, outputDir))
     dTask.start()
     while True:
         item = q.get()
         if item is None:
             break
         cluster(item, outputDir, cursor, conn, lock, min_eps, max_eps, step_eps, min_min_samples, max_min_samples)
-        q.task_done()
+    dTask.join()
+    conn.close()

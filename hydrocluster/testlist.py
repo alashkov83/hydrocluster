@@ -3,17 +3,18 @@
 """Created by lashkov on 01.06.18"""
 import os
 import os.path
-from multiprocessing import Queue, Process, Lock
 import sqlite3
 import sys
 import warnings
+from multiprocessing import Queue, Process, Lock
+
+import psutil
 
 warnings.filterwarnings("ignore")
 from Bio.PDB import PDBParser, PDBList
 from Bio.PDB.Polypeptide import PPBuilder
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
 from matplotlib.backends.backend_agg import FigureCanvasAgg
-import progressbar
 
 try:
     from .pdbcluster import ClusterPdb
@@ -180,7 +181,7 @@ def db_save(con, curr, lock, file, htable, ntres, mind, maxd, meand, metric, sco
     try:
         curr.execute("""INSERT INTO Results (IDPDB, HTABLE, NTRES, MIND, MAXD, MEAND, SCORING_FUNCTION, SCORE_MAX, EPS, 
 MIN_SAMPLES, N_CLUSTERS) VALUES ("{:s}", "{:s}", {:d}, {:.2f}, {:.2f}, {:.2f}, "{:s}", {:.3f}, {:.2f}, {:d}, {:d} )""".format(
-                    file, htable, ntres, mind, maxd, meand, metric, score, eps, min_samples, n_clusters))
+            file, htable, ntres, mind, maxd, meand, metric, score, eps, min_samples, n_clusters))
     except sqlite3.DatabaseError as err:
         print("Error: ", err)
         return
@@ -190,56 +191,50 @@ MIN_SAMPLES, N_CLUSTERS) VALUES ("{:s}", "{:s}", {:d}, {:.2f}, {:.2f}, {:.2f}, "
         lock.release()
 
 
-def clusterThread(htable, file, dir, cursor, conn, lock, min_eps, max_eps, step_eps, min_min_samples, max_min_samples):
+def clusterThread(file, dir, cursor, conn, lock, min_eps, max_eps, step_eps, min_min_samples, max_min_samples):
     cls = ClusterPdb()
     cls.open_pdb(os.path.join(dir, file, 'pdb{:s}.ent'.format(file)))
-    try:
-        ntres, mind, maxd, meand = cls.parser(htable=htable, pH=pH)
-    except ValueError:
-        print('Error! Invalid file format\nor file does not contain {:s} resides\n'.format(
-            'hydrophobic' if htable in ('hydropathy', 'nanodroplet')
-            else 'negative' if htable == 'negative' else 'positive'))
-        return
-    dir_ptable = os.path.join(dir, file, htable)
-    try:
-        os.makedirs(dir_ptable, exist_ok=True)
-    except OSError:
-        print('Unable to create folder ' + dir_ptable)
-        return
-    cls.init_cycles(min_eps, max_eps, step_eps, min_min_samples, max_min_samples)
-    for metric in metrics:
+    for htable in htables:
         try:
+            ntres, mind, maxd, meand = cls.parser(htable=htable, pH=pH)
+        except ValueError:
+            print('Error! Invalid file format\nor file does not contain {:s} resides\n'.format(
+                'hydrophobic' if htable in ('hydropathy', 'nanodroplet')
+                else 'negative' if htable == 'negative' else 'positive'))
+            return
+        dir_ptable = os.path.join(dir, file, htable)
+        try:
+            os.makedirs(dir_ptable, exist_ok=True)
+        except OSError:
+            print('Unable to create folder ' + dir_ptable)
+            continue
+        try:
+            cls.init_cycles(min_eps, max_eps, step_eps, min_min_samples, max_min_samples)
             for n in cls.auto_yield():
-                eps, min_samples = cls.auto(metric=metric)
+                pass
         except ValueError:
             print('Error! File was not parse or clustering was fail\n')
-            return
-        else:
-            print("Job was done for ID_PDB: {:s}, ptable: {:s}, metric: {:s}".format(file, htable, metric))
-            db_save(conn, cursor, lock, file, htable, ntres, mind, maxd, meand, metric,
-                    cls.si_score if metric == 'si_score' else cls.calinski, eps, min_samples, cls.n_clusters)
-            dir_metric = os.path.join(dir_ptable, metric)
+            continue
+        for metric in metrics:
             try:
-                os.makedirs(dir_metric, exist_ok=True)
-            except OSError:
-                print('Unable to create folder ' + dir_metric)
-                return
-            save_pymol(cls, dir_metric, file)
-            graph(cls, dir_metric, file)
-    colormap(cls, dir_ptable, file)
-    save_state(cls,dir_ptable, file)
-
-
-def cluster(file, dir, cursor, conn, lock, min_eps, max_eps, step_eps, min_min_samples, max_min_samples):
-    clusterTasks = []
-    for ptable in htables:
-        p = Process(target=clusterThread, args=(ptable, file, dir, cursor, conn, lock,
-                                                min_eps, max_eps, step_eps, min_min_samples, max_min_samples))
-        clusterTasks.append(p)
-    for p in clusterTasks:
-        p.start()
-    for p in clusterTasks:
-        p.join()
+                eps, min_samples = cls.auto(metric=metric)
+            except ValueError:
+                print('Error! File was not parse or clustering was fail\n')
+                continue
+            else:
+                print("Job was done for ID_PDB: {:s}, ptable: {:s}, metric: {:s}".format(file, htable, metric))
+                db_save(conn, cursor, lock, file, htable, ntres, mind, maxd, meand, metric,
+                        cls.si_score if metric == 'si_score' else cls.calinski, eps, min_samples, cls.n_clusters)
+                dir_metric = os.path.join(dir_ptable, metric)
+                try:
+                    os.makedirs(dir_metric, exist_ok=True)
+                except OSError:
+                    print('Unable to create folder ' + dir_metric)
+                    continue
+                save_pymol(cls, dir_metric, file)
+                graph(cls, dir_metric, file)
+        colormap(cls, dir_ptable, file)
+        save_state(cls, dir_ptable, file)
 
 
 def main(namespace):
@@ -279,10 +274,22 @@ def main(namespace):
     cursor, conn = opendb(output)
     dTask = Process(target=download, args=(filelist, q, lock, cursor, conn, outputDir))
     dTask.start()
-    while True:
-        item = q.get()
-        if item is None:
-            break
-        cluster(item, outputDir, cursor, conn, lock, min_eps, max_eps, step_eps, min_min_samples, max_min_samples)
+    TaskDone = False
+    clusterTasks = []
+    while not TaskDone:
+        while len(clusterTasks) < psutil.cpu_count() - 1:
+            item = q.get()
+            if item is None:
+                TaskDone = True
+                break
+            p = Process(target=clusterThread, args=(item, outputDir, cursor, conn, lock, min_eps, max_eps, step_eps,
+                                                    min_min_samples, max_min_samples))
+            p.start()
+            clusterTasks.append(p)
+        for process in clusterTasks:
+            if not process.is_alive():
+                clusterTasks.remove(process)
+    for p in clusterTasks:
+        p.join()
     dTask.join()
     conn.close()

@@ -17,6 +17,11 @@ from Bio.SeqUtils.ProtParam import ProteinAnalysis
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 
 try:
+    import progressbar2 as progressbar
+except ImportError:
+    import progressbar
+
+try:
     from .pdbcluster import ClusterPdb
 except ImportError:
     print('Error! Scikit-learn is not installed!')
@@ -78,17 +83,17 @@ def download(filelist, q, lock, cursor, conn, dir):
             continue
         parser = PDBParser()
         structure = parser.get_structure('{:s}', os.path.join(dir, file, 'pdb{:s}.ent'.format(file)))
-        name = parser.header['name']
-        head = parser.header['head']
-        method = parser.header['structure_method']
-        res = parser.header['resolution']
+        name = parser.header.get('name', '')
+        head = parser.header.get('head', '')
+        method = parser.header.get('structure_method', '')
+        res = parser.header.get('resolution', '')
         ncomp = 0
         nchain = 0
         eclist = []
         for values in parser.header['compound'].values():
             ncomp += 1
             nchain += len(values['chain'].split(','))
-            eclist.append(values['ec'] or values['ec'])
+            eclist.append(values.get('ec', '') or values.get('ec_number', ''))
         ec = ", ".join(eclist)
         nres = 0
         mmass = 0
@@ -105,7 +110,7 @@ NRES, MMASS, EC) VALUES ("{:s}", "{:s}", "{:s}", "{:s}", {:.2f}, {:d}, {:d},{:d}
                 file, name, head, method, res, ncomp, nchain, nres, mmass, ec))
         except sqlite3.DatabaseError as err:
             print("Error: ", err)
-            break
+            continue
         else:
             print("Download Done for ID PDB: {:s}".format(file))
             conn.commit()
@@ -233,7 +238,11 @@ def clusterThread(file, dir, cursor, conn, lock, min_eps, max_eps, step_eps, min
                     continue
                 save_pymol(cls, dir_metric, file)
                 graph(cls, dir_metric, file)
-        colormap(cls, dir_ptable, file)
+        try:
+            colormap(cls, dir_ptable, file)
+        except ValueError as err:
+            print(err)
+            continue
         save_state(cls, dir_ptable, file)
 
 
@@ -276,6 +285,8 @@ def main(namespace):
     dTask.start()
     TaskDone = False
     clusterTasks = []
+    n = 1
+    tmp_dict = {}
     while not TaskDone:
         while len(clusterTasks) < psutil.cpu_count() - 1:
             item = q.get()
@@ -285,10 +296,14 @@ def main(namespace):
             p = Process(target=clusterThread, args=(item, outputDir, cursor, conn, lock, min_eps, max_eps, step_eps,
                                                     min_min_samples, max_min_samples))
             p.start()
+            tmp_dict[p.pid] = item
             clusterTasks.append(p)
         for process in clusterTasks:
             if not process.is_alive():
                 clusterTasks.remove(process)
+                print("All tasks was done for {:s} ({:d}/{:d})".format(tmp_dict[process.pid], n, len(filelist)))
+                del tmp_dict[process.pid]
+                n += 1
     for p in clusterTasks:
         p.join()
     dTask.join()

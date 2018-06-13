@@ -387,7 +387,10 @@ class ClusterPdb:
         ax2.set_ylabel('EPS, \u212B')
         ax2.grid(grid_state)
         z = np.array([data[3] for data in colormap_data])
-        z_min = min([x for x in z.flat if x > -1.0])
+        try:
+            z_min = min([x for x in z.flat if x > -1.0])
+        except ValueError:
+            z_min = -1.0
         z.shape = (y.size, x.size)
         pc2 = ax2.pcolor(x, y, z, cmap='gnuplot', vmin=z_min)
         fig.colorbar(pc2, ax=ax2, extend='max', extendfrac=0.1)

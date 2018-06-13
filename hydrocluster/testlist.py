@@ -3,14 +3,12 @@
 """Created by lashkov on 01.06.18"""
 import os
 import os.path
+import psutil
 import sqlite3
 import sys
 import warnings
 from multiprocessing import Queue, Process, Lock
 
-import psutil
-
-warnings.filterwarnings("ignore")
 from Bio.PDB import PDBParser, PDBList
 from Bio.PDB.Polypeptide import PPBuilder
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
@@ -27,12 +25,18 @@ except ImportError:
     print('Error! Scikit-learn is not installed!')
     sys.exit()
 
+warnings.filterwarnings("ignore")
 pH = 7.0
 htables = ['hydropathy', 'nanodroplet', 'positive', 'negative']
 metrics = ['si_score', 'calinski']
 
 
 def opendb(fiename: str):
+    """
+
+    :param fiename:
+    :return:
+    """
     isDbExists = os.path.exists("{:s}.db".format(fiename))
     # Создаем соединение с нашей базой данных
     conn = sqlite3.connect("{:s}.db".format(fiename), check_same_thread=False)
@@ -42,20 +46,20 @@ def opendb(fiename: str):
     # cursor.execute("PRAGMA journal_mode = MEMORY")
     if not isDbExists:
         try:
-            cursor.execute("""CREATE TABLE "Structures"  (IDPDB TEXT PRIMARY KEY UNIQUE, 
+            cursor.execute("""CREATE TABLE "Structures"  (IDPDB TEXT PRIMARY KEY UNIQUE,
 NAME TEXT,
 HEAD TEXT,
 METHOD TEXT,
-RESOLUTION REAL DEFAULT 0, 
+RESOLUTION REAL DEFAULT 0,
 NCOMP INTEGER DEFAULT 1,
 NCHAIN INTEGER DEFAULT 1,
 NRES INTEGER,
 MMASS INTEGER,
 EC TEXT)""")
-            cursor.execute("""CREATE TABLE "Results" (ID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE, 
-IDPDB TEXT NOT NULL, 
+            cursor.execute("""CREATE TABLE "Results" (ID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
+IDPDB TEXT NOT NULL,
 HTABLE TEXT NOT NULL,
-NTRES INTEGER NOT NULL, 
+NTRES INTEGER NOT NULL,
 MIND REAL NOT NULL,
 MAXD REAL NOT NULL,
 MEAND REAL NOT NULL,
@@ -75,6 +79,15 @@ FOREIGN KEY(IDPDB) REFERENCES Structures(IDPDB))""")
 
 
 def download(filelist, q, lock, cursor, conn, dir):
+    """
+
+    :param filelist:
+    :param q:
+    :param lock:
+    :param cursor:
+    :param conn:
+    :param dir:
+    """
     for file in filelist:
         pdbl = PDBList()
         pdbl.retrieve_pdb_file(file, pdir=os.path.join(dir, file), file_format='pdb')
@@ -105,7 +118,7 @@ def download(filelist, q, lock, cursor, conn, dir):
             mmass += int(seqan.molecular_weight())
         lock.acquire()
         try:
-            cursor.execute("""INSERT INTO Structures (IDPDB, NAME, HEAD, METHOD, RESOLUTION, NCOMP, NCHAIN, 
+            cursor.execute("""INSERT INTO Structures (IDPDB, NAME, HEAD, METHOD, RESOLUTION, NCOMP, NCHAIN,
 NRES, MMASS, EC) VALUES ("{:s}", "{:s}", "{:s}", "{:s}", {:.2f}, {:d}, {:d},{:d}, {:d}, "{:s}")""".format(
                 file, name, head, method, res, ncomp, nchain, nres, mmass, ec))
         except sqlite3.DatabaseError as err:
@@ -123,7 +136,8 @@ NRES, MMASS, EC) VALUES ("{:s}", "{:s}", "{:s}", "{:s}", {:.2f}, {:d}, {:d},{:d}
 def graph(cls, dir, basefile):
     """
 
-    :param newdir:
+    :param dir:
+    :param cls:
     :param basefile:
     :return:
     """
@@ -140,6 +154,7 @@ def graph(cls, dir, basefile):
 def colormap(cls, newdir: str, basefile: str):
     """
 
+    :param cls:
     :param newdir:
     :param basefile:
     :return:
@@ -156,6 +171,7 @@ def colormap(cls, newdir: str, basefile: str):
 def save_state(cls, newdir: str, basefile: str):
     """
 
+    :param cls:
     :param newdir:
     :param basefile:
     :return:
@@ -170,6 +186,7 @@ def save_state(cls, newdir: str, basefile: str):
 def save_pymol(cls, newdir: str, basefile: str):
     """
 
+    :param cls:
     :param newdir:
     :param basefile:
     :return:
@@ -182,10 +199,28 @@ def save_pymol(cls, newdir: str, basefile: str):
 
 
 def db_save(con, curr, lock, file, htable, ntres, mind, maxd, meand, metric, score, eps, min_samples, n_clusters):
+    """
+
+    :param con:
+    :param curr:
+    :param lock:
+    :param file:
+    :param htable:
+    :param ntres:
+    :param mind:
+    :param maxd:
+    :param meand:
+    :param metric:
+    :param score:
+    :param eps:
+    :param min_samples:
+    :param n_clusters:
+    :return:
+    """
     lock.acquire()
     try:
-        curr.execute("""INSERT INTO Results (IDPDB, HTABLE, NTRES, MIND, MAXD, MEAND, SCORING_FUNCTION, SCORE_MAX, EPS, 
-MIN_SAMPLES, N_CLUSTERS) VALUES ("{:s}", "{:s}", {:d}, {:.2f}, {:.2f}, {:.2f}, "{:s}", {:.3f}, {:.2f}, {:d}, {:d} )""".format(
+        curr.execute("""INSERT INTO Results (IDPDB, HTABLE, NTRES, MIND, MAXD, MEAND, SCORING_FUNCTION, SCORE_MAX, EPS,
+MIN_SAMPLES, N_CLUSTERS) VALUES ("{:s}", "{:s}", {:d}, {:.2f}, {:.2f}, {:.2f}, "{:s}", {:.3f}, {:.2f}, {:d}, {:d})""".format(
             file, htable, ntres, mind, maxd, meand, metric, score, eps, min_samples, n_clusters))
     except sqlite3.DatabaseError as err:
         print("Error: ", err)
@@ -197,6 +232,20 @@ MIN_SAMPLES, N_CLUSTERS) VALUES ("{:s}", "{:s}", {:d}, {:.2f}, {:.2f}, {:.2f}, "
 
 
 def clusterThread(file, dir, cursor, conn, lock, min_eps, max_eps, step_eps, min_min_samples, max_min_samples):
+    """
+
+    :param file:
+    :param dir:
+    :param cursor:
+    :param conn:
+    :param lock:
+    :param min_eps:
+    :param max_eps:
+    :param step_eps:
+    :param min_min_samples:
+    :param max_min_samples:
+    :return:
+    """
     cls = ClusterPdb()
     cls.open_pdb(os.path.join(dir, file, 'pdb{:s}.ent'.format(file)))
     for htable in htables:
@@ -214,7 +263,7 @@ def clusterThread(file, dir, cursor, conn, lock, min_eps, max_eps, step_eps, min
             print('Unable to create folder ' + dir_ptable)
             continue
         try:
-            cls.init_cycles(min_eps, max_eps, step_eps, min_min_samples, max_min_samples)
+            cls.init_cycles(min_eps, max_eps, step_eps, min_min_samples, max_min_samples, n_jobs=1)
             for n in cls.auto_yield():
                 pass
         except ValueError:
@@ -247,6 +296,10 @@ def clusterThread(file, dir, cursor, conn, lock, min_eps, max_eps, step_eps, min
 
 
 def main(namespace):
+    """
+
+    :param namespace:
+    """
     output = namespace.output
     inp = namespace.input
     if not output:
@@ -276,7 +329,7 @@ def main(namespace):
         print("File {:s} is not contain text!".format(inp))
         sys.exit()
     except (OSError, FileNotFoundError):
-        print("File is unavailable!".format(inp))
+        print("File {:s} is unavailable!".format(inp))
         sys.exit()
     q = Queue()
     lock = Lock()

@@ -54,7 +54,6 @@ class Cli:
             self.save_state(newdir, basefile)
             self.colormap(newdir, basefile)
         self.resi()
-
         self.save_pymol(newdir, basefile)
         self.graph(newdir, basefile)
 
@@ -92,11 +91,12 @@ class Cli:
                 bar1.update(n)
             #           print("--- %s seconds ---" % (time.time() - start_time))
             eps, min_samples = self.cls.auto(metric=metric)
-            self.log_append('Autoscan done... \n')
         except ValueError:
             self.log_append('Error! File was not parse or clustering was fail\n')
             sys.exit(-1)
         else:
+            self.log_append('Autoscan done... \n')
+            bar1.finish()
             self.log_append(('Number of clusters = {0:d}\nSilhouette Coefficient = {1:.3f}\n'
                              'Calinski-Harabaz score = {4:.3f}\nEPS = {2:.1f} \u212B\nMIN_SAMPLES = {3:d}\n').format(
                 self.cls.n_clusters, self.cls.si_score, eps, min_samples, self.cls.calinski))

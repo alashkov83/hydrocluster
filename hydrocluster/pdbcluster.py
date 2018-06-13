@@ -5,16 +5,17 @@
 import gzip
 import io
 import pickle
+import psutil
+
 import warnings
 from collections import OrderedDict
+from multiprocessing import Queue, Process
 from urllib.error import HTTPError
 
 import matplotlib.cm as cm
 import numpy as np
 from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import axes3d
-
-warnings.filterwarnings("ignore")
 
 try:
     from sklearn.cluster import DBSCAN
@@ -23,6 +24,9 @@ try:
     from sklearn.metrics.pairwise import euclidean_distances
 except ImportError:
     raise ImportError
+
+
+warnings.filterwarnings("ignore")
 
 
 class ClusterPdb:
@@ -45,6 +49,8 @@ class ClusterPdb:
         self.weight_array = []
         self.aa_list = []
         self.states = []
+        self.clusterThreads = []
+        self.queue = Queue()
 
     def clean(self) -> None:
         """
@@ -63,17 +69,21 @@ class ClusterPdb:
         self.weight_array.clear()
         self.aa_list.clear()
         self.states.clear()
+        self.clusterThreads.clear()
+        self.queue = Queue()
 
-    def cluster(self, eps: float, min_samples: int):
+    @staticmethod
+    def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, weight_array, eps: float, min_samples: int):
         """
 
+        :param X:
+        :param pdist:
+        :param weight_array:
         :param eps:
         :param min_samples:
         """
-        if self.X is None or self.pdist is None:
-            raise ValueError
         db = DBSCAN(eps=eps, min_samples=min_samples, n_jobs=-1, metric='precomputed'
-                    ).fit(self.pdist, sample_weight=self.weight_array)
+                    ).fit(pdist, sample_weight=weight_array)
         # The DBSCAN algorithm views clusters as areas of high density separated by areas of low density.
         # Due to this rather generic view, clusters found by DBSCAN can be any shape,
         # as opposed to k-means which assumes that clusters are convex shaped.
@@ -89,12 +99,12 @@ class ClusterPdb:
         # Ester, M., H. P. Kriegel, J. Sander, and X. Xu,
         # In Proceedings of the 2nd International Conference on Knowledge Discovery and Data Mining,
         # Portland, OR, AAAI Press, pp. 226–231. 1996
-        self.core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
-        self.core_samples_mask[db.core_sample_indices_] = True
-        self.labels = db.labels_
-        self.n_clusters = len(set(self.labels)) - (1 if -1 in self.labels else 0)
+        core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
+        core_samples_mask[db.core_sample_indices_] = True
+        labels = db.labels_
+        n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
         try:
-            self.si_score = silhouette_score(self.pdist, self.labels, metric='precomputed')
+            si_score = silhouette_score(pdist, labels, metric='precomputed')
         # The Silhouette Coefficient is calculated using the mean intra-cluster distance (a)
         # and the mean nearest-cluster distance (b) for each sample.
         # The Silhouette Coefficient for a sample is (b - a) / max(a, b).
@@ -105,19 +115,44 @@ class ClusterPdb:
         # “Silhouettes: a Graphical Aid to the Interpretation and Validation of Cluster Analysis”.
         # Computational and Applied Mathematics 20: 53-65.
         except ValueError:
-            self.si_score = -1
+            si_score = -1
         try:
-            self.calinski = calinski_harabaz_score(self.X, self.labels)
+            calinski = calinski_harabaz_score(X, labels)
             # The score is defined as ratio between the within-cluster dispersion and the between-cluster dispersion.
             # Cite:
             # T.Calinski and J.Harabasz, 1974. “A dendrite method for cluster analysis”.Communications in Statistics
         except ValueError:
-            self.calinski = 0
+            calinski = 0
+        return labels, n_clusters, core_samples_mask, si_score, calinski
 
-    def init_cycles(self, min_eps: float, max_eps: float, step_eps: float,
-                    min_min_samples: int, max_min_samples: int) -> tuple:
+    def cluster(self, eps: float, min_samples: int):
         """
 
+        :param eps:
+        :param min_samples:
+        """
+        if self.X is None or self.pdist is None:
+            raise ValueError
+        self.labels, self.n_clusters, self.core_samples_mask, self.si_score, self.calinski = self.clusterDBSCAN(
+            self.X, self.pdist, self.weight_array, eps, min_samples)
+
+    def clusterThread(self, subParams):
+        """
+
+        :param subParams:
+        """
+        for eps, min_samples in subParams:
+            labels, n_clusters, core_samples_mask, si_score, calinski = self.clusterDBSCAN(
+                self.X, self.pdist, self.weight_array, eps, min_samples)
+            clusterResults = labels, core_samples_mask, n_clusters, si_score, calinski, eps, min_samples
+            self.queue.put(clusterResults)
+        self.queue.put(None)
+
+    def init_cycles(self, min_eps: float, max_eps: float, step_eps: float,
+                    min_min_samples: int, max_min_samples: int, n_jobs=0) -> tuple:
+        """
+
+        :param n_jobs:
         :param min_eps:
         :param max_eps:
         :param step_eps:
@@ -125,22 +160,42 @@ class ClusterPdb:
         :param max_min_samples:
         :return:
         """
+        hyperParams = []
+        for eps in np.arange(min_eps, max_eps + step_eps, step_eps):
+            for min_samples in range(min_min_samples, max_min_samples + 1):
+                hyperParams.append((eps, min_samples))
+        if n_jobs == 0:
+            if psutil.cpu_count(logical=True) == 1:
+                n_jobs = 1
+            else:
+                n_jobs = psutil.cpu_count(logical=True) - 1
+        chunk_size = len(hyperParams) // n_jobs
+        hyperParams = [hyperParams[i:i + chunk_size] for i in range(0, len(hyperParams), chunk_size)]
+        self.clusterThreads.clear()
+        for subParams in hyperParams:
+            p = Process(target=self.clusterThread, args=(subParams, ))
+            p.start()
+            self.clusterThreads.append(p)
         self.auto_params = min_eps, max_eps, step_eps, min_min_samples, max_min_samples
         return (max_min_samples - min_min_samples + 1) * np.arange(min_eps, max_eps + step_eps, step_eps).size
 
     def auto_yield(self) -> iter:
         """
         """
-        min_eps, max_eps, step_eps, min_min_samples, max_min_samples = self.auto_params
         n = 1
         self.states.clear()
-        for j in np.arange(min_eps, max_eps + step_eps, step_eps):
-            for i in range(min_min_samples, max_min_samples + 1):
-                self.cluster(eps=j, min_samples=i)
-                self.states.append(
-                    (self.labels, self.core_samples_mask, self.n_clusters, self.si_score, self.calinski, j, i))
-                yield n, j, i
-                n += 1
+        k = len(self.clusterThreads)
+        while k:
+            clusterResults = self.queue.get()
+            if clusterResults is None:
+                k -= 1
+                continue
+            self.states.append(clusterResults)
+            yield n, clusterResults[5], clusterResults[6]
+            n += 1
+        for p in self.clusterThreads:
+            p.join()
+        self.clusterThreads.clear()
 
     def auto(self, metric: str = 'si_score') -> tuple:
         """
@@ -201,7 +256,6 @@ class ClusterPdb:
         """
         try:
             import Bio.PDB as PDB
-            from Bio.PDB.mmtf import MMTFParser
         except ImportError:
             raise ImportError
         parser = PDB.MMCIFParser()

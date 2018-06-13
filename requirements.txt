@@ -1,3 +1,4 @@
+psutil
 progressbar
 progressbar2
 matplotlib>=1.5.1

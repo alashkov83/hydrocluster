@@ -1,0 +1,11 @@
+Representative Structures at 30% Sequence Identity of Entries of :Entries of :Holdings : Molecule Type=protein Experimental Method=X-RAY 
+and
+Search for Large Structures : search option = omit large structures
+and
+ModelCountQuery: mvStructure.modelCount.comparator== mvStructure.modelCount.value=1 
+and
+Resolution is 2.6 or less
+and
+Percent Sequence Alignment Search : PDB can contain Expression Tag sequence = Yes , Percent of UniProt sequence covered by PDB >= 100% 
+and
+Representative Structures at 30% Sequence Identity

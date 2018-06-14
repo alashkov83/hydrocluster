@@ -63,7 +63,7 @@ class Cli:
         :param line:
         """
         print(line, end='')
-        with open(self.log_name, 'at') as f:
+        with open(self.log_name, 'at',  encoding='utf-8') as f:
             f.write(line)
 
     def run(self) -> None:

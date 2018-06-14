@@ -6,6 +6,7 @@
 """
 
 import argparse
+import sys
 
 
 class Parser(argparse.ArgumentParser):
@@ -52,6 +53,8 @@ if __name__ == '__main__':
         from hydrocluster.cli import Cli
         cli = Cli(namespace)
     elif namespace.gui == 'testlist':
-        from hydrocluster.testlist import main
-
+        if sys.platform == 'win32':
+            from hydrocluster.testlist_win import main
+        else:
+            from hydrocluster.testlist import main
         main(namespace)

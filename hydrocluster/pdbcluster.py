@@ -6,6 +6,7 @@ import gzip
 import io
 import pickle
 import psutil
+import random
 
 import warnings
 from collections import OrderedDict
@@ -24,7 +25,6 @@ try:
     from sklearn.metrics.pairwise import euclidean_distances
 except ImportError:
     raise ImportError
-
 
 warnings.filterwarnings("ignore")
 
@@ -148,6 +148,18 @@ class ClusterPdb:
             self.queue.put(clusterResults)
         self.queue.put(None)
 
+    @staticmethod
+    def chunkIt(seq, num):
+        out = [[] for x in range(num)]
+        seq = seq.copy()
+        n = 0
+        while seq:
+            element = random.choice(seq)
+            seq.remove(element)
+            out[n % num].append(element)
+            n += 1
+        return out
+
     def init_cycles(self, min_eps: float, max_eps: float, step_eps: float,
                     min_min_samples: int, max_min_samples: int, n_jobs=0) -> tuple:
         """
@@ -169,11 +181,10 @@ class ClusterPdb:
                 n_jobs = 1
             else:
                 n_jobs = psutil.cpu_count(logical=True) - 1
-        chunk_size = len(hyperParams) // n_jobs
-        hyperParams = [hyperParams[i:i + chunk_size] for i in range(0, len(hyperParams), chunk_size)]
+        hyperParams = self.chunkIt(hyperParams, n_jobs)
         self.clusterThreads.clear()
         for subParams in hyperParams:
-            p = Process(target=self.clusterThread, args=(subParams, ))
+            p = Process(target=self.clusterThread, args=(subParams,))
             p.start()
             self.clusterThreads.append(p)
         self.auto_params = min_eps, max_eps, step_eps, min_min_samples, max_min_samples
@@ -275,7 +286,7 @@ class ClusterPdb:
                 self.s_array = f.readlines()
 
     @staticmethod
-    def dict_abs_charge(res_type: str, pH: float) -> dict:
+    def calc_abs_charge(res_type: str, pH: float) -> dict:
         """
 
         :param res_type:
@@ -313,7 +324,7 @@ class ClusterPdb:
         elif htable == 'nanodroplet':
             hydrfob = nanodroplet
         elif htable == 'positive' or htable == 'negative':
-            hydrfob = self.dict_abs_charge(htable, pH)
+            hydrfob = self.calc_abs_charge(htable, pH)
         # OLD CA-BASED PARSER
         # for s in strarr:
         #     if s[0:6] == 'ATOM  ' and (s[17:20] in hydrfob) and s[12:16] == ' CA ':

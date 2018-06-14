@@ -540,7 +540,7 @@ class TkGui(tk.Tk):
         if sa:
             letter = self.tx.get(1.0, tk.END)
             try:
-                with open(sa, 'w') as f:
+                with open(sa, 'w', encoding='utf-8') as f:
                     f.write(letter)
             except FileNotFoundError:
                 pass

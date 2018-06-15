@@ -231,7 +231,8 @@ MIN_SAMPLES, N_CLUSTERS) VALUES ("{:s}", "{:s}", {:d}, {:.2f}, {:.2f}, {:.2f}, "
         lock.release()
 
 
-def clusterThread(file, dir, cursor, conn, lock, min_eps, max_eps, step_eps, min_min_samples, max_min_samples):
+def clusterThread(file, dir, cursor, conn, lock, min_eps, max_eps, step_eps,
+                  min_min_samples, max_min_samples, n_jobs=1):
     """
 
     :param file:
@@ -263,7 +264,7 @@ def clusterThread(file, dir, cursor, conn, lock, min_eps, max_eps, step_eps, min
             print('Unable to create folder ' + dir_ptable)
             continue
         try:
-            cls.init_cycles(min_eps, max_eps, step_eps, min_min_samples, max_min_samples, n_jobs=1)
+            cls.init_cycles(min_eps, max_eps, step_eps, min_min_samples, max_min_samples, n_jobs=n_jobs)
             for n in cls.auto_yield():
                 pass
         except ValueError:

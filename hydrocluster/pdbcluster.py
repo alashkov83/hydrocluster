@@ -5,9 +5,7 @@
 import gzip
 import io
 import pickle
-import psutil
 import random
-
 import warnings
 from collections import OrderedDict
 from multiprocessing import Queue, Process
@@ -15,6 +13,7 @@ from urllib.error import HTTPError
 
 import matplotlib.cm as cm
 import numpy as np
+import psutil
 from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import axes3d
 
@@ -359,7 +358,7 @@ class ClusterPdb:
                     xyzm_array.shape = (-1, 4)
                 except AttributeError:
                     raise ValueError
-                xyz_array = np.hstack((xyz_array, self._cmass(xyzm_array)))
+                xyz_array = np.hstack((xyz_array, self.cmass(xyzm_array)))
                 xyzm_array = []
                 current_resn = int(s[22:26])
                 current_chainn = s[21]
@@ -462,7 +461,7 @@ class ClusterPdb:
         return fig
 
     @staticmethod
-    def _cmass(str_nparray: np.ndarray) -> list:
+    def cmass(str_nparray: np.ndarray) -> list:
         """Calculate the position of the center of mass."""
         mass_sum = float(str_nparray[:, 3].sum())
         mx = (str_nparray[:, 3]) * (str_nparray[:, 0])

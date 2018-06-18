@@ -120,8 +120,8 @@ class TkGui(tk.Tk):
         lab23.grid(row=4, column=0, pady=5, padx=5)
         self.pb = ttk.Progressbar(lab23, orient='horizontal', mode='determinate', length=200)
         self.pb.pack()
-        self.fra3 = tk.Frame(self, width=800, height=720)
-        self.fra3.grid_propagate(False)
+        self.fra3 = tk.Frame(self, width=800, height=700)
+        self.fra3.grid_propagate(True)
         self.fra3.grid(row=0, column=1)
         fra4 = tk.Frame(self)
         fra4.grid(row=1, column=1, pady=10)
@@ -324,7 +324,8 @@ class TkGui(tk.Tk):
         """
         try:
             self.canvas.get_tk_widget().destroy()
-            self.toolbar.destroy()
+            # self.toolbar.destroy()
+            self.fig = None
         except AttributeError:
             pass
         grid, legend = self.grid, self.legend
@@ -334,11 +335,11 @@ class TkGui(tk.Tk):
             return
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.fra3)
         ax.mouse_init()
-        self.canvas.draw()
+        # self.canvas.draw()
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-        self.toolbar = NavigationToolbar2TkAgg(self.canvas, self.fra3)
-        self.toolbar.update()
-        self.canvas._tkcanvas.pack(fill=tk.BOTH, side=tk.TOP, expand=1)
+        # self.toolbar = NavigationToolbar2TkAgg(self.canvas, self.fra3)
+        # self.toolbar.update()
+        # self.canvas._tkcanvas.pack(fill=tk.BOTH, side=tk.TOP, expand=1)
 
     def open_pdb(self):
         """
@@ -440,7 +441,7 @@ class TkGui(tk.Tk):
         self.pb.update()
         try:
             self.canvas.get_tk_widget().destroy()
-            self.toolbar.destroy()
+            # self.toolbar.destroy()
         except AttributeError:
             pass
         self.fig = None

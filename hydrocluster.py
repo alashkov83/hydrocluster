@@ -35,9 +35,9 @@ class Parser(argparse.ArgumentParser):
         self.add_argument('-pt', '--ptable', choices=['hydropathy', 'nanodroplet', 'positive', 'negative'], type=str,
                           default='hydropathy', help='Property table for weighting')
         self.add_argument('-pH', '--pH', type=float, default=7.0,
-                          help='pH value for calculate net charges for --ptable positive or negative')
+                          help='pH value for calculatation of net charges (positive or negative) for --ptable ')
         self.add_argument('-na', '--noauto', action='store_const', const=True, default=False,
-                          help='No automatic mode. --eps and --min_samples options are required')
+                          help='No automatic mode. --eps and --min_samples options required')
         self.add_argument('-eps', '--eps', type=float, default=0, help='EPS value (A)')
         self.add_argument('-min_samples', '--min_samples', type=int, default=0, help='MIN SAMPLES')
 

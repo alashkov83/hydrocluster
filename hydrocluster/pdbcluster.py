@@ -83,17 +83,17 @@ class ClusterPdb:
         """
         db = DBSCAN(eps=eps, min_samples=min_samples, n_jobs=-1, metric='precomputed'
                     ).fit(pdist, sample_weight=weight_array)
-        # The DBSCAN algorithm views clusters as areas of high density separated by areas of low density.
-        # Due to this rather generic view, clusters found by DBSCAN can be any shape,
+        # The DBSCAN algorithm considers clusters as areas of high density separated by areas of low density.
+        # Due to this rather generic view, clusters found by DBSCAN can be of any shape,
         # as opposed to k-means which assumes that clusters are convex shaped.
-        # The central component to the DBSCAN is the concept of core samples, which are samples that are in areas
+        # The result of the DBSCAN follows the concept of core samples, namely the samples that are located in areas
         # of high density. A cluster is therefore a set of core samples,
         # each close to each other (measured by some distance measure) and a set of non-core samples that are close
-        # to a core sample (but are not themselves core samples).
-        # There are two parameters to the algorithm, min_samples and eps,
+        # to a core sample (but are not core samples themselves).
+        # There algorithm has two parameters: min_samples and eps,
         #  which define formally what we mean when we say dense.
-        # Higher min_samples or lower eps indicate higher density necessary to form a cluster.
-        # Cite:
+        # Higher min_samples or lower eps indicate higher density needed to form a cluster.
+        # For more info see:
         # “A Density-Based Algorithm for Discovering Clusters in Large Spatial Databases with Noise”
         # Ester, M., H. P. Kriegel, J. Sander, and X. Xu,
         # In Proceedings of the 2nd International Conference on Knowledge Discovery and Data Mining,
@@ -107,9 +107,9 @@ class ClusterPdb:
         # The Silhouette Coefficient is calculated using the mean intra-cluster distance (a)
         # and the mean nearest-cluster distance (b) for each sample.
         # The Silhouette Coefficient for a sample is (b - a) / max(a, b).
-        # To clarify, b is the distance between a sample and the nearest cluster that the sample is not a part of.
+        # To clarify, b is the distance between a sample and a nearest neighbor cluster (not containing this sample).
         # Note that Silhouette Coefficient is only defined if number of labels is 2 <= n_labels <= n_samples - 1.
-        # Cite:
+        # For more info see:
         # Peter J. Rousseeuw (1987).
         # “Silhouettes: a Graphical Aid to the Interpretation and Validation of Cluster Analysis”.
         # Computational and Applied Mathematics 20: 53-65.
@@ -118,7 +118,7 @@ class ClusterPdb:
         try:
             calinski = calinski_harabaz_score(X, labels)
             # The score is defined as ratio between the within-cluster dispersion and the between-cluster dispersion.
-            # Cite:
+            # For more info see:
             # T.Calinski and J.Harabasz, 1974. “A dendrite method for cluster analysis”.Communications in Statistics
         except ValueError:
             calinski = 0
@@ -389,7 +389,7 @@ class ClusterPdb:
         ax = axes3d.Axes3D(fig)
         colors = [cm.get_cmap('rainbow')(each) for each in np.linspace(0, 1, len(unique_labels))]
         for k, col in zip(unique_labels, colors):
-            # Black used for noise.
+            # Noise is marked in black.
             if k == -1:
                 xyz_noise = np.array([x for i, x in enumerate(xyz_all) if self.labels[i] == k])
                 if xyz_noise.any():
@@ -404,7 +404,7 @@ class ClusterPdb:
                                        and not self.core_samples_mask[i]])
                 if xyz_uncore.any():
                     ax.scatter(xyz_uncore[:, 0], xyz_uncore[:, 1], xyz_uncore[:, 2], c=tuple(col), s=12,
-                               label='Uncore Cluster No {:d}'.format(k + 1))
+                               label='Non-core Cluster No {:d}'.format(k + 1))
         fig.suptitle('Cluster analysis\n')
         ax.set_ylabel(r'$y\ \AA$')
         ax.set_xlabel(r'$x\ \AA$')

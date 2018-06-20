@@ -12,7 +12,7 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 try:
     from .pdbcluster import ClusterPdb
 except ImportError:
-    print('Error! Scikit-learn is not installed!')
+    print('Error! Scikit-learn not installed!')
     sys.exit()
 try:
     import progressbar2 as progressbar
@@ -84,15 +84,15 @@ class Cli:
         #       start_time = time.time()
         try:
             for n, j, i in self.cls.auto_yield():
-                self.log_append(('Step No {0:d}: EPS = {1:.2f} \u212B, min_samples = {2:d}, No clusters = {3:d}, '
-                                 'Silhouette score = {4:.3f} Calinski score = {5:.3f}\n').format(
+                self.log_append(('Step No. {0:d}: EPS = {1:.2f} \u212B, min_samples = {2:d}, No. of clusters = {3:d}, '
+                                 'Silhouette score = {4:.3f}; Calinski score = {5:.3f}\n').format(
                     n, j, i, self.cls.n_clusters, self.cls.si_score, self.cls.calinski))
 
                 bar1.update(n)
             #           print("--- %s seconds ---" % (time.time() - start_time))
             eps, min_samples = self.cls.auto(metric=metric)
         except ValueError:
-            self.log_append('Error! File was not parse or clustering was fail\n')
+            self.log_append('Error! Could not parse file or clustering failed\n')
             sys.exit(-1)
         else:
             self.log_append('Autoscan done... \n')
@@ -108,12 +108,12 @@ class Cli:
         :param min_samples:
         """
         if min_samples <= 0 or eps <= 0:
-            print("--eps and --min samples options are required and it's values > 0")
+            print("--eps and --min samples options are required with values > 0")
             sys.exit(-1)
         try:
             self.cls.cluster(eps, min_samples)
         except ValueError:
-            self.log_append('Error! File was not parse or clustering was fail\n')
+            self.log_append('Error! Could not parse file or clustering failed\n')
             sys.exit(-1)
         else:
             self.log_append(('Number of clusters = {0:d}\nSilhouette Coefficient = {1:.3f}\n'
@@ -134,7 +134,7 @@ class Cli:
             canvas = FigureCanvasAgg(fig)
             canvas.print_png(sa)
         except AttributeError:
-            self.log_append('Error! Plot was not created!\n')
+            self.log_append('Error! Failed to plot!\n')
 
     def open_file(self, filename: str):
         """
@@ -142,7 +142,7 @@ class Cli:
         :param filename:
         """
         if not filename:
-            self.log_append('Filename was not defined\n')
+            self.log_append('Filename not defined\n')
             sys.exit(-1)
         if filename.split('.')[-1].strip().lower() == 'pdb':
             try:
@@ -151,12 +151,12 @@ class Cli:
                 self.log_append('File {:s} not found!\n'.format(filename))
                 sys.exit(-1)
             else:
-                self.log_append('File {:s} was read!\n'.format(filename))
+                self.log_append('File {:s} successfully read!\n'.format(filename))
         elif filename.split('.')[-1].strip().lower() == 'cif':
             try:
                 self.cls.open_cif(filename)
             except ImportError:
-                self.log_append('Import error! Bio Python unavailable! \nPlease install biopython and mmtf!\n')
+                self.log_append('Import error! BioPython not found! \nPlease install biopython and mmtf!\n')
                 sys.exit(-1)
             except FileNotFoundError:
                 sys.exit(-1)
@@ -164,19 +164,19 @@ class Cli:
                 self.log_append('Error! Incorrect CIF file: {0:s}!\n'.format(filename))
                 sys.exit(-1)
             else:
-                self.log_append('File {:s} read!\n')
+                self.log_append('File {:s} successfully read!\n')
         else:
             try:
                 self.cls.open_url(filename)
             except ImportError:
-                self.log_append('Import error! Bio Python unavailable! \nPlease install biopython and mmtf\n')
+                self.log_append('Import error! BioPython unavailable! \nPlease install biopython and mmtf\n')
                 sys.exit(-1)
             except HTTPError as e:
                 self.log_append('Error! ID PDB: {0:s} not found or refers to an incorrect file!'.format(
                     filename, str(e)))
                 sys.exit(-1)
             else:
-                self.log_append('File ID PDB: {0:s} was downloaded!\n'.format(filename))
+                self.log_append('File ID PDB: {0:s} successfully downloaded!\n'.format(filename))
 
     def parse_pdb(self, htable: str, pH: float):
         """
@@ -192,11 +192,11 @@ class Cli:
         try:
             parse_results = self.cls.parser(htable=htable, pH=pH)
         except ValueError:
-            self.log_append('Error! Invalid file format\nor file does not contain {:s} resides\n'.format(
+            self.log_append('Error! Invalid file format\nor file does not contain {:s} residues\n'.format(
                 'hydrophobic' if htable in ('hydropathy', 'nanodroplet')
                 else 'negative' if htable == 'negative' else 'positive'))
         else:
-            self.log_append("No of residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
+            self.log_append("No. of residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
                             "Maximum distance = {:.3f} \u212B\nMean distance = {:.3f} \u212B\n".format(*parse_results))
 
     def save_state(self, newdir: str, basefile: str):
@@ -234,8 +234,8 @@ class Cli:
         if not dict_aa:
             return
         for k, aa_list in dict_aa.items():
-            self.log_append('\nIn {:s} cluster No {:d} included: {:s}'.format(
-                ("Core" if k[0] else "Uncore"), k[1], ", ".join(['{2:s}:{1:s}{0:d}'.format(*aac) for aac in aa_list])))
+            self.log_append('\n{:s} cluster No. {:d} contains: {:s}'.format(
+                ("Core" if k[0] else "Non-core"), k[1], ", ".join(['{2:s}:{1:s}{0:d}'.format(*aac) for aac in aa_list])))
         self.log_append('\n\n')
 
     def colormap(self, newdir: str, basefile: str):
@@ -251,4 +251,4 @@ class Cli:
             canvas = FigureCanvasAgg(fig)
             canvas.print_png(sa)
         except AttributeError:
-            self.log_append('Error! Plot was not created !!\n')
+            self.log_append('Error! Failed to plot!!\n')

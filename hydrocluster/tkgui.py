@@ -18,7 +18,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 try:
     from .pdbcluster import ClusterPdb
 except ImportError:
-    showerror('Error!', 'Scikit-learn is not installed!')
+    showerror('Error!', 'Scikit-learn not installed!')
     sys.exit()
 
 
@@ -223,7 +223,7 @@ class TkGui(tk.Tk):
                 self.run_flag = True
                 self.pb['value'] = 0
                 self.pb.update()
-                showerror("Error", "Non correct value for Min EPS")
+                showerror("Error", "Not correct value for Min EPS")
                 return
             try:
                 max_eps = float(self.ent_max_eps.get())
@@ -233,7 +233,7 @@ class TkGui(tk.Tk):
                 self.run_flag = True
                 self.pb['value'] = 0
                 self.pb.update()
-                showerror("Error", "Non correct value for Max EPS")
+                showerror("Error", "Not correct value for Max EPS")
                 return
             try:
                 step_eps = float(self.ent_step_eps.get())
@@ -243,7 +243,7 @@ class TkGui(tk.Tk):
                 self.run_flag = True
                 self.pb['value'] = 0
                 self.pb.update()
-                showerror("Error", "Non correct value for Step EPS")
+                showerror("Error", "Not correct value for Step EPS")
                 return
             try:
                 min_min_samples = int(self.ent_min_min_samples.get())
@@ -253,7 +253,7 @@ class TkGui(tk.Tk):
                 self.run_flag = True
                 self.pb['value'] = 0
                 self.pb.update()
-                showerror("Error", "Non correct value for Min MIN_SAMPLES")
+                showerror("Error", "Not correct value for Min MIN_SAMPLES")
                 return
             try:
                 max_min_samples = int(self.ent_max_min_samples.get())
@@ -263,7 +263,7 @@ class TkGui(tk.Tk):
                 self.run_flag = True
                 self.pb['value'] = 0
                 self.pb.update()
-                showerror("Error", "Non correct value for Max MIN_SAMPLES")
+                showerror("Error", "Not correct value for Max MIN_SAMPLES")
                 return
             if self.cls.states and self.cls.auto_params == (min_eps, max_eps, step_eps,
                                                             min_min_samples, max_min_samples):
@@ -286,8 +286,8 @@ class TkGui(tk.Tk):
                     self.tx.insert(tk.END, 'Autoscan done... \n')
                     self.tx.configure(state='disabled')
                 except ValueError:
-                    showerror('Error!', 'File was not parse or clustering was fail')
-                    self.tx.insert(tk.END, 'Error! File was not parse or clustering was fail\n')
+                    showerror('Error!', 'Could not parse file or clustering failed')
+                    self.tx.insert(tk.END, 'Error! Could not parse file or clustering failed\n')
                     self.tx.configure(state='disabled')
                     self.run_flag = False
                     return
@@ -302,7 +302,7 @@ class TkGui(tk.Tk):
                 self.pb['value'] = 1
                 self.pb.update()
             except ValueError:
-                showerror('Error!', 'File was not parse or clustering was fail')
+                showerror('Error!', 'Could not parse file or clustering failed')
                 self.run_flag = False
                 return
         showinfo('Autoscan done', ('Number of clusters = {0:d}\nSilhouette Coefficient = {1:.3f}\n'
@@ -375,13 +375,13 @@ class TkGui(tk.Tk):
             try:
                 self.cls.open_url(url)
             except ImportError:
-                showerror('Import error', 'Bio Python unavailable!\nPlease install biopython and mmtf!')
+                showerror('Import error', 'BioPython unavailable!\nPlease install biopython and mmtf!')
                 return
             except HTTPError as e:
                 showerror('Error!!', ('{1:s}\nID PDB: {0:s} not found'
                                       ' or refers to an incorrect file!').format(url, str(e)))
             else:
-                showinfo('Info', 'File ID PDB: {0:s} was downloaded'.format(url))
+                showinfo('Info', 'File ID PDB: {0:s} downloaded'.format(url))
                 self.parse_pdb()
 
     def open_cif(self):
@@ -398,7 +398,7 @@ class TkGui(tk.Tk):
             try:
                 self.cls.open_cif(cif_f)
             except ImportError:
-                showerror('Import error', 'Bio Python is not available!\nPlease install biopython and mmtf!')
+                showerror('Import error', 'BioPython is not available!\nPlease install biopython and mmtf!')
                 return
             except FileNotFoundError:
                 return
@@ -406,7 +406,7 @@ class TkGui(tk.Tk):
                 showerror('Error', 'Incorrect CIF file: {0:s}!'.format(cif_f))
                 return
             else:
-                showinfo('Infor', 'File {0:s} was read!'.format(cif_f))
+                showinfo('Infor', 'File {0:s} successfully read!'.format(cif_f))
                 self.parse_pdb()
 
     def parse_pdb(self):
@@ -425,13 +425,13 @@ class TkGui(tk.Tk):
             else:
                 parse_results = self.cls.parser(htable=htable)
         except ValueError:
-            showerror('Error!', 'Invalid file format\nor file does not {:s} contain resides\n'.format(
+            showerror('Error!', 'Invalid file format\nor file does not {:s} contain residues\n'.format(
                 'hydrophobic' if htable in ('hydropathy', 'nanodroplet')
                 else 'negative' if htable == 'negative' else 'positive'))
             return
         else:
-            showinfo('Info', 'File was parsed!\nPTable: {:s}\n'.format(htable) +
-                     "No of residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
+            showinfo('Info', 'File successfully parsed!\nPTable: {:s}\n'.format(htable) +
+                     "No. of residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
                      "Maximum distance = {:.3f} \u212B\nMean distance = {:.3f} \u212B\n".format(*parse_results))
             self.l11.configure(text="{0:>5d}".format(parse_results[0]))
             self.l12.configure(text="{0:>5.3f}".format(parse_results[1]))
@@ -448,7 +448,7 @@ class TkGui(tk.Tk):
         self.clean_txt()
         self.tx.configure(state='normal')
         self.tx.insert(tk.END, 'PTable: {:s}\n'.format(htable) +
-                       "No of residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
+                       "No. of residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
                        "Maximum distance = {:.3f} \u212B\nMean distance = {:.3f} \u212B\n\n".format(*parse_results))
         self.tx.configure(state='disabled')
 
@@ -555,10 +555,10 @@ class TkGui(tk.Tk):
             showerror('Error!', 'The calculation is still running!')
             return
         if self.fig is None:
-            showerror('Error!', 'Plot unavailable!')
+            showerror('Error!', 'Failed to plot!')
             return
         opt = {'parent': self,
-               'filetypes': [('All support formats', ('.eps', '.jpeg', '.jpg', '.pdf', '.pgf', '.png', '.ps',
+               'filetypes': [('All supported formats', ('.eps', '.jpeg', '.jpg', '.pdf', '.pgf', '.png', '.ps',
                                                       '.raw', '.rgba', '.svg', '.svgz', '.tif', '.tiff')), ],
                'initialfile': 'myfile.png',
                'title': 'Save plot'}
@@ -569,7 +569,7 @@ class TkGui(tk.Tk):
             except FileNotFoundError:
                 return
             except AttributeError:
-                showerror('Error!', 'Plot unavailable!')
+                showerror('Error!', 'Failed to plot!')
             except ValueError:
                 showerror('Unsupported file format!',
                           'Supported formats: eps, jpeg, jpg, pdf, pgf, png, ps, raw, rgba, svg, svgz, tif, tiff.')
@@ -617,7 +617,7 @@ class TkGui(tk.Tk):
             return
         for k, aa_list in dict_aa.items():
             self.tx.configure(state='normal')
-            self.tx.insert(tk.END, '\nIn {:s} cluster No {:d} included: {:s}'.format(
+            self.tx.insert(tk.END, '\n{:s} cluster No. {:d} contains: {:s}'.format(
                 ("Core" if k[0] else "Uncore"), k[1], ", ".join(['{2:s}:{1:s}{0:d}'.format(*aac) for aac in aa_list])))
             self.tx.configure(state='disabled')
         self.tx.configure(state='normal')

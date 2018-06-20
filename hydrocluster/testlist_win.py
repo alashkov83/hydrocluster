@@ -40,7 +40,7 @@ def main(namespace):
             if not filelist:
                 raise ValueError
     except (UnicodeDecodeError, ValueError):
-        print("File {:s} is not contain text!".format(inp))
+        print("File {:s} does not contain text!".format(inp))
         sys.exit()
     except (OSError, FileNotFoundError):
         print("File {:s} is unavailable!".format(inp))
@@ -57,7 +57,7 @@ def main(namespace):
             break
         clusterThread(item, outputDir, cursor, conn, lock, min_eps, max_eps,
                       step_eps, min_min_samples, max_min_samples, n_jobs=0)
-        print("All tasks was done for {:s} ({:d}/{:d})".format(item, n, len(filelist)))
+        print("All tasks completed for {:s} ({:d}/{:d})".format(item, n, len(filelist)))
         n += 1
     dTask.join()
     conn.close()

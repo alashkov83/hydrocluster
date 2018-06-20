@@ -22,7 +22,7 @@ except ImportError:
 try:
     from .pdbcluster import ClusterPdb
 except ImportError:
-    print('Error! Scikit-learn is not installed!')
+    print('Error! Scikit-learn not installed!')
     sys.exit()
 
 warnings.filterwarnings("ignore")
@@ -92,7 +92,7 @@ def download(filelist, q, lock, cursor, conn, dir):
         pdbl = PDBList()
         pdbl.retrieve_pdb_file(file, pdir=os.path.join(dir, file), file_format='pdb')
         if not os.path.exists(os.path.join(dir, file, 'pdb{:s}.ent'.format(file))):
-            print("File with ID PDB: {:s} was not found!".format(file))
+            print("File with ID PDB: {:s} not found!".format(file))
             continue
         parser = PDBParser()
         structure = parser.get_structure('{:s}', os.path.join(dir, file, 'pdb{:s}.ent'.format(file)))
@@ -148,7 +148,7 @@ def graph(cls, dir, basefile):
         canvas = FigureCanvasAgg(fig)
         canvas.print_png(sa)
     except AttributeError:
-        print('Error! Plot was not created!\n')
+        print('Error! Failed to plot!\n')
 
 
 def colormap(cls, newdir: str, basefile: str):
@@ -165,7 +165,7 @@ def colormap(cls, newdir: str, basefile: str):
         canvas = FigureCanvasAgg(fig)
         canvas.print_png(sa)
     except AttributeError:
-        print('Error! Plot was not created !!\n')
+        print('Error! Failed to plot!\n')
 
 
 def save_state(cls, newdir: str, basefile: str):
@@ -253,7 +253,7 @@ def clusterThread(file, dir, cursor, conn, lock, min_eps, max_eps, step_eps,
         try:
             ntres, mind, maxd, meand = cls.parser(htable=htable, pH=pH)
         except ValueError:
-            print('Error! Invalid file format\nor file does not contain {:s} resides\n'.format(
+            print('Error! Invalid file format\nor file does not contain {:s} residues\n'.format(
                 'hydrophobic' if htable in ('hydropathy', 'nanodroplet')
                 else 'negative' if htable == 'negative' else 'positive'))
             return
@@ -268,16 +268,16 @@ def clusterThread(file, dir, cursor, conn, lock, min_eps, max_eps, step_eps,
             for n in cls.auto_yield():
                 pass
         except ValueError:
-            print('Error! File was not parse or clustering was fail\n')
+            print('Error! Could not parse file or clustering failed\n')
             continue
         for metric in metrics:
             try:
                 eps, min_samples = cls.auto(metric=metric)
             except ValueError:
-                print('Error! File was not parse or clustering was fail\n')
+                print('Error! Could not parse file or clustering failed\n')
                 continue
             else:
-                print("Job was done for ID_PDB: {:s}, ptable: {:s}, metric: {:s}".format(file, htable, metric))
+                print("Job completed for ID_PDB: {:s}, ptable: {:s}, metric: {:s}".format(file, htable, metric))
                 db_save(conn, cursor, lock, file, htable, ntres, mind, maxd, meand, metric,
                         cls.si_score if metric == 'si_score' else cls.calinski, eps, min_samples, cls.n_clusters)
                 dir_metric = os.path.join(dir_ptable, metric)
@@ -327,7 +327,7 @@ def main(namespace):
             if not filelist:
                 raise ValueError
     except (UnicodeDecodeError, ValueError):
-        print("File {:s} is not contain text!".format(inp))
+        print("File {:s} does not contain text!".format(inp))
         sys.exit()
     except (OSError, FileNotFoundError):
         print("File {:s} is unavailable!".format(inp))
@@ -355,7 +355,7 @@ def main(namespace):
         for process in clusterTasks:
             if not process.is_alive():
                 clusterTasks.remove(process)
-                print("All tasks was done for {:s} ({:d}/{:d})".format(tmp_dict[process.pid], n, len(filelist)))
+                print("All tasks completed for {:s} ({:d}/{:d})".format(tmp_dict[process.pid], n, len(filelist)))
                 del tmp_dict[process.pid]
                 n += 1
     for p in clusterTasks:

@@ -25,6 +25,8 @@ try:
 except ImportError:
     raise ImportError
 
+from .DBCV import DBCV
+
 warnings.filterwarnings("ignore")
 
 
@@ -41,6 +43,7 @@ class ClusterPdb:
         self.n_clusters = 0
         self.si_score = -1
         self.calinski = 0
+        self.dbcv = -1
         self.s_array = []
         self.htable = 'hydropathy'
         self.parse_results = (0, 0.0, 0.0, 0.0)
@@ -65,6 +68,7 @@ class ClusterPdb:
         self.n_clusters = 0
         self.si_score = -1
         self.calinski = 0
+        self.dbcv = -1
         self.weight_array.clear()
         self.aa_list.clear()
         self.states.clear()
@@ -122,7 +126,11 @@ class ClusterPdb:
             # T.Calinski and J.Harabasz, 1974. “A dendrite method for cluster analysis”.Communications in Statistics
         except ValueError:
             calinski = 0
-        return labels, n_clusters, core_samples_mask, si_score, calinski
+        try:
+            dbcv = DBCV(X, labels)
+        except ValueError:
+            dbcv = -1
+        return labels, n_clusters, core_samples_mask, si_score, calinski, dbcv
 
     def cluster(self, eps: float, min_samples: int):
         """
@@ -132,7 +140,7 @@ class ClusterPdb:
         """
         if self.X is None or self.pdist is None:
             raise ValueError
-        self.labels, self.n_clusters, self.core_samples_mask, self.si_score, self.calinski = self.clusterDBSCAN(
+        self.labels, self.n_clusters, self.core_samples_mask, self.si_score, self.calinski, self.dbcv = self.clusterDBSCAN(
             self.X, self.pdist, self.weight_array, eps, min_samples)
 
     def clusterThread(self, subParams):
@@ -141,9 +149,9 @@ class ClusterPdb:
         :param subParams:
         """
         for eps, min_samples in subParams:
-            labels, n_clusters, core_samples_mask, si_score, calinski = self.clusterDBSCAN(
+            labels, n_clusters, core_samples_mask, si_score, calinski, dbcv = self.clusterDBSCAN(
                 self.X, self.pdist, self.weight_array, eps, min_samples)
-            clusterResults = labels, core_samples_mask, n_clusters, si_score, calinski, eps, min_samples
+            clusterResults = labels, core_samples_mask, n_clusters, si_score, calinski, dbcv, eps, min_samples
             self.queue.put(clusterResults)
         self.queue.put(None)
 
@@ -217,13 +225,16 @@ class ClusterPdb:
             self.states.sort(key=lambda x: x[3], reverse=True)
         elif metric == 'calinski':
             self.states.sort(key=lambda x: x[4], reverse=True)
+        if metric == 'dbcv':
+            self.states.sort(key=lambda x: x[5], reverse=True)
         state = self.states[0]
         self.labels = state[0]
         self.core_samples_mask = state[1]
         self.n_clusters = state[2]
         self.si_score = state[3]
         self.calinski = state[4]
-        return state[5], state[6]
+        self.dbcv = state[5]
+        return state[6], state[7]
 
     def open_pdb(self, pdb: str) -> None:
         """
@@ -431,7 +442,7 @@ class ClusterPdb:
         """
         if not self.states:
             raise ValueError
-        colormap_data = [(state[6], state[5], state[4], state[3]) for state in self.states]
+        colormap_data = [(state[7], state[6], state[4], state[3], state[5]) for state in self.states]
         colormap_data.sort(key=lambda i: i[0])
         colormap_data.sort(key=lambda i: i[1])
         x = np.array(sorted(list({data[0] for data in colormap_data})), ndmin=1)
@@ -458,6 +469,19 @@ class ClusterPdb:
         z.shape = (y.size, x.size)
         pc2 = ax2.pcolor(x, y, z, cmap='gnuplot', vmin=z_min)
         fig.colorbar(pc2, ax=ax2, extend='max', extendfrac=0.1)
+        ax3 = fig.add_subplot(232)
+        ax3.set_title('DBCV score')
+        ax3.set_xlabel('MIN SAMPLES')
+        ax3.set_ylabel('EPS, \u212B')
+        ax3.grid(grid_state)
+        z = np.array([data[4] for data in colormap_data])
+        try:
+            z_min = min([x for x in z.flat if x > -1.0])
+        except ValueError:
+            z_min = -1.0
+        z.shape = (y.size, x.size)
+        pc3 = ax3.pcolor(x, y, z, cmap='gnuplot', vmin=z_min)
+        fig.colorbar(pc3, ax=ax3, extend='max', extendfrac=0.1)
         return fig
 
     @staticmethod
@@ -525,6 +549,7 @@ class ClusterPdb:
             'n_clusters': self.n_clusters,
             'si_score': self.si_score,
             'calinski': self.calinski,
+            'dbcv': self.dbcv,
             'weight_array': self.weight_array,
             'aa_list': self.aa_list,
             's_array': self.s_array,
@@ -554,6 +579,7 @@ class ClusterPdb:
         self.auto_params = global_state['auto_params']
         self.si_score = global_state['si_score']
         self.calinski = global_state['calinski']
+        self.dbcv = global_state['dbcv']
         self.weight_array = global_state['weight_array']
         self.aa_list = global_state['aa_list']
         self.states = global_state['states']

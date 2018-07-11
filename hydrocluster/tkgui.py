@@ -312,7 +312,9 @@ class TkGui(tk.Tk):
         self.tx.configure(state='normal')
         self.tx.insert(tk.END, ('Number of clusters = {0:d}\nSilhouette Coefficient = {1:.3f}\n'
                                 'Calinski-Harabaz score = {4:.3f}\nEPS = {2:.1f} \u212B\nMIN_SAMPLES = {3:d}\n'
-                                ).format(self.cls.n_clusters, self.cls.si_score, eps, min_samples, self.cls.calinski))
+                                'Percent of noise = {5:.2f} %\n'
+                                ).format(self.cls.n_clusters, self.cls.si_score, eps, min_samples, self.cls.calinski,
+                                         self.cls.noise_percent()))
         self.tx.configure(state='disabled')
         self.graph()
         self.run_flag = False

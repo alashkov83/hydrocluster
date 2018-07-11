@@ -98,8 +98,10 @@ class Cli:
             self.log_append('Autoscan done... \n')
             bar1.finish()
             self.log_append(('Number of clusters = {0:d}\nSilhouette Coefficient = {1:.3f}\n'
-                             'Calinski-Harabaz score = {4:.3f}\nEPS = {2:.1f} \u212B\nMIN_SAMPLES = {3:d}\n').format(
-                self.cls.n_clusters, self.cls.si_score, eps, min_samples, self.cls.calinski))
+                             'Calinski-Harabaz score = {4:.3f}\n'
+                             'EPS = {2:.1f} \u212B\nMIN_SAMPLES = {3:d}\n'
+                             'Percent of noise = {5:.2f} %\n').format(
+                self.cls.n_clusters, self.cls.si_score, eps, min_samples, self.cls.calinski, self.cls.noise_percent()))
 
     def noauto(self, eps: float, min_samples: int):
         """

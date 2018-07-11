@@ -68,6 +68,7 @@ SCORE_MAX REAL NOT NULL,
 EPS REAL NOT NULL,
 MIN_SAMPLES INTEGER NOT NULL,
 N_CLUSTERS INTEGER NOT NULL,
+P_NOISE REAL NOT NULL,
 FOREIGN KEY(IDPDB) REFERENCES Structures(IDPDB))""")
         except sqlite3.DatabaseError as err:
             print("Error: ", err)
@@ -198,7 +199,8 @@ def save_pymol(cls, newdir: str, basefile: str):
         return
 
 
-def db_save(con, curr, lock, file, htable, ntres, mind, maxd, meand, metric, score, eps, min_samples, n_clusters):
+def db_save(con, curr, lock, file, htable, ntres, mind, maxd,
+            meand, metric, score, eps, min_samples, n_clusters, p_noise):
     """
 
     :param con:
@@ -220,8 +222,8 @@ def db_save(con, curr, lock, file, htable, ntres, mind, maxd, meand, metric, sco
     lock.acquire()
     try:
         curr.execute("""INSERT INTO Results (IDPDB, HTABLE, NTRES, MIND, MAXD, MEAND, SCORING_FUNCTION, SCORE_MAX, EPS,
-MIN_SAMPLES, N_CLUSTERS) VALUES ("{:s}", "{:s}", {:d}, {:.2f}, {:.2f}, {:.2f}, "{:s}", {:.3f}, {:.2f}, {:d}, {:d})""".format(
-            file, htable, ntres, mind, maxd, meand, metric, score, eps, min_samples, n_clusters))
+MIN_SAMPLES, N_CLUSTERS, P_NOISE) VALUES ("{:s}", "{:s}", {:d}, {:.2f}, {:.2f}, {:.2f}, "{:s}", {:.3f}, {:.2f}, {:d}, {:d}, {:.2f})""".format(
+            file, htable, ntres, mind, maxd, meand, metric, score, eps, min_samples, n_clusters, p_noise))
     except sqlite3.DatabaseError as err:
         print("Error: ", err)
         return
@@ -279,7 +281,8 @@ def clusterThread(file, dir, cursor, conn, lock, min_eps, max_eps, step_eps,
             else:
                 print("Job completed for ID_PDB: {:s}, ptable: {:s}, metric: {:s}".format(file, htable, metric))
                 db_save(conn, cursor, lock, file, htable, ntres, mind, maxd, meand, metric,
-                        cls.si_score if metric == 'si_score' else cls.calinski, eps, min_samples, cls.n_clusters)
+                        cls.si_score if metric == 'si_score' else cls.calinski,
+                        eps, min_samples, cls.n_clusters, cls.noise_percent())
                 dir_metric = os.path.join(dir_ptable, metric)
                 try:
                     os.makedirs(dir_metric, exist_ok=True)

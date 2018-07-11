@@ -225,6 +225,15 @@ class ClusterPdb:
         self.calinski = state[4]
         return state[5], state[6]
 
+    def noise_percent(self):
+        if self.labels is not None:
+            labflat = self.labels.flatten()
+            n = len(labflat)
+            noise_n = len([x for x in labflat if x == -1])
+            return noise_n*100/n
+        else:
+            return 0
+
     def open_pdb(self, pdb: str) -> None:
         """
 

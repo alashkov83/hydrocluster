@@ -350,7 +350,9 @@ class ClusterPdb:
             ' O': 16.0,
             ' P': 31.0,
             ' S': 32.0,
-            ' F': 19.0}
+            ' F': 19.0,
+            'SE': 79.0,
+            ' D': 2}
         for s in self.s_array:
             if s[0:6] == 'ATOM  ' and (s[17:20] in hydrfob) and ((current_resn is None or current_chainn is None) or (
                     current_resn == int(s[22:26]) and current_chainn == s[21])):

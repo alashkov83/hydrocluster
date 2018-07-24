@@ -513,10 +513,10 @@ class ClusterPdb:
         s = "from pymol import cmd\n\ncmd.set('label_color','white')\ncmd.delete ('sele')\ncmd.hide ('everything')\n" \
             "cmd.show_as('sticks', 'all')\n"
         dict_aa = self.get_dict_aa()
-        colors = [cm.get_cmap('tab20')(each) for each in np.linspace(0, 1, len(dict_aa))]
+        colors = (cm.get_cmap('tab20b')(each) for each in np.linspace(0, 1, len(dict_aa)))
         color_names = []
         for n, colindex in enumerate(colors):
-            s += "cmd.set_color('col_{:d}', [{:.2f}, {:.2f}, {:.2f}])\n".format(n, *colindex)
+            s += "cmd.set_color('col_{:d}', [{:f}, {:f}, {:f}])\n".format(n, *colindex)
             color_names.append("col_{:d}".format(n))
         for (k, aa_list), color in zip(dict_aa.items(), color_names):
             if aa_list:
@@ -526,6 +526,7 @@ class ClusterPdb:
                 s += "cmd.color('{:s}', '{:s}_cluster_{:d}')\n".format(
                     color, ("Core" if k[0] else "Uncore"), k[1])
                 s += "cmd.show_as('spheres', '{:s}_cluster_{:d}')\n".format(("Core" if k[0] else "Uncore"), k[1])
+        s += "cmd.deselect()\n"
         with open(filename, 'wt') as f:
             f.write(s)
 

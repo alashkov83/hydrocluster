@@ -3,21 +3,16 @@
 """Created by lashkov on 01.06.18"""
 import os
 import os.path
-import psutil
 import sqlite3
 import sys
 import warnings
 from multiprocessing import Queue, Process, Lock
 
+import psutil
 from Bio.PDB import PDBParser, PDBList
 from Bio.PDB.Polypeptide import PPBuilder
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
 from matplotlib.backends.backend_agg import FigureCanvasAgg
-
-try:
-    import progressbar2 as progressbar
-except ImportError:
-    import progressbar
 
 try:
     from .pdbcluster import ClusterPdb

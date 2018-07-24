@@ -236,6 +236,15 @@ class ClusterPdb:
         self.dbcv = state[5]
         return state[6], state[7]
 
+    def noise_percent(self):
+        if self.labels is not None:
+            labflat = self.labels.flatten()
+            n = len(labflat)
+            noise_n = len([x for x in labflat if x == -1])
+            return noise_n*100/n
+        else:
+            return 0
+
     def open_pdb(self, pdb: str) -> None:
         """
 
@@ -352,7 +361,9 @@ class ClusterPdb:
             ' O': 16.0,
             ' P': 31.0,
             ' S': 32.0,
-            ' F': 19.0}
+            ' F': 19.0,
+            'SE': 79.0,
+            ' D': 2.0}
         for s in self.s_array:
             if s[0:6] == 'ATOM  ' and (s[17:20] in hydrfob) and ((current_resn is None or current_chainn is None) or (
                     current_resn == int(s[22:26]) and current_chainn == s[21])):
@@ -526,13 +537,20 @@ class ClusterPdb:
         s = "from pymol import cmd\n\ncmd.set('label_color','white')\ncmd.delete ('sele')\ncmd.hide ('everything')\n" \
             "cmd.show_as('sticks', 'all')\n"
         dict_aa = self.get_dict_aa()
-        for k, aa_list in dict_aa.items():
-            s += "cmd.select('{:s}_cluster_{:d}', '{:s}')\n".format(
-                ("Core" if k[0] else "Uncore"), k[1], "+".join(
+        colors = (cm.get_cmap('tab20b')(each) for each in np.linspace(0, 1, len(dict_aa)))
+        color_names = []
+        for n, colindex in enumerate(colors):
+            s += "cmd.set_color('col_{:d}', [{:f}, {:f}, {:f}])\n".format(n, *colindex)
+            color_names.append("col_{:d}".format(n))
+        for (k, aa_list), color in zip(dict_aa.items(), color_names):
+            if aa_list:
+                s += "cmd.select('{:s}_cluster_{:d}', '{:s}')\n".format(
+                    ("Core" if k[0] else "Uncore"), k[1], "+".join(
                     ['(chain {1:s} and resi {0:d})'.format(*aac) for aac in aa_list]))
-            s += "cmd.color('{:s}', '{:s}_cluster_{:d}')\n".format(
-                ('forest' if k[0] else 'olive'), ("Core" if k[0] else "Uncore"), k[1])
-            s += "cmd.show_as('spheres', '{:s}_cluster_{:d}')\n".format(("Core" if k[0] else "Uncore"), k[1])
+                s += "cmd.color('{:s}', '{:s}_cluster_{:d}')\n".format(
+                    color, ("Core" if k[0] else "Uncore"), k[1])
+                s += "cmd.show_as('spheres', '{:s}_cluster_{:d}')\n".format(("Core" if k[0] else "Uncore"), k[1])
+        s += "cmd.deselect()\n"
         with open(filename, 'wt') as f:
             f.write(s)
 

@@ -112,7 +112,7 @@ class TkGui(tk.Tk):
         but2.grid(row=3, column=0, pady=5)
         lab21 = tk.LabelFrame(lab2, text='Metric shrink', labelanchor='n', borderwidth=5)
         lab21.grid(row=0, column=0, pady=5, padx=5)
-        listbox_items = ['calinski', 'si_score', 'dbcv']
+        listbox_items = ['calinski', 'si_score']
         self.combox = ttk.Combobox(lab21, height=5, width=15, values=listbox_items)
         self.combox.pack()
         self.combox.set('calinski')
@@ -277,10 +277,9 @@ class TkGui(tk.Tk):
                 try:
                     for n, j, i in self.cls.auto_yield():
                         self.tx.insert(tk.END, 'Step No {0:d}: EPS = {1:.2f} \u212B, min_s = {2:d}, '
-                                               'No cls = {3:d}, Si sc = {4:.3f}, '
-                                               'Calinski_sc = {5:.3f}, DBCV = {6:.3f}\n'
+                                               'No cls = {3:d}, Si sc = {4:.3f}, Calinski_sc = {5:.3f}\n'
                                        .format(n, j, i, self.cls.n_clusters,
-                                               self.cls.si_score, self.cls.calinski, self.cls.dbcv))
+                                               self.cls.si_score, self.cls.calinski))
                         self.pb['value'] = n
                         self.pb.update()
                     eps, min_samples = self.cls.auto(metric=metric)
@@ -307,18 +306,13 @@ class TkGui(tk.Tk):
                 self.run_flag = False
                 return
         showinfo('Autoscan done', ('Number of clusters = {0:d}\nSilhouette Coefficient = {1:.3f}\n'
-                                   'Calinski-Harabaz score = {4:.3f}\n'
-                                   'DBCV = {5:.3f}\n'
-                                   'EPS = {2:.1f} \u212B\nMIN_SAMPLES = {3:d}\n'
+                                   'Calinski-Harabaz score = {4:.3f}\nEPS = {2:.1f} \u212B\nMIN_SAMPLES = {3:d}\n'
                                    ).format(self.cls.n_clusters, self.cls.si_score, eps, min_samples,
-                                            self.cls.calinski, self.cls.dbcv))
+                                            self.cls.calinski))
         self.tx.configure(state='normal')
         self.tx.insert(tk.END, ('Number of clusters = {0:d}\nSilhouette Coefficient = {1:.3f}\n'
-                                'Calinski-Harabaz score = {4:.3f}\n'
-                                'DBCV = {5:.3f}\n'
-                                'EPS = {2:.1f} \u212B\nMIN_SAMPLES = {3:d}\n'
-                                ).format(self.cls.n_clusters, self.cls.si_score, eps, min_samples,
-                                         self.cls.calinski, self.cls.dbcv))
+                                'Calinski-Harabaz score = {4:.3f}\nEPS = {2:.1f} \u212B\nMIN_SAMPLES = {3:d}\n'
+                                ).format(self.cls.n_clusters, self.cls.si_score, eps, min_samples, self.cls.calinski))
         self.tx.configure(state='disabled')
         self.graph()
         self.run_flag = False

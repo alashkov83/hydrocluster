@@ -401,6 +401,7 @@ class ClusterPdb:
         colors = [cm.get_cmap('rainbow')(each) for each in np.linspace(0, 1, len(unique_labels))]
         for k, col in zip(unique_labels, colors):
             # Noise is marked in black.
+            col = np.array(col, ndmin=2)
             if k == -1:
                 xyz_noise = np.array([x for i, x in enumerate(xyz_all) if self.labels[i] == k])
                 if xyz_noise.any():
@@ -409,12 +410,12 @@ class ClusterPdb:
                 xyz_core = np.array([x for i, x in enumerate(xyz_all) if self.labels[i] == k
                                      and self.core_samples_mask[i]])
                 if xyz_core.any():
-                    ax.scatter(xyz_core[:, 0], xyz_core[:, 1], xyz_core[:, 2], c=tuple(col), s=32,
+                    ax.scatter(xyz_core[:, 0], xyz_core[:, 1], xyz_core[:, 2], c=col, s=32,
                                label='Core Cluster No {:d}'.format(k + 1))
                 xyz_uncore = np.array([x for i, x in enumerate(xyz_all) if self.labels[i] == k
                                        and not self.core_samples_mask[i]])
                 if xyz_uncore.any():
-                    ax.scatter(xyz_uncore[:, 0], xyz_uncore[:, 1], xyz_uncore[:, 2], c=tuple(col), s=12,
+                    ax.scatter(xyz_uncore[:, 0], xyz_uncore[:, 1], xyz_uncore[:, 2], c=col, s=12,
                                label='Non-core Cluster No {:d}'.format(k + 1))
         fig.suptitle('Cluster analysis\n')
         ax.set_ylabel(r'$y\ \AA$')

@@ -100,8 +100,9 @@ class Cli:
             self.log_append(('Number of clusters = {0:d}\nSilhouette Coefficient = {1:.3f}\n'
                              'Calinski-Harabaz score = {4:.3f}\n'
                              'EPS = {2:.1f} \u212B\nMIN_SAMPLES = {3:d}\n'
-                             'Percent of noise = {5:.2f} %\n').format(
-                self.cls.n_clusters, self.cls.si_score, eps, min_samples, self.cls.calinski, self.cls.noise_percent()))
+                             'Percent of noise = {5:.2f} %{6:s}\n').format(
+                self.cls.n_clusters, self.cls.si_score, eps, min_samples, self.cls.calinski, self.cls.noise_percent(),
+                ('!!WARNING!!!' if self.cls.noise_percent() > 30 else '')))
 
     def noauto(self, eps: float, min_samples: int):
         """
@@ -119,8 +120,9 @@ class Cli:
             sys.exit(-1)
         else:
             self.log_append(('Number of clusters = {0:d}\nSilhouette Coefficient = {1:.3f}\n'
-                             'Calinski-Harabaz score = {4:.3f}\nEPS = {2:.1f} \u212B\nMIN_SAMPLES = {3:d}\n').format(
-                self.cls.n_clusters, self.cls.si_score, eps, min_samples, self.cls.calinski))
+                             'Calinski-Harabaz score = {4:.3f}\nEPS = {2:.1f} \u212B\n'
+                             'MIN_SAMPLES = {3:d}\nPercent of noise = {5:.2f} %\n').format(
+                self.cls.n_clusters, self.cls.si_score, eps, min_samples, self.cls.calinski, self.cls.noise_percent()))
 
     def graph(self, newdir: str, basefile: str):
         """

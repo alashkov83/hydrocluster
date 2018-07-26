@@ -5,11 +5,8 @@
 import sys
 import tkinter as tk
 import tkinter.ttk as ttk
-from tkinter.filedialog import askopenfilename
-from tkinter.filedialog import asksaveasfilename
-from tkinter.messagebox import askyesno
-from tkinter.messagebox import showerror
-from tkinter.messagebox import showinfo
+from tkinter.filedialog import askopenfilename, asksaveasfilename
+from tkinter.messagebox import askyesno, showerror, showinfo, showwarning
 from tkinter.simpledialog import askstring, askfloat
 from urllib.error import HTTPError
 
@@ -309,6 +306,8 @@ class TkGui(tk.Tk):
                                    'Calinski-Harabaz score = {4:.3f}\nEPS = {2:.1f} \u212B\nMIN_SAMPLES = {3:d}\n'
                                    ).format(self.cls.n_clusters, self.cls.si_score, eps, min_samples,
                                             self.cls.calinski))
+        if self.cls.noise_percent() > 30:
+            showwarning('Warning!', 'Percent of noise = {:.2f} %'.format(self.cls.noise_percent()))
         self.tx.configure(state='normal')
         self.tx.insert(tk.END, ('Number of clusters = {0:d}\nSilhouette Coefficient = {1:.3f}\n'
                                 'Calinski-Harabaz score = {4:.3f}\nEPS = {2:.1f} \u212B\nMIN_SAMPLES = {3:d}\n'

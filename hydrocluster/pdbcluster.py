@@ -19,8 +19,7 @@ from mpl_toolkits.mplot3d import axes3d
 
 try:
     from sklearn.cluster import DBSCAN
-    from sklearn.metrics import silhouette_score
-    from sklearn.metrics import calinski_harabaz_score
+    from sklearn.metrics import silhouette_score, calinski_harabaz_score
     from sklearn.metrics.pairwise import euclidean_distances
 except ImportError:
     raise ImportError

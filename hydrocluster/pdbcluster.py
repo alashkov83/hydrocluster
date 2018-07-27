@@ -547,41 +547,40 @@ class ClusterPdb:
                 if len(cmd) == 2 and cmd[1] == '-R':
                     break
         else:
-            p = Popen(args=('pymol', '-R'))
-        if p.poll() == None:
-            n = 0
-            while n < 10:
-                try:
-                    pymol = ServerProxy(uri="http://localhost:9123/RPC2")
-                    pymol.read_pdbstr(''.join(self.s_array), 'obj')
-                except ConnectionRefusedError:
-                    time.sleep(1)
-                    n += 1
-                else:
-                    break
+            Popen(args=('pymol', '-R'))
+        n = 0
+        while n < 10:
+            try:
+                pymol = ServerProxy(uri="http://localhost:9123/RPC2")
+                pymol.read_pdbstr(''.join(self.s_array), 'obj')
+            except ConnectionRefusedError:
+                time.sleep(1)
+                n += 1
             else:
-                raise ConnectionRefusedError
-            pymol.set('label_color', 'white')
-            pymol.delete('sele')
-            pymol.hide('everything')
-            pymol.show_as('sticks', 'all')
-            dict_aa = self.get_dict_aa()
-            if dict_aa is None:
-                return
-            colors = [cm.get_cmap('tab20b')(each) for each in np.linspace(0, 1, len(dict_aa))]
-            color_names = []
-            for n, colindex in enumerate(colors):
-                colindex = [float(col) for n, col in enumerate(colindex) if n < 3]
-                pymol.set_color('col_{:d}'.format(n), colindex)
-                color_names.append("col_{:d}".format(n))
-            for (k, aa_list), color in zip(dict_aa.items(), color_names):
-                if aa_list:
-                    pymol.select('{:s}_cluster_{:d}'.format(("Core" if k[0] else "Uncore"), k[1]),
-                                 '{:s}'.format(
-                                     "+".join(['(chain {1:s} and resi {0:d})'.format(*aac) for aac in aa_list])))
-                    pymol.color(color, '{:s}_cluster_{:d}'.format(("Core" if k[0] else "Uncore"), k[1]))
-                    pymol.show_as('spheres', '{:s}_cluster_{:d}'.format(("Core" if k[0] else "Uncore"), k[1]))
-            pymol.deselect()
+                break
+        else:
+            raise ConnectionRefusedError
+        pymol.set('label_color', 'white')
+        pymol.delete('sele')
+        pymol.hide('everything')
+        pymol.show_as('sticks', 'all')
+        dict_aa = self.get_dict_aa()
+        if dict_aa is None:
+            return
+        colors = [cm.get_cmap('tab20b')(each) for each in np.linspace(0, 1, len(dict_aa))]
+        color_names = []
+        for n, colindex in enumerate(colors):
+            colindex = [float(col) for n, col in enumerate(colindex) if n < 3]
+            pymol.set_color('col_{:d}'.format(n), colindex)
+            color_names.append("col_{:d}".format(n))
+        for (k, aa_list), color in zip(dict_aa.items(), color_names):
+            if aa_list:
+                pymol.select('{:s}_cluster_{:d}'.format(("Core" if k[0] else "Uncore"), k[1]),
+                             '{:s}'.format(
+                                 "+".join(['(chain {1:s} and resi {0:d})'.format(*aac) for aac in aa_list])))
+                pymol.color(color, '{:s}_cluster_{:d}'.format(("Core" if k[0] else "Uncore"), k[1]))
+                pymol.show_as('spheres', '{:s}_cluster_{:d}'.format(("Core" if k[0] else "Uncore"), k[1]))
+        pymol.deselect()
 
 
 

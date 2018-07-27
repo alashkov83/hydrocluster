@@ -657,4 +657,7 @@ class TkGui(tk.Tk):
         if self.run_flag:
             showerror('Error!', 'The calculation is still running!')
             return
-        self.cls.open_pymol()
+        try:
+            self.cls.open_pymol()
+        except FileNotFoundError:
+            showerror("Erros!", "PyMol not found!")

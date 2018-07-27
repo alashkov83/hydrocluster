@@ -102,7 +102,7 @@ class Cli:
                              'EPS = {2:.1f} \u212B\nMIN_SAMPLES = {3:d}\n'
                              'Percent of noise = {5:.2f} %{6:s}\n').format(
                 self.cls.n_clusters, self.cls.si_score, eps, min_samples, self.cls.calinski, self.cls.noise_percent(),
-                ('!!WARNING!!!' if self.cls.noise_percent() > 30 else '')))
+                (' !!WARNING!!!' if self.cls.noise_percent() > 30 else '')))
 
     def noauto(self, eps: float, min_samples: int):
         """

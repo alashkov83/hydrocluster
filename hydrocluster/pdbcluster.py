@@ -6,10 +6,13 @@ import gzip
 import io
 import pickle
 import random
+import time
 import warnings
 from collections import OrderedDict
 from multiprocessing import Queue, Process
+from subprocess import Popen
 from urllib.error import HTTPError
+from xmlrpc.client import ServerProxy
 
 import matplotlib.cm as cm
 import numpy as np
@@ -21,6 +24,7 @@ try:
     from sklearn.cluster import DBSCAN
     from sklearn.metrics import silhouette_score, calinski_harabaz_score
     from sklearn.metrics.pairwise import euclidean_distances
+    from sklearn.linear_model import LinearRegression
 except ImportError:
     raise ImportError
 
@@ -435,6 +439,17 @@ class ClusterPdb:
             ax.legend(loc='best', frameon=False)
         return fig, ax
 
+    @staticmethod
+    def regr_cube(x: np.ndarray, y: np.ndarray, z: np.ndarray):
+        A = 4 * np.pi / 3
+        X = np.array((A * x ** 3), ndmin=2).T
+        k = z.argmax(axis=1)
+        Y = np.array(y[k], ndmin=2).T
+        model = LinearRegression(fit_intercept=True)
+        model.fit(X, Y)
+        Yfit = model.predict(X)
+        return X, Y, Yfit, model.coef_[0][0], model.intercept_[0], model.score(X, Y)
+
     def colormap(self, grid_state: bool) -> object:
         """
 
@@ -449,14 +464,24 @@ class ClusterPdb:
         y = np.array(sorted(list({data[1] for data in colormap_data})), ndmin=1)
         z = np.array([data[2] for data in colormap_data])
         z.shape = (y.size, x.size)
-        fig = Figure(figsize=(7, 8))
-        ax1 = fig.add_subplot(211)
+        fig = Figure(figsize=(10, 8))
+        ax1 = fig.add_subplot(221)
         ax1.set_title('Calinski-Harabaz_score')
         ax1.set_ylabel('EPS, \u212B')
+        ax1.set_xlabel('MIN SAMPLES')
         ax1.grid(grid_state)
         pc1 = ax1.pcolor(x, y, z, cmap='gnuplot')
         fig.colorbar(pc1, ax=ax1, extend='max', extendfrac=0.1)
-        ax2 = fig.add_subplot(212)
+        ax11 = fig.add_subplot(223)
+        ax11.set_ylabel('MIN SAMPLES')
+        ax11.set_xlabel(r'$V,\ \AA^3$')
+        V, N, Nfit, C, B, R2 = self.regr_cube(y, x, z)
+        ax11.scatter(V, N, c='k')
+        ax11.plot(V, Nfit, c='r')
+        tex = r'$C_h\ =\ ' + '{:.4f}'.format(C) + r'\ \AA^{-3},\ ' + r'N_0\ =\ ' + '{:.1f}'.format(B) \
+              + r',\ R^2\ =\ ' + '{:.4f}'.format(R2) + r'$'
+        ax11.set_title(tex, fontsize=8)
+        ax2 = fig.add_subplot(222)
         ax2.set_title('Silhouette score')
         ax2.set_xlabel('MIN SAMPLES')
         ax2.set_ylabel('EPS, \u212B')
@@ -469,6 +494,16 @@ class ClusterPdb:
         z.shape = (y.size, x.size)
         pc2 = ax2.pcolor(x, y, z, cmap='gnuplot', vmin=z_min)
         fig.colorbar(pc2, ax=ax2, extend='max', extendfrac=0.1)
+        ax21 = fig.add_subplot(224)
+        ax21.set_ylabel('MIN SAMPLES')
+        ax21.set_xlabel(r'$V,\ \AA^3$')
+        V, N, Nfit, C, B, R2 = self.regr_cube(y, x, z)
+        ax21.scatter(V, N, c='k')
+        ax21.plot(V, Nfit, c='r')
+        tex = r'$C_h\ =\ ' + '{:.4f}'.format(C) + r'\ \AA^{-3},\ ' + r'N_0\ =\ ' + '{:.1f}'.format(B) \
+              + r',\ R^2\ =\ ' + '{:.4f}'.format(R2) + r'$'
+        ax21.set_title(tex, fontsize=8)
+        fig.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
         return fig
 
     @staticmethod
@@ -504,6 +539,52 @@ class ClusterPdb:
                 dict_aa[(1, k + 1)] = core_aa_list
                 dict_aa[(0, k + 1)] = uncore_aa_list
         return dict_aa
+
+    def open_pymol(self):
+        for pid in psutil.pids():
+            if psutil.Process(pid).name() == 'pymol':
+                cmd = psutil.Process(pid).cmdline()
+                if len(cmd) == 2 and cmd[1] == '-R':
+                    break
+        else:
+            p = Popen(args=('pymol', '-R'))
+        if p.poll() == None:
+            n = 0
+            while n < 10:
+                try:
+                    pymol = ServerProxy(uri="http://localhost:9123/RPC2")
+                    pymol.read_pdbstr(''.join(self.s_array), 'obj')
+                except ConnectionRefusedError:
+                    time.sleep(1)
+                    n += 1
+                else:
+                    break
+            else:
+                raise ConnectionRefusedError
+            pymol.set('label_color', 'white')
+            pymol.delete('sele')
+            pymol.hide('everything')
+            pymol.show_as('sticks', 'all')
+            dict_aa = self.get_dict_aa()
+            if dict_aa is None:
+                return
+            colors = [cm.get_cmap('tab20b')(each) for each in np.linspace(0, 1, len(dict_aa))]
+            color_names = []
+            for n, colindex in enumerate(colors):
+                colindex = [float(col) for n, col in enumerate(colindex) if n < 3]
+                pymol.set_color('col_{:d}'.format(n), colindex)
+                color_names.append("col_{:d}".format(n))
+            for (k, aa_list), color in zip(dict_aa.items(), color_names):
+                if aa_list:
+                    pymol.select('{:s}_cluster_{:d}'.format(("Core" if k[0] else "Uncore"), k[1]),
+                                 '{:s}'.format(
+                                     "+".join(['(chain {1:s} and resi {0:d})'.format(*aac) for aac in aa_list])))
+                    pymol.color(color, '{:s}_cluster_{:d}'.format(("Core" if k[0] else "Uncore"), k[1]))
+                    pymol.show_as('spheres', '{:s}_cluster_{:d}'.format(("Core" if k[0] else "Uncore"), k[1]))
+            pymol.deselect()
+
+
+
 
     def save_pymol_script(self, filename):
         """

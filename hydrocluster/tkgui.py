@@ -195,6 +195,7 @@ class TkGui(tk.Tk):
         om.add_command(label='Cores content', command=self.resi)
         om.add_command(label='Autotune colormap', command=self.colormap)
         om.add_command(label='Clear LOG', command=self.clean_txt)
+        om.add_command(label='Open PyMol', command=self.open_pymol)
         m.add_command(label='About', command=self.about)
 
     def close_win(self) -> None:
@@ -651,3 +652,9 @@ class TkGui(tk.Tk):
         toolbar = NavigationToolbar2TkAgg(canvas, fra4)
         toolbar.update()
         canvas._tkcanvas.pack(fill=tk.BOTH, side=tk.TOP, expand=1)
+
+    def open_pymol(self):
+        if self.run_flag:
+            showerror('Error!', 'The calculation is still running!')
+            return
+        self.cls.open_pymol()

@@ -24,7 +24,7 @@ try:
     from sklearn.cluster import DBSCAN
     from sklearn.metrics import silhouette_score, calinski_harabaz_score
     from sklearn.metrics.pairwise import euclidean_distances
-    from sklearn.linear_model import LinearRegression
+    from sklearn.linear_model import LinearRegression, RANSACRegressor
 except ImportError:
     raise ImportError
 
@@ -445,10 +445,15 @@ class ClusterPdb:
         X = np.array((A * x ** 3), ndmin=2).T
         k = z.argmax(axis=1)
         Y = np.array(y[k], ndmin=2).T
-        model = LinearRegression(fit_intercept=True)
-        model.fit(X, Y)
-        Yfit = model.predict(X)
-        return X, Y, Yfit, model.coef_[0][0], model.intercept_[0], model.score(X, Y)
+        modelLinear = LinearRegression()
+        modelLinear.fit(X, Y)
+        YfitLinear = modelLinear.predict(X)
+        modelRAMSAC = RANSACRegressor()
+        modelRAMSAC.fit(X, Y)
+        YfitRANSAC = modelRAMSAC.predict(X)
+        return X, Y, YfitLinear, modelLinear.coef_[0][0], modelLinear.intercept_[0], modelLinear.score(X, Y), \
+               YfitRANSAC, modelRAMSAC.estimator_.coef_[0][0], modelRAMSAC.estimator_.intercept_[0], \
+               modelRAMSAC.score(X[modelRAMSAC.inlier_mask_], Y[modelRAMSAC.inlier_mask_])
 
     def colormap(self, grid_state: bool) -> object:
         """
@@ -475,12 +480,15 @@ class ClusterPdb:
         ax11 = fig.add_subplot(223)
         ax11.set_ylabel('MIN SAMPLES')
         ax11.set_xlabel(r'$V,\ \AA^3$')
-        V, N, Nfit, C, B, R2 = self.regr_cube(y, x, z)
+        V, N, Nfit, C, B, R2, NRfit, CR, BR, SR = self.regr_cube(y, x, z)
         ax11.scatter(V, N, c='k')
-        ax11.plot(V, Nfit, c='r')
-        tex = r'$C_h\ =\ ' + '{:.4f}'.format(C) + r'\ \AA^{-3},\ ' + r'N_0\ =\ ' + '{:.1f}'.format(B) \
-              + r',\ R^2\ =\ ' + '{:.4f}'.format(R2) + r'$'
-        ax11.set_title(tex, fontsize=8)
+        texLINEAR = 'Linear:\n' + r'$C_h\ =\ ' + '{:.4f}'.format(C) + r'\ \AA^{-3}$' + "\n" + r'$N_0\ =\ ' + \
+                    '{:.1f}$'.format(B) + '\n' + r'$R^2\ =\ ' + '{:.4f}'.format(R2) + r'$'
+        ax11.plot(V, Nfit, c='r', label=texLINEAR)
+        texRANSAC = 'RANSAC:\n' + r'$C_h\ =\ ' + '{:.4f}'.format(CR) + r'\ \AA^{-3}$' + "\n" + r'$N_0\ =\ ' + \
+                    '{:.1f}$'.format(BR) + '\n' + r'$R^2\ =\ ' + '{:.4f}'.format(SR) + r'$'
+        ax11.plot(V, NRfit, c='g', label=texRANSAC)
+        ax11.legend(loc='best', fontsize=6)
         ax2 = fig.add_subplot(222)
         ax2.set_title('Silhouette score')
         ax2.set_xlabel('MIN SAMPLES')
@@ -497,12 +505,15 @@ class ClusterPdb:
         ax21 = fig.add_subplot(224)
         ax21.set_ylabel('MIN SAMPLES')
         ax21.set_xlabel(r'$V,\ \AA^3$')
-        V, N, Nfit, C, B, R2 = self.regr_cube(y, x, z)
+        V, N, Nfit, C, B, R2, NRfit, CR, BR, SR = self.regr_cube(y, x, z)
         ax21.scatter(V, N, c='k')
-        ax21.plot(V, Nfit, c='r')
-        tex = r'$C_h\ =\ ' + '{:.4f}'.format(C) + r'\ \AA^{-3},\ ' + r'N_0\ =\ ' + '{:.1f}'.format(B) \
-              + r',\ R^2\ =\ ' + '{:.4f}'.format(R2) + r'$'
-        ax21.set_title(tex, fontsize=8)
+        texLINEAR = 'Linear:\n' + r'$C_h\ =\ ' + '{:.4f}'.format(C) + r'\ \AA^{-3}$' + "\n" + r'$N_0\ =\ ' + \
+                    '{:.1f}$'.format(B) + '\n' + r'$R^2\ =\ ' + '{:.4f}'.format(R2) + r'$'
+        ax21.plot(V, Nfit, c='r', label=texLINEAR)
+        texRANSAC = 'RANSAC:\n' + r'$C_h\ =\ ' + '{:.4f}'.format(CR) + r'\ \AA^{-3}$' + "\n" + r'$N_0\ =\ ' + \
+                    '{:.1f}$'.format(BR) + '\n' + r'$R^2\ =\ ' + '{:.4f}'.format(SR) + r'$'
+        ax21.plot(V, NRfit, c='g', label=texRANSAC)
+        ax21.legend(loc='best', fontsize=6)
         fig.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
         return fig
 

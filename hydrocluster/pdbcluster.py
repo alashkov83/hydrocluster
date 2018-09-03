@@ -593,9 +593,6 @@ class ClusterPdb:
                 pymol.show_as('spheres', '{:s}_cluster_{:d}'.format(("Core" if k[0] else "Uncore"), k[1]))
         pymol.deselect()
 
-
-
-
     def save_pymol_script(self, filename):
         """
 

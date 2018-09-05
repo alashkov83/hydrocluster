@@ -197,7 +197,7 @@ class Cli:
             parse_results = self.cls.parser(htable=htable, pH=pH)
         except ValueError:
             self.log_append('Error! Invalid file format\nor file does not contain {:s} residues\n'.format(
-                'hydrophobic' if htable in ('hydropathy', 'nanodroplet')
+                'hydrophobic' if htable in ('hydropathy', 'nanodroplet', 'menv')
                 else 'negative' if htable == 'negative' else 'positive'))
         else:
             self.log_append("No. of residues: {:d}\nMinimum distance = {:.3f} \u212B\n"

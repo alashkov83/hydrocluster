@@ -325,13 +325,20 @@ class ClusterPdb:
         self.clean()
         self.htable = htable
         xyz_array = []
-        # www.pnas.org/cgi/doi/10.1073/pnas.1616138113 # 1.0 - -7.55 kj/mol A;; residues with delta mu < 0
+        # www.pnas.org/cgi/doi/10.1073/pnas.1616138113 # 1.0 - -7.55 kj/mol A; residues with delta mu < 0
         nanodroplet = {'ALA': 1.269, 'VAL': 1.094, 'PRO': 1.0, 'LEU': 1.147, 'ILE': 1.289, 'PHE': 1.223, 'MET': 1.013,
                        'TRP': 1.142, 'CYS': 0.746, 'GLY': 0.605, 'THR': 0.538, 'SER': 0.472}
+        # Quantitative expression of protein heterogeneity: Response of amino acid side chains to their local environment.
+        # Bandyopadhyay D, Mehler EL.
+        # Proteins. 2008 Aug;72(2):646-59. doi: 10.1002/prot.21958. # 1.0 - 0.33; residues with values > 0
+        menv = {'ALA': 1.0, 'VAL': 2.52, 'LEU': 2.64, 'ILE': 2.94, 'PHE': 2.58, 'MET': 1.64,
+                'TRP': 2.03, 'CYS': 3.48, 'THR': 1.82}
         # Kyte J, Doolittle RF. J Mol Biol. 1982 May 5;157(1):105-32. 1.0 - 1.8 residues with kdHydrophobicity > 0
         hydropathy = {'ALA': 1.0, 'VAL': 2.333, 'LEU': 2.111, 'ILE': 2.5, 'PHE': 1.556, 'MET': 1.056, 'CYS': 1.389}
         if htable == 'hydropathy':
             hydrfob = hydropathy
+        elif htable == 'menv':
+            hydrfob = menv
         elif htable == 'nanodroplet':
             hydrfob = nanodroplet
         elif htable == 'positive' or htable == 'negative':

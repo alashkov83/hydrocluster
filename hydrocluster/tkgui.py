@@ -35,7 +35,7 @@ class TkGui(tk.Tk):
         lab1.pack(expand=1, fill=tk.X, pady=5, padx=5)
         lab11 = tk.LabelFrame(lab1, text='Property table', labelanchor='n', borderwidth=5)
         lab11.grid(row=0, column=0, pady=5, padx=5)
-        listbox_items = ['hydropathy', 'nanodroplet', 'positive', 'negative']
+        listbox_items = ['hydropathy', 'menv', 'nanodroplet', 'positive', 'negative']
         self.combox_p = ttk.Combobox(lab11, height=5, width=15, values=listbox_items)
         self.combox_p.pack()
         self.combox_p.set('hydropathy')
@@ -428,7 +428,7 @@ class TkGui(tk.Tk):
                 parse_results = self.cls.parser(htable=htable)
         except ValueError:
             showerror('Error!', 'Invalid file format\nor file does not {:s} contain residues\n'.format(
-                'hydrophobic' if htable in ('hydropathy', 'nanodroplet')
+                'hydrophobic' if htable in ('hydropathy', 'menv', 'nanodroplet')
                 else 'negative' if htable == 'negative' else 'positive'))
             return
         else:

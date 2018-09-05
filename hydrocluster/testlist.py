@@ -22,7 +22,7 @@ except ImportError:
 
 warnings.filterwarnings("ignore")
 pH = 7.0
-htables = ['hydropathy', 'nanodroplet', 'positive', 'negative']
+htables = ['hydropathy', 'nanodroplet', 'menv', 'positive', 'negative']
 metrics = ['si_score', 'calinski']
 
 

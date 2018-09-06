@@ -333,12 +333,22 @@ class ClusterPdb:
         # Proteins. 2008 Aug;72(2):646-59. doi: 10.1002/prot.21958. # 1.0 - 0.33; residues with values > 0
         menv = {'ALA': 1.0, 'VAL': 2.52, 'LEU': 2.64, 'ILE': 2.94, 'PHE': 2.58, 'MET': 1.64,
                 'TRP': 2.03, 'CYS': 3.48, 'THR': 1.82}
+        # Brylinski, M., Konieczny, L. and Roterman, I. (2006b) ‘Fuzzy-oil-drop hydrophobic force
+        # field – a model to represent late-stage folding (In Silico) of lysozyme’, J. Biomol. Struct. Dyn .,
+        # Vol. 23, pp.519–528.
+        # Is the protein folding an aim-oriented process? Human haemoglobin as example.
+        # Brylinski M, Konieczny L, Roterman I.
+        # Int J Bioinform Res Appl. 2007;3(2):234-60.
+        fuzzyoildrop = {'ALA': 1.0, 'VAL': 1.418, 'LEU': 1.369, 'ILE': 1.544, 'PHE': 1.583, 'MET': 1.448,
+                        'TRP': 1.497, 'CYS': 1.748, 'THR': 0.538}
         # Kyte J, Doolittle RF. J Mol Biol. 1982 May 5;157(1):105-32. 1.0 - 1.8 residues with kdHydrophobicity > 0
         hydropathy = {'ALA': 1.0, 'VAL': 2.333, 'LEU': 2.111, 'ILE': 2.5, 'PHE': 1.556, 'MET': 1.056, 'CYS': 1.389}
         if htable == 'hydropathy':
             hydrfob = hydropathy
         elif htable == 'menv':
             hydrfob = menv
+        elif htable == 'fuzzyoildrop':
+            hydrfob = fuzzyoildrop
         elif htable == 'nanodroplet':
             hydrfob = nanodroplet
         elif htable == 'positive' or htable == 'negative':

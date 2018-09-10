@@ -156,7 +156,6 @@ def cmass(str_nparray: np.ndarray) -> list:
     return [c_mass_x, c_mass_y, c_mass_z]
 
 
-
 class ClusterPdb:
     """
 
@@ -202,7 +201,6 @@ class ClusterPdb:
         self.clusterThreads.clear()
         self.queue = Queue()
 
-
     def cluster(self, eps: float, min_samples: int):
         """
 
@@ -225,7 +223,6 @@ class ClusterPdb:
             clusterResults = labels, core_samples_mask, n_clusters, si_score, calinski, eps, min_samples
             self.queue.put(clusterResults)
         self.queue.put(None)
-
 
     def init_cycles(self, min_eps: float, max_eps: float, step_eps: float,
                     min_min_samples: int, max_min_samples: int, n_jobs=0) -> tuple:
@@ -298,7 +295,7 @@ class ClusterPdb:
             labflat = self.labels.flatten()
             n = len(labflat)
             noise_n = len([x for x in labflat if x == -1])
-            return noise_n*100/n
+            return noise_n * 100 / n
         else:
             return 0
 
@@ -502,7 +499,6 @@ class ClusterPdb:
             ax.legend(loc='best', frameon=False)
         return fig, ax
 
-
     def colormap(self, grid_state: bool) -> object:
         """
 
@@ -646,7 +642,7 @@ class ClusterPdb:
             if aa_list:
                 s += "cmd.select('{:s}_cluster_{:d}', '{:s}')\n".format(
                     ("Core" if k[0] else "Uncore"), k[1], "+".join(
-                    ['(chain {1:s} and resi {0:d})'.format(*aac) for aac in aa_list]))
+                        ['(chain {1:s} and resi {0:d})'.format(*aac) for aac in aa_list]))
                 s += "cmd.color('{:s}', '{:s}_cluster_{:d}')\n".format(
                     color, ("Core" if k[0] else "Uncore"), k[1])
                 s += "cmd.show_as('spheres', '{:s}_cluster_{:d}')\n".format(("Core" if k[0] else "Uncore"), k[1])

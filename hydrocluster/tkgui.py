@@ -23,6 +23,7 @@ class TkGui(tk.Tk):
     """
 
     """
+
     def __init__(self, namespace) -> None:
         super().__init__()
         self.title('HydroCluster')
@@ -576,7 +577,7 @@ class TkGui(tk.Tk):
             return
         opt = {'parent': self,
                'filetypes': [('All supported formats', ('.eps', '.jpeg', '.jpg', '.pdf', '.pgf', '.png', '.ps',
-                                                      '.raw', '.rgba', '.svg', '.svgz', '.tif', '.tiff')), ],
+                                                        '.raw', '.rgba', '.svg', '.svgz', '.tif', '.tiff')), ],
                'initialfile': 'myfile.png',
                'title': 'Save plot'}
         sa = asksaveasfilename(**opt)

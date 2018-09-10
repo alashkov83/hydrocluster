@@ -13,6 +13,7 @@ class Parser(argparse.ArgumentParser):
     """
 
     """
+
     def __init__(self):
         super().__init__(prog='hydrocluster.py')
         self.parser_setup()
@@ -50,10 +51,12 @@ if __name__ == '__main__':
     namespace = parser.parse_args()
     if namespace.gui == 'tkgui':
         from hydrocluster.tkgui import TkGui
+
         gui = TkGui(namespace)
         gui.mainloop()
     elif namespace.gui == 'cli':
         from hydrocluster.cli import Cli
+
         cli = Cli(namespace)
     elif namespace.gui == 'testlist':
         if sys.platform == 'win32':

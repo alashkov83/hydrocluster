@@ -24,6 +24,7 @@ class Cli:
     """
 
     """
+
     def __init__(self, namespace) -> None:
         self.namespace = namespace
         if namespace.output:
@@ -64,7 +65,7 @@ class Cli:
         :param line:
         """
         print(line, end='')
-        with open(self.log_name, 'at',  encoding='utf-8') as f:
+        with open(self.log_name, 'at', encoding='utf-8') as f:
             f.write(line)
 
     def run(self) -> None:
@@ -240,7 +241,8 @@ class Cli:
             return
         for k, aa_list in dict_aa.items():
             self.log_append('\n{:s} cluster No. {:d} contains: {:s}'.format(
-                ("Core" if k[0] else "Non-core"), k[1], ", ".join(['{2:s}:{1:s}{0:d}'.format(*aac) for aac in aa_list])))
+                ("Core" if k[0] else "Non-core"), k[1],
+                ", ".join(['{2:s}:{1:s}{0:d}'.format(*aac) for aac in aa_list])))
         self.log_append('\n\n')
 
     def colormap(self, newdir: str, basefile: str):

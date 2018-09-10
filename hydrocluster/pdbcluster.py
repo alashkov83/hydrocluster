@@ -31,6 +31,132 @@ except ImportError:
 warnings.filterwarnings("ignore")
 
 
+def filterXYZandRData(Label, XYZ, Dist):
+    condlist = np.ones_like(Label, dtype=bool)
+    condlist[Label == -1] = False
+    filterLabel = np.compress(condlist, Label, axis=0)
+    filterXYZ = np.compress(condlist, XYZ, axis=0)
+    filterR = np.compress(condlist, np.compress(condlist, Dist, axis=0), axis=1)
+    return filterLabel, filterXYZ, filterR
+
+
+def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, weight_array, eps: float, min_samples: int, noise_filter: bool):
+    """
+
+    :param X:
+    :param pdist:
+    :param weight_array:
+    :param eps:
+    :param min_samples:
+    """
+    db = DBSCAN(eps=eps, min_samples=min_samples, n_jobs=-1, metric='precomputed'
+                ).fit(pdist, sample_weight=weight_array)
+    # The DBSCAN algorithm considers clusters as areas of high density separated by areas of low density.
+    # Due to this rather generic view, clusters found by DBSCAN can be of any shape,
+    # as opposed to k-means which assumes that clusters are convex shaped.
+    # The result of the DBSCAN follows the concept of core samples, namely the samples that are located in areas
+    # of high density. A cluster is therefore a set of core samples,
+    # each close to each other (measured by some distance measure) and a set of non-core samples that are close
+    # to a core sample (but are not core samples themselves).
+    # There algorithm has two parameters: min_samples and eps,
+    #  which define formally what we mean when we say dense.
+    # Higher min_samples or lower eps indicate higher density needed to form a cluster.
+    # For more info see:
+    # “A Density-Based Algorithm for Discovering Clusters in Large Spatial Databases with Noise”
+    # Ester, M., H. P. Kriegel, J. Sander, and X. Xu,
+    # In Proceedings of the 2nd International Conference on Knowledge Discovery and Data Mining,
+    # Portland, OR, AAAI Press, pp. 226–231. 1996
+    core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
+    core_samples_mask[db.core_sample_indices_] = True
+    labels = db.labels_
+    n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
+    if noise_filter:
+        filterLabel, filterXYZ, filterR = filterXYZandRData(labels, X, pdist)
+    else:
+        filterLabel, filterXYZ, filterR = labels, X, pdist
+    try:
+        si_score = silhouette_score(filterR, filterLabel, metric='precomputed')
+    # The Silhouette Coefficient is calculated using the mean intra-cluster distance (a)
+    # and the mean nearest-cluster distance (b) for each sample.
+    # The Silhouette Coefficient for a sample is (b - a) / max(a, b).
+    # To clarify, b is the distance between a sample and a nearest neighbor cluster (not containing this sample).
+    # Note that Silhouette Coefficient is only defined if number of labels is 2 <= n_labels <= n_samples - 1.
+    # For more info see:
+    # Peter J. Rousseeuw (1987).
+    # “Silhouettes: a Graphical Aid to the Interpretation and Validation of Cluster Analysis”.
+    # Computational and Applied Mathematics 20: 53-65.
+    except ValueError:
+        si_score = -1
+    try:
+        calinski = calinski_harabaz_score(filterXYZ, filterLabel)
+        # The score is defined as ratio between the within-cluster dispersion and the between-cluster dispersion.
+        # For more info see:
+        # T.Calinski and J.Harabasz, 1974. “A dendrite method for cluster analysis”.Communications in Statistics
+    except ValueError:
+        calinski = 0
+    return labels, n_clusters, core_samples_mask, si_score, calinski
+
+
+def chunkIt(seq, num):
+    out = [[] for x in range(num)]
+    seq = seq.copy()
+    n = 0
+    while seq:
+        element = random.choice(seq)
+        seq.remove(element)
+        out[n % num].append(element)
+        n += 1
+    return out
+
+
+def calc_abs_charge(res_type: str, pH: float) -> dict:
+    """
+
+    :param res_type:
+    :param pH:
+    :return:
+    """
+    pKa_dict = {'ARG': 12.5, 'ASP': 3.9, 'GLU': 4.35, 'HIS': 6.5, 'LIS': 10.35, 'TYR': 9.9, 'CYS': 8.3}
+    # DEXTER S MOORE Amino Acid and Peptide Net Charges: A Simple Calculational Procedure
+    # BIOCHEMICAL EDUCATION 13(1) 1985
+    shrink_value = 0.1
+    if res_type == 'positive':
+        return {res: 1 / (1 + 10 ** (pH - pKa_dict[res])) for res in ['HIS', 'LIS', 'ARG']
+                if (1 / (1 + 10 ** (pH - pKa_dict[res]))) > shrink_value}
+    elif res_type == 'negative':
+        return {res: 1 / (1 + 10 ** (pKa_dict[res] - pH)) for res in ['ASP', 'GLU', 'TYR', 'CYS']
+                if (1 / (1 + 10 ** (pKa_dict[res] - pH))) > shrink_value}
+
+
+def regr_cube(x: np.ndarray, y: np.ndarray, z: np.ndarray):
+    A = 4 * np.pi / 3
+    X = np.array((A * x ** 3), ndmin=2).T
+    k = z.argmax(axis=1)
+    Y = np.array(y[k], ndmin=2).T
+    modelLinear = LinearRegression()
+    modelLinear.fit(X, Y)
+    YfitLinear = modelLinear.predict(X)
+    modelRAMSAC = RANSACRegressor()
+    modelRAMSAC.fit(X, Y)
+    YfitRANSAC = modelRAMSAC.predict(X)
+    return X, Y, YfitLinear, modelLinear.coef_[0][0], modelLinear.intercept_[0], modelLinear.score(X, Y), \
+           YfitRANSAC, modelRAMSAC.estimator_.coef_[0][0], modelRAMSAC.estimator_.intercept_[0], \
+           modelRAMSAC.score(X[modelRAMSAC.inlier_mask_], Y[modelRAMSAC.inlier_mask_])
+
+
+def cmass(str_nparray: np.ndarray) -> list:
+    """Calculate the position of the center of mass."""
+    mass_sum = float(str_nparray[:, 3].sum())
+    mx = (str_nparray[:, 3]) * (str_nparray[:, 0])
+    my = (str_nparray[:, 3]) * (str_nparray[:, 1])
+    mz = (str_nparray[:, 3]) * (str_nparray[:, 2])
+    c_mass_x = float(mx.sum()) / mass_sum
+    c_mass_y = float(my.sum()) / mass_sum
+    c_mass_z = float(mz.sum()) / mass_sum
+    return [c_mass_x, c_mass_y, c_mass_z]
+
+
+
 class ClusterPdb:
     """
 
@@ -40,6 +166,7 @@ class ClusterPdb:
         self.X = None
         self.pdist = None
         self.labels = None
+        self.noise_filter = False
         self.core_samples_mask = []
         self.n_clusters = 0
         self.si_score = -1
@@ -62,6 +189,7 @@ class ClusterPdb:
         self.pdist = None
         self.labels = None
         self.htable = 'hydropathy'
+        self.noise_filter = False
         self.parse_results = (0, 0.0, 0.0, 0.0)
         self.auto_params = (0.0, 0.0, 0.0, 0, 0)
         self.core_samples_mask = []
@@ -74,58 +202,6 @@ class ClusterPdb:
         self.clusterThreads.clear()
         self.queue = Queue()
 
-    @staticmethod
-    def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, weight_array, eps: float, min_samples: int):
-        """
-
-        :param X:
-        :param pdist:
-        :param weight_array:
-        :param eps:
-        :param min_samples:
-        """
-        db = DBSCAN(eps=eps, min_samples=min_samples, n_jobs=-1, metric='precomputed'
-                    ).fit(pdist, sample_weight=weight_array)
-        # The DBSCAN algorithm considers clusters as areas of high density separated by areas of low density.
-        # Due to this rather generic view, clusters found by DBSCAN can be of any shape,
-        # as opposed to k-means which assumes that clusters are convex shaped.
-        # The result of the DBSCAN follows the concept of core samples, namely the samples that are located in areas
-        # of high density. A cluster is therefore a set of core samples,
-        # each close to each other (measured by some distance measure) and a set of non-core samples that are close
-        # to a core sample (but are not core samples themselves).
-        # There algorithm has two parameters: min_samples and eps,
-        #  which define formally what we mean when we say dense.
-        # Higher min_samples or lower eps indicate higher density needed to form a cluster.
-        # For more info see:
-        # “A Density-Based Algorithm for Discovering Clusters in Large Spatial Databases with Noise”
-        # Ester, M., H. P. Kriegel, J. Sander, and X. Xu,
-        # In Proceedings of the 2nd International Conference on Knowledge Discovery and Data Mining,
-        # Portland, OR, AAAI Press, pp. 226–231. 1996
-        core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
-        core_samples_mask[db.core_sample_indices_] = True
-        labels = db.labels_
-        n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
-        try:
-            si_score = silhouette_score(pdist, labels, metric='precomputed')
-        # The Silhouette Coefficient is calculated using the mean intra-cluster distance (a)
-        # and the mean nearest-cluster distance (b) for each sample.
-        # The Silhouette Coefficient for a sample is (b - a) / max(a, b).
-        # To clarify, b is the distance between a sample and a nearest neighbor cluster (not containing this sample).
-        # Note that Silhouette Coefficient is only defined if number of labels is 2 <= n_labels <= n_samples - 1.
-        # For more info see:
-        # Peter J. Rousseeuw (1987).
-        # “Silhouettes: a Graphical Aid to the Interpretation and Validation of Cluster Analysis”.
-        # Computational and Applied Mathematics 20: 53-65.
-        except ValueError:
-            si_score = -1
-        try:
-            calinski = calinski_harabaz_score(X, labels)
-            # The score is defined as ratio between the within-cluster dispersion and the between-cluster dispersion.
-            # For more info see:
-            # T.Calinski and J.Harabasz, 1974. “A dendrite method for cluster analysis”.Communications in Statistics
-        except ValueError:
-            calinski = 0
-        return labels, n_clusters, core_samples_mask, si_score, calinski
 
     def cluster(self, eps: float, min_samples: int):
         """
@@ -135,8 +211,8 @@ class ClusterPdb:
         """
         if self.X is None or self.pdist is None:
             raise ValueError
-        self.labels, self.n_clusters, self.core_samples_mask, self.si_score, self.calinski = self.clusterDBSCAN(
-            self.X, self.pdist, self.weight_array, eps, min_samples)
+        self.labels, self.n_clusters, self.core_samples_mask, self.si_score, self.calinski = clusterDBSCAN(
+            self.X, self.pdist, self.weight_array, eps, min_samples, self.noise_filter)
 
     def clusterThread(self, subParams):
         """
@@ -144,23 +220,12 @@ class ClusterPdb:
         :param subParams:
         """
         for eps, min_samples in subParams:
-            labels, n_clusters, core_samples_mask, si_score, calinski = self.clusterDBSCAN(
-                self.X, self.pdist, self.weight_array, eps, min_samples)
+            labels, n_clusters, core_samples_mask, si_score, calinski = clusterDBSCAN(
+                self.X, self.pdist, self.weight_array, eps, min_samples, self.noise_filter)
             clusterResults = labels, core_samples_mask, n_clusters, si_score, calinski, eps, min_samples
             self.queue.put(clusterResults)
         self.queue.put(None)
 
-    @staticmethod
-    def chunkIt(seq, num):
-        out = [[] for x in range(num)]
-        seq = seq.copy()
-        n = 0
-        while seq:
-            element = random.choice(seq)
-            seq.remove(element)
-            out[n % num].append(element)
-            n += 1
-        return out
 
     def init_cycles(self, min_eps: float, max_eps: float, step_eps: float,
                     min_min_samples: int, max_min_samples: int, n_jobs=0) -> tuple:
@@ -183,7 +248,7 @@ class ClusterPdb:
                 n_jobs = 1
             else:
                 n_jobs = psutil.cpu_count(logical=True) - 1
-        hyperParams = self.chunkIt(hyperParams, n_jobs)
+        hyperParams = chunkIt(hyperParams, n_jobs)
         self.clusterThreads.clear()
         for subParams in hyperParams:
             p = Process(target=self.clusterThread, args=(subParams,))
@@ -296,25 +361,6 @@ class ClusterPdb:
                 f.seek(0, 0)
                 self.s_array = f.readlines()
 
-    @staticmethod
-    def calc_abs_charge(res_type: str, pH: float) -> dict:
-        """
-
-        :param res_type:
-        :param pH:
-        :return:
-        """
-        pKa_dict = {'ARG': 12.5, 'ASP': 3.9, 'GLU': 4.35, 'HIS': 6.5, 'LIS': 10.35, 'TYR': 9.9, 'CYS': 8.3}
-        # DEXTER S MOORE Amino Acid and Peptide Net Charges: A Simple Calculational Procedure
-        # BIOCHEMICAL EDUCATION 13(1) 1985
-        shrink_value = 0.1
-        if res_type == 'positive':
-            return {res: 1 / (1 + 10 ** (pH - pKa_dict[res])) for res in ['HIS', 'LIS', 'ARG']
-                    if (1 / (1 + 10 ** (pH - pKa_dict[res]))) > shrink_value}
-        elif res_type == 'negative':
-            return {res: 1 / (1 + 10 ** (pKa_dict[res] - pH)) for res in ['ASP', 'GLU', 'TYR', 'CYS']
-                    if (1 / (1 + 10 ** (pKa_dict[res] - pH))) > shrink_value}
-
     def parser(self, htable: str = 'hydropathy', pH: float = 7.0) -> tuple:
         """
 
@@ -352,7 +398,7 @@ class ClusterPdb:
         elif htable == 'nanodroplet':
             hydrfob = nanodroplet
         elif htable == 'positive' or htable == 'negative':
-            hydrfob = self.calc_abs_charge(htable, pH)
+            hydrfob = calc_abs_charge(htable, pH)
         # OLD CA-BASED PARSER
         # for s in strarr:
         #     if s[0:6] == 'ATOM  ' and (s[17:20] in hydrfob) and s[12:16] == ' CA ':
@@ -389,7 +435,7 @@ class ClusterPdb:
                     xyzm_array.shape = (-1, 4)
                 except AttributeError:
                     raise ValueError
-                xyz_array = np.hstack((xyz_array, self.cmass(xyzm_array)))
+                xyz_array = np.hstack((xyz_array, cmass(xyzm_array)))
                 xyzm_array = []
                 current_resn = int(s[22:26])
                 current_chainn = s[21]
@@ -456,21 +502,6 @@ class ClusterPdb:
             ax.legend(loc='best', frameon=False)
         return fig, ax
 
-    @staticmethod
-    def regr_cube(x: np.ndarray, y: np.ndarray, z: np.ndarray):
-        A = 4 * np.pi / 3
-        X = np.array((A * x ** 3), ndmin=2).T
-        k = z.argmax(axis=1)
-        Y = np.array(y[k], ndmin=2).T
-        modelLinear = LinearRegression()
-        modelLinear.fit(X, Y)
-        YfitLinear = modelLinear.predict(X)
-        modelRAMSAC = RANSACRegressor()
-        modelRAMSAC.fit(X, Y)
-        YfitRANSAC = modelRAMSAC.predict(X)
-        return X, Y, YfitLinear, modelLinear.coef_[0][0], modelLinear.intercept_[0], modelLinear.score(X, Y), \
-               YfitRANSAC, modelRAMSAC.estimator_.coef_[0][0], modelRAMSAC.estimator_.intercept_[0], \
-               modelRAMSAC.score(X[modelRAMSAC.inlier_mask_], Y[modelRAMSAC.inlier_mask_])
 
     def colormap(self, grid_state: bool) -> object:
         """
@@ -497,7 +528,7 @@ class ClusterPdb:
         ax11 = fig.add_subplot(223)
         ax11.set_ylabel('MIN SAMPLES')
         ax11.set_xlabel(r'$V,\ \AA^3$')
-        V, N, Nfit, C, B, R2, NRfit, CR, BR, SR = self.regr_cube(y, x, z)
+        V, N, Nfit, C, B, R2, NRfit, CR, BR, SR = regr_cube(y, x, z)
         ax11.scatter(V, N, c='k')
         texLINEAR = 'Linear:\n' + r'$C_h\ =\ ' + '{:.4f}'.format(C) + r'\ \AA^{-3}$' + "\n" + r'$N_0\ =\ ' + \
                     '{:.1f}$'.format(B) + '\n' + r'$R^2\ =\ ' + '{:.4f}'.format(R2) + r'$'
@@ -522,7 +553,7 @@ class ClusterPdb:
         ax21 = fig.add_subplot(224)
         ax21.set_ylabel('MIN SAMPLES')
         ax21.set_xlabel(r'$V,\ \AA^3$')
-        V, N, Nfit, C, B, R2, NRfit, CR, BR, SR = self.regr_cube(y, x, z)
+        V, N, Nfit, C, B, R2, NRfit, CR, BR, SR = regr_cube(y, x, z)
         ax21.scatter(V, N, c='k')
         texLINEAR = 'Linear:\n' + r'$C_h\ =\ ' + '{:.4f}'.format(C) + r'\ \AA^{-3}$' + "\n" + r'$N_0\ =\ ' + \
                     '{:.1f}$'.format(B) + '\n' + r'$R^2\ =\ ' + '{:.4f}'.format(R2) + r'$'
@@ -533,18 +564,6 @@ class ClusterPdb:
         ax21.legend(loc='best', fontsize=6)
         fig.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
         return fig
-
-    @staticmethod
-    def cmass(str_nparray: np.ndarray) -> list:
-        """Calculate the position of the center of mass."""
-        mass_sum = float(str_nparray[:, 3].sum())
-        mx = (str_nparray[:, 3]) * (str_nparray[:, 0])
-        my = (str_nparray[:, 3]) * (str_nparray[:, 1])
-        mz = (str_nparray[:, 3]) * (str_nparray[:, 2])
-        c_mass_x = float(mx.sum()) / mass_sum
-        c_mass_y = float(my.sum()) / mass_sum
-        c_mass_z = float(mz.sum()) / mass_sum
-        return [c_mass_x, c_mass_y, c_mass_z]
 
     def get_dict_aa(self):
         """
@@ -644,6 +663,7 @@ class ClusterPdb:
             'X': self.X,
             'pdist': self.pdist,
             'labels': self.labels,
+            'noise_filer': self.noise_filter,
             'core_samples_mask': self.core_samples_mask,
             'n_clusters': self.n_clusters,
             'si_score': self.si_score,
@@ -669,10 +689,11 @@ class ClusterPdb:
         self.X = global_state['X']
         self.pdist = global_state['pdist']
         self.labels = global_state['labels']
+        self.noise_filter = global_state['noise_filter']
         self.core_samples_mask = global_state['core_samples_mask']
         self.n_clusters = global_state['n_clusters']
         self.s_array = global_state['s_array']
-        self.htable = global_state['htable'],
+        self.htable = global_state['htable']
         self.parse_results = global_state['parse_results']
         self.auto_params = global_state['auto_params']
         self.si_score = global_state['si_score']

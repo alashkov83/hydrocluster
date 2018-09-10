@@ -35,6 +35,8 @@ class Parser(argparse.ArgumentParser):
         self.add_argument('-pt', '--ptable', choices=['hydropathy', 'menv', 'fuzzyoildrop',
                                                       'nanodroplet', 'positive', 'negative'],
                           type=str, default='hydropathy', help='Property table for weighting')
+        self.add_argument('-nf', '--noise_filter', action='store_const', const=True, default=False,
+                          help='Activate filter of noise for scoring function (Not recommended!!!')
         self.add_argument('-pH', '--pH', type=float, default=7.0,
                           help='pH value for calculatation of net charges (positive or negative) for --ptable ')
         self.add_argument('-na', '--noauto', action='store_const', const=True, default=False,

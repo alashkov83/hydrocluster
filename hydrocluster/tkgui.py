@@ -59,6 +59,12 @@ class TkGui(tk.Tk):
         l14.grid(row=3, column=0, pady=5, padx=5)
         self.l14 = tk.Label(fra11, text="{0:>5.3f}".format(0), anchor=tk.NW)
         self.l14.grid(row=3, column=1, pady=5, padx=5)
+        lab4 = tk.LabelFrame(fra1, text='Option', labelanchor='n', borderwidth=5)
+        lab4.pack(expand=1, fill=tk.X, pady=5, padx=5)
+        self.checkNoise = tk.BooleanVar()
+        self.nfCheckBox = tk.Checkbutton(lab4, text="Noise filter\n(Not recommended!)", variable=self.checkNoise,
+                                         anchor=tk.NW)
+        self.nfCheckBox.pack(expand=1, fill=tk.X, pady=5, padx=5)
         lab2 = tk.LabelFrame(fra1, text='Auto mode', labelanchor='n', borderwidth=5)
         lab2.pack(expand=1, fill=tk.X, pady=5, padx=5)
         lab3 = tk.LabelFrame(fra1, text='Manual mode', labelanchor='n', borderwidth=5)
@@ -263,10 +269,14 @@ class TkGui(tk.Tk):
                 self.pb.update()
                 showerror("Error", "Not correct value for Max MIN_SAMPLES")
                 return
-            if self.cls.states and self.cls.auto_params == (min_eps, max_eps, step_eps,
-                                                            min_min_samples, max_min_samples):
+            if self.cls.states and self.cls.auto_params == (min_eps, max_eps,
+                                                            step_eps,
+                                                            min_min_samples,
+                                                            max_min_samples) and \
+                    self.cls.noise_filter == self.checkNoise.get():
                 eps, min_samples = self.cls.auto(metric=metric)
             else:
+                self.cls.noise_filter = self.checkNoise.get()
                 self.pb['maximum'] = self.cls.init_cycles(min_eps, max_eps, step_eps, min_min_samples, max_min_samples)
                 self.tx.configure(state='normal')
                 self.tx.insert(tk.END, ('Starting Autoscan (range EPS: {0:.2f} - {1:.2f} \u212B,'
@@ -292,6 +302,7 @@ class TkGui(tk.Tk):
             self.sca1.set(eps)
             self.sca2.set(min_samples)
         else:
+            self.cls.noise_filter = self.checkNoise.get()
             eps = self.sca1.get()
             min_samples = self.sca2.get()
             self.pb['maximum'] = 1
@@ -498,6 +509,10 @@ class TkGui(tk.Tk):
             self.ent_min_min_samples.insert(0, '{:d}'.format(min_min_samples))
             self.ent_max_min_samples.delete(0, tk.END)
             self.ent_max_min_samples.insert(0, '{:d}'.format(max_min_samples))
+            if self.cls.noise_filter:
+                self.nfCheckBox.select()
+            else:
+                self.nfCheckBox.deselect()
             self.run(auto=True)
 
     def save_state(self):

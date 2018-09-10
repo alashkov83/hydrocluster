@@ -47,6 +47,7 @@ class Cli:
         self.cls = ClusterPdb()
         self.open_file(namespace.input)
         self.parse_pdb(namespace.ptable, namespace.pH)
+        self.cls.noise_filter = namespace.noise_filter
         if namespace.noauto:
             self.noauto(namespace.eps, namespace.min_samples)
         else:

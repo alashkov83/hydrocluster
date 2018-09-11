@@ -423,6 +423,7 @@ class TkGui(tk.Tk):
                 showinfo('Infor', 'File {0:s} successfully read!'.format(cif_f))
                 self.parse_pdb()
 
+
     def parse_pdb(self):
         """
 
@@ -431,13 +432,35 @@ class TkGui(tk.Tk):
         if self.run_flag:
             showerror('Error!', 'The calculation is still running!')
             return
+        self.win_choise = tk.Toplevel(self)
+        self.win_choise.title("Choice chains")
+        fra1 = ttk.Frame(self.win_choise)
+        fra1.grid(row=0, column=0)
+        checkVars = []
+        for chain in self.cls.preparser():
+            checkVar = tk.StringVar()
+            self.CheckBox = tk.Checkbutton(fra1, text="Chain {:s}".format(chain), variable=checkVar, onvalue=chain,
+                                           offvalue='', anchor=tk.NW)
+            self.CheckBox.select()
+            self.CheckBox.pack(expand=1, fill=tk.X, pady=5, padx=5)
+            checkVars.append(checkVar)
+        fra2 = ttk.Frame(self.win_choise)
+        fra2.grid(row=1, column=0)
+        butChoice = tk.Button(fra2, text='Choice', command=lambda: self.parse_pdb_main(
+            [ch for ch in (ch.get() for ch in checkVars) if ch]))
+        butChoice.grid(row=0, column=0, pady=5)
+        butAll = tk.Button(fra2, text='All', command=self.parse_pdb_main)
+        butAll.grid(row=0, column=1, pady=5)
+
+    def parse_pdb_main(self, chains=None):
+        self.win_choise.destroy()
         htable = self.combox_p.get()
         try:
             if htable == 'positive' or htable == 'negative':
                 pH = askfloat('Your pH', 'pH value:', initialvalue=7.0, minvalue=0.0, maxvalue=14.0)
-                parse_results = self.cls.parser(htable=htable, pH=pH)
+                parse_results = self.cls.parser(htable=htable, pH=pH, selectChains=chains)
             else:
-                parse_results = self.cls.parser(htable=htable)
+                parse_results = self.cls.parser(htable=htable, selectChains=chains)
         except ValueError:
             showerror('Error!', 'Invalid file format\nor file does not {:s} contain residues\n'.format(
                 'hydrophobic' if htable in ('hydropathy', 'menv', 'nanodroplet', 'fuzzyoildrop')

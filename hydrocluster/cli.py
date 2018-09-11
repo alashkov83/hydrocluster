@@ -47,7 +47,7 @@ class Cli:
         self.log_name = os.path.join(newdir, '{:s}'.format(basefile + '.log'))
         self.cls = ClusterPdb()
         self.open_file(namespace.input)
-        self.parse_pdb(namespace.ptable, namespace.pH)
+        self.parse_pdb(namespace.ptable, namespace.pH, self.chainsSelect(namespace))
         self.cls.noise_filter = namespace.noise_filter
         if namespace.noauto:
             self.noauto(namespace.eps, namespace.min_samples)
@@ -184,11 +184,27 @@ class Cli:
             else:
                 self.log_append('File ID PDB: {0:s} successfully downloaded!\n'.format(filename))
 
-    def parse_pdb(self, htable: str, pH: float):
+    def chainsSelect(self, namespace: object) -> list:
+        if namespace.chains is None:
+            self.log_append("All chains selected!\n")
+            return None
+        selectChains = namespace.chains.strip().upper().split('_')
+        allChains = self.cls.preparser()
+        if set(selectChains).issubset(allChains):
+            self.log_append("Selected chains: {:s}\n".format(', '.join(selectChains)))
+            return selectChains
+        else:
+            self.log_append(
+                "Error! Chain(s): {:s} is not include in structure! Structure included: {:s} chain(s)!\n".format(
+                    ', '.join(set(selectChains).difference(set(allChains))), ','.join(allChains)))
+            sys.exit(-1)
+
+    def parse_pdb(self, htable: str, pH: float, chains: list = None):
         """
 
         :param htable:
         :param pH:
+        :param chains:
         :return:
         """
         if htable == 'positive' or htable == 'negative':
@@ -196,7 +212,7 @@ class Cli:
                 print("pH value range is 0-14")
                 sys.exit(-1)
         try:
-            parse_results = self.cls.parser(htable=htable, pH=pH)
+            parse_results = self.cls.parser(htable=htable, pH=pH, selectChains=chains)
         except ValueError:
             self.log_append('Error! Invalid file format\nor file does not contain {:s} residues\n'.format(
                 'hydrophobic' if htable in ('hydropathy', 'nanodroplet', 'menv', 'fuzzyoildrop')

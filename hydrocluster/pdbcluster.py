@@ -358,9 +358,12 @@ class ClusterPdb:
                 f.seek(0, 0)
                 self.s_array = f.readlines()
 
-    def parser(self, htable: str = 'hydropathy', pH: float = 7.0) -> tuple:
-        """
+    def preparser(self) -> list:
+        return list(sorted(set((s[21] for s in self.s_array if s[0:6] == 'ATOM  '))))
 
+    def parser(self, selectChains: list = None, htable: str = 'hydropathy', pH: float = 7.0) -> tuple:
+        """
+        :param selectChains:
         :param htable:
         :param pH:
         :return:
@@ -416,7 +419,9 @@ class ClusterPdb:
             ' F': 19.0,
             'SE': 79.0,
             ' D': 2.0}
-        for s in self.s_array:
+        if selectChains is None:
+            selectChains = self.preparser()
+        for s in (s for s in self.s_array if (s[21] in selectChains)):
             if s[0:6] == 'ATOM  ' and (s[17:20] in hydrfob) and ((current_resn is None or current_chainn is None) or (
                     current_resn == int(s[22:26]) and current_chainn == s[21])):
                 current_resn = int(s[22:26])
@@ -425,8 +430,7 @@ class ClusterPdb:
                 xyzm = [float(s[30:38]), float(s[38:46]), float(s[46:54]), mass[s[76:78]]]
                 xyzm_array = np.hstack((xyzm_array, xyzm))
             elif s[0:6] == 'ATOM  ' and (s[17:20] in hydrfob):
-                self.aa_list.append(
-                    (current_resn, current_chainn, current_resname))
+                self.aa_list.append((current_resn, current_chainn, current_resname))
                 self.weight_array.append(hydrfob[current_resname])
                 try:
                     xyzm_array.shape = (-1, 4)

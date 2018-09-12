@@ -32,17 +32,16 @@ warnings.filterwarnings("ignore")
 
 
 def filterXYZandRData(Label, XYZ, Dist):
-    condlist = np.ones_like(Label, dtype=bool)
-    condlist[Label == -1] = False
-    filterLabel = np.compress(condlist, Label, axis=0)
-    filterXYZ = np.compress(condlist, XYZ, axis=0)
-    filterR = np.compress(condlist, np.compress(condlist, Dist, axis=0), axis=1)
+    filterLabel = Label[Label != -1]
+    filterXYZ = XYZ[Label != -1]
+    filterR = Dist[Label != -1, :][:, Label != -1]
     return filterLabel, filterXYZ, filterR
 
 
 def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, weight_array, eps: float, min_samples: int, noise_filter: bool):
     """
 
+    :param noise_filter:
     :param X:
     :param pdist:
     :param weight_array:

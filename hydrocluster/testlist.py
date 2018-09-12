@@ -198,6 +198,7 @@ def db_save(con, curr, lock, file, htable, ntres, mind, maxd,
             meand, metric, score, eps, min_samples, n_clusters, p_noise):
     """
 
+    :param p_noise:
     :param con:
     :param curr:
     :param lock:

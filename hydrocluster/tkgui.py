@@ -423,7 +423,6 @@ class TkGui(tk.Tk):
                 showinfo('Infor', 'File {0:s} successfully read!'.format(cif_f))
                 self.parse_pdb()
 
-
     def parse_pdb(self):
         """
 

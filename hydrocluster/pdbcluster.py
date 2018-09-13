@@ -38,7 +38,8 @@ def filterXYZandRData(Label, XYZ, Dist):
     return filterLabel, filterXYZ, filterR
 
 
-def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, weight_array, eps: float, min_samples: int, noise_filter: bool):
+def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, weight_array, eps: float, min_samples: int,
+                  metric: str = 'si_score', noise_filter: bool = False) -> tuple:
     """
 
     :param noise_filter:
@@ -47,6 +48,8 @@ def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, weight_array, eps: float, mi
     :param weight_array:
     :param eps:
     :param min_samples:
+    :param metric:
+    :param: noise_filter:
     """
     db = DBSCAN(eps=eps, min_samples=min_samples, n_jobs=-1, metric='precomputed'
                 ).fit(pdist, sample_weight=weight_array)
@@ -73,27 +76,29 @@ def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, weight_array, eps: float, mi
         filterLabel, filterXYZ, filterR = filterXYZandRData(labels, X, pdist)
     else:
         filterLabel, filterXYZ, filterR = labels, X, pdist
-    try:
-        si_score = silhouette_score(filterR, filterLabel, metric='precomputed')
-    # The Silhouette Coefficient is calculated using the mean intra-cluster distance (a)
-    # and the mean nearest-cluster distance (b) for each sample.
-    # The Silhouette Coefficient for a sample is (b - a) / max(a, b).
-    # To clarify, b is the distance between a sample and a nearest neighbor cluster (not containing this sample).
-    # Note that Silhouette Coefficient is only defined if number of labels is 2 <= n_labels <= n_samples - 1.
-    # For more info see:
-    # Peter J. Rousseeuw (1987).
-    # “Silhouettes: a Graphical Aid to the Interpretation and Validation of Cluster Analysis”.
-    # Computational and Applied Mathematics 20: 53-65.
-    except ValueError:
-        si_score = -1
-    try:
-        calinski = calinski_harabaz_score(filterXYZ, filterLabel)
-        # The score is defined as ratio between the within-cluster dispersion and the between-cluster dispersion.
+    if metric == 'si_score':
+        try:
+            score = silhouette_score(filterR, filterLabel, metric='precomputed')
+        # The Silhouette Coefficient is calculated using the mean intra-cluster distance (a)
+        # and the mean nearest-cluster distance (b) for each sample.
+        # The Silhouette Coefficient for a sample is (b - a) / max(a, b).
+        # To clarify, b is the distance between a sample and a nearest neighbor cluster (not containing this sample).
+        # Note that Silhouette Coefficient is only defined if number of labels is 2 <= n_labels <= n_samples - 1.
         # For more info see:
-        # T.Calinski and J.Harabasz, 1974. “A dendrite method for cluster analysis”.Communications in Statistics
-    except ValueError:
-        calinski = 0
-    return labels, n_clusters, core_samples_mask, si_score, calinski
+        # Peter J. Rousseeuw (1987).
+        # “Silhouettes: a Graphical Aid to the Interpretation and Validation of Cluster Analysis”.
+        # Computational and Applied Mathematics 20: 53-65.
+        except ValueError:
+            score = -1
+    elif metric == 'calinski':
+        try:
+            score = calinski_harabaz_score(filterXYZ, filterLabel)
+            # The score is defined as ratio between the within-cluster dispersion and the between-cluster dispersion.
+            # For more info see:
+            # T.Calinski and J.Harabasz, 1974. “A dendrite method for cluster analysis”.Communications in Statistics
+        except ValueError:
+            score = 0
+    return labels, n_clusters, core_samples_mask, score
 
 
 def chunkIt(seq, num):
@@ -161,18 +166,19 @@ class ClusterPdb:
     """
 
     def __init__(self) -> None:
+        self.metrics_name = {'calinski': 'Calinski-Harabaz score', 'si_score': 'Silhouette score'}
         self.X = None
         self.pdist = None
         self.labels = None
         self.noise_filter = False
         self.core_samples_mask = []
         self.n_clusters = 0
-        self.si_score = -1
-        self.calinski = 0
+        self.score = 0
+        self.metric = 'si_score'
         self.s_array = []
         self.htable = 'hydropathy'
         self.parse_results = (0, 0.0, 0.0, 0.0)
-        self.auto_params = (0.0, 0.0, 0.0, 0, 0)
+        self.auto_params = (0.0, 0.0, 0.0, 0, 0, 'si_score')
         self.weight_array = []
         self.aa_list = []
         self.states = []
@@ -189,18 +195,18 @@ class ClusterPdb:
         self.htable = 'hydropathy'
         self.noise_filter = False
         self.parse_results = (0, 0.0, 0.0, 0.0)
-        self.auto_params = (0.0, 0.0, 0.0, 0, 0)
+        self.auto_params = (0.0, 0.0, 0.0, 0, 0, 'si_score')
         self.core_samples_mask = []
         self.n_clusters = 0
-        self.si_score = -1
-        self.calinski = 0
+        self.score = 0
+        self.metric = 'si_score'
         self.weight_array.clear()
         self.aa_list.clear()
         self.states.clear()
         self.clusterThreads.clear()
         self.queue = Queue()
 
-    def cluster(self, eps: float, min_samples: int):
+    def cluster(self, eps: float, min_samples: int, metric):
         """
 
         :param eps:
@@ -208,8 +214,9 @@ class ClusterPdb:
         """
         if self.X is None or self.pdist is None:
             raise ValueError
-        self.labels, self.n_clusters, self.core_samples_mask, self.si_score, self.calinski = clusterDBSCAN(
-            self.X, self.pdist, self.weight_array, eps, min_samples, self.noise_filter)
+        self.metric = metric
+        self.labels, self.n_clusters, self.core_samples_mask, self.score = clusterDBSCAN(
+            self.X, self.pdist, self.weight_array, eps, min_samples, metric, self.noise_filter)
 
     def clusterThread(self, subParams):
         """
@@ -217,14 +224,14 @@ class ClusterPdb:
         :param subParams:
         """
         for eps, min_samples in subParams:
-            labels, n_clusters, core_samples_mask, si_score, calinski = clusterDBSCAN(
-                self.X, self.pdist, self.weight_array, eps, min_samples, self.noise_filter)
-            clusterResults = labels, core_samples_mask, n_clusters, si_score, calinski, eps, min_samples
+            labels, n_clusters, core_samples_mask, score = clusterDBSCAN(
+                self.X, self.pdist, self.weight_array, eps, min_samples, self.metric, self.noise_filter)
+            clusterResults = labels, core_samples_mask, n_clusters, score, eps, min_samples
             self.queue.put(clusterResults)
         self.queue.put(None)
 
     def init_cycles(self, min_eps: float, max_eps: float, step_eps: float,
-                    min_min_samples: int, max_min_samples: int, n_jobs=0) -> tuple:
+                    min_min_samples: int, max_min_samples: int, n_jobs=0, metric: str = 'si_score') -> tuple:
         """
 
         :param n_jobs:
@@ -233,24 +240,26 @@ class ClusterPdb:
         :param step_eps:
         :param min_min_samples:
         :param max_min_samples:
+        :param metric:
         :return:
         """
+        self.metric = metric
         hyperParams = []
         for eps in np.arange(min_eps, max_eps + step_eps, step_eps):
             for min_samples in range(min_min_samples, max_min_samples + 1):
                 hyperParams.append((eps, min_samples))
         if n_jobs == 0:
-            if psutil.cpu_count(logical=True) == 1:
+            if psutil.cpu_count() == 1:
                 n_jobs = 1
             else:
-                n_jobs = psutil.cpu_count(logical=True) - 1
+                n_jobs = psutil.cpu_count() - 1
         hyperParams = chunkIt(hyperParams, n_jobs)
         self.clusterThreads.clear()
         for subParams in hyperParams:
             p = Process(target=self.clusterThread, args=(subParams,))
             p.start()
             self.clusterThreads.append(p)
-        self.auto_params = min_eps, max_eps, step_eps, min_min_samples, max_min_samples
+        self.auto_params = min_eps, max_eps, step_eps, min_min_samples, max_min_samples, metric
         return (max_min_samples - min_min_samples + 1) * np.arange(min_eps, max_eps + step_eps, step_eps).size
 
     def auto_yield(self) -> iter:
@@ -265,29 +274,24 @@ class ClusterPdb:
                 k -= 1
                 continue
             self.states.append(clusterResults)
-            yield n, clusterResults[5], clusterResults[6]
+            yield n, clusterResults[4], clusterResults[5]
             n += 1
         for p in self.clusterThreads:
             p.join()
         self.clusterThreads.clear()
 
-    def auto(self, metric: str = 'si_score') -> tuple:
+    def auto(self) -> tuple:
         """
 
-        :param metric:
         :return:
         """
-        if metric == 'si_score':
-            self.states.sort(key=lambda x: x[3], reverse=True)
-        elif metric == 'calinski':
-            self.states.sort(key=lambda x: x[4], reverse=True)
+        self.states.sort(key=lambda x: x[3], reverse=True)
         state = self.states[0]
         self.labels = state[0]
         self.core_samples_mask = state[1]
         self.n_clusters = state[2]
-        self.si_score = state[3]
-        self.calinski = state[4]
-        return state[5], state[6]
+        self.score = state[3]
+        return state[4], state[5]
 
     def noise_percent(self):
         if self.labels is not None:
@@ -509,22 +513,28 @@ class ClusterPdb:
         """
         if not self.states:
             raise ValueError
-        colormap_data = [(state[6], state[5], state[4], state[3]) for state in self.states]
+        colormap_data = [(state[5], state[4], state[3]) for state in self.states]
         colormap_data.sort(key=lambda i: i[0])
         colormap_data.sort(key=lambda i: i[1])
         x = np.array(sorted(list({data[0] for data in colormap_data})), ndmin=1)
         y = np.array(sorted(list({data[1] for data in colormap_data})), ndmin=1)
         z = np.array([data[2] for data in colormap_data])
         z.shape = (y.size, x.size)
-        fig = Figure(figsize=(10, 8))
-        ax1 = fig.add_subplot(221)
-        ax1.set_title('Calinski-Harabaz_score')
+        fig = Figure(figsize=(12, 6))
+        z_min = 0
+        if self.metric == 'si_score':
+            try:
+                z_min = min([x for x in z.flat if x > -1.0])
+            except ValueError:
+                z_min = -1.0
+        ax1 = fig.add_subplot(121)
+        ax1.set_title(self.metrics_name[self.metric])
         ax1.set_ylabel('EPS, \u212B')
         ax1.set_xlabel('MIN SAMPLES')
         ax1.grid(grid_state)
-        pc1 = ax1.pcolor(x, y, z, cmap='gnuplot')
+        pc1 = ax1.pcolor(x, y, z, cmap='gnuplot', vmin=z_min)
         fig.colorbar(pc1, ax=ax1, extend='max', extendfrac=0.1)
-        ax11 = fig.add_subplot(223)
+        ax11 = fig.add_subplot(122)
         ax11.set_ylabel('MIN SAMPLES')
         ax11.set_xlabel(r'$V,\ \AA^3$')
         V, N, Nfit, C, B, R2, NRfit, CR, BR, SR = regr_cube(y, x, z)
@@ -536,31 +546,6 @@ class ClusterPdb:
                     '{:.1f}$'.format(BR) + '\n' + r'$R^2\ =\ ' + '{:.4f}'.format(SR) + r'$'
         ax11.plot(V, NRfit, c='g', label=texRANSAC)
         ax11.legend(loc='best', fontsize=6)
-        ax2 = fig.add_subplot(222)
-        ax2.set_title('Silhouette score')
-        ax2.set_xlabel('MIN SAMPLES')
-        ax2.set_ylabel('EPS, \u212B')
-        ax2.grid(grid_state)
-        z = np.array([data[3] for data in colormap_data])
-        try:
-            z_min = min([x for x in z.flat if x > -1.0])
-        except ValueError:
-            z_min = -1.0
-        z.shape = (y.size, x.size)
-        pc2 = ax2.pcolor(x, y, z, cmap='gnuplot', vmin=z_min)
-        fig.colorbar(pc2, ax=ax2, extend='max', extendfrac=0.1)
-        ax21 = fig.add_subplot(224)
-        ax21.set_ylabel('MIN SAMPLES')
-        ax21.set_xlabel(r'$V,\ \AA^3$')
-        V, N, Nfit, C, B, R2, NRfit, CR, BR, SR = regr_cube(y, x, z)
-        ax21.scatter(V, N, c='k')
-        texLINEAR = 'Linear:\n' + r'$C_h\ =\ ' + '{:.4f}'.format(C) + r'\ \AA^{-3}$' + "\n" + r'$N_0\ =\ ' + \
-                    '{:.1f}$'.format(B) + '\n' + r'$R^2\ =\ ' + '{:.4f}'.format(R2) + r'$'
-        ax21.plot(V, Nfit, c='r', label=texLINEAR)
-        texRANSAC = 'RANSAC:\n' + r'$C_h\ =\ ' + '{:.4f}'.format(CR) + r'\ \AA^{-3}$' + "\n" + r'$N_0\ =\ ' + \
-                    '{:.1f}$'.format(BR) + '\n' + r'$R^2\ =\ ' + '{:.4f}'.format(SR) + r'$'
-        ax21.plot(V, NRfit, c='g', label=texRANSAC)
-        ax21.legend(loc='best', fontsize=6)
         fig.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
         return fig
 
@@ -665,8 +650,8 @@ class ClusterPdb:
             'noise_filer': self.noise_filter,
             'core_samples_mask': self.core_samples_mask,
             'n_clusters': self.n_clusters,
-            'si_score': self.si_score,
-            'calinski': self.calinski,
+            'score': self.score,
+            'metric': self.metric,
             'weight_array': self.weight_array,
             'aa_list': self.aa_list,
             's_array': self.s_array,
@@ -695,8 +680,8 @@ class ClusterPdb:
         self.htable = global_state['htable']
         self.parse_results = global_state['parse_results']
         self.auto_params = global_state['auto_params']
-        self.si_score = global_state['si_score']
-        self.calinski = global_state['calinski']
+        self.score = global_state['score']
+        self.metric = global_state['metric']
         self.weight_array = global_state['weight_array']
         self.aa_list = global_state['aa_list']
         self.states = global_state['states']

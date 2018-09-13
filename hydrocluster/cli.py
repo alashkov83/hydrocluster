@@ -50,7 +50,7 @@ class Cli:
         self.parse_pdb(namespace.ptable, namespace.pH, self.chainsSelect(namespace))
         self.cls.noise_filter = namespace.noise_filter
         if namespace.noauto:
-            self.noauto(namespace.eps, namespace.min_samples)
+            self.noauto(namespace.eps, namespace.min_samples, self.namespace.score)
         else:
             self.run()
             self.save_state(newdir, basefile)
@@ -81,32 +81,31 @@ class Cli:
                          'step EPS = {2:.2f} \u212B, range min_samples: {3:d} - {4:d}...\n').format(
             min_eps, max_eps, step_eps, min_min_samples, max_min_samples))
         bar1 = progressbar.ProgressBar(maxval=self.cls.init_cycles(
-            min_eps, max_eps, step_eps, min_min_samples, max_min_samples), redirect_stdout=True).start()
+            min_eps, max_eps, step_eps, min_min_samples, max_min_samples, metric=metric), redirect_stdout=True).start()
         #       import time
         #       start_time = time.time()
         try:
             for n, j, i in self.cls.auto_yield():
                 self.log_append(('Step No. {0:d}: EPS = {1:.2f} \u212B, min_samples = {2:d}, No. of clusters = {3:d}, '
-                                 'Silhouette score = {4:.3f}; Calinski score = {5:.3f}\n').format(
-                    n, j, i, self.cls.n_clusters, self.cls.si_score, self.cls.calinski))
-
+                                 '{4:s} = {5:.3f}\n').format(
+                    n, j, i, self.cls.n_clusters, self.cls.metrics_name[self.cls.metric], self.cls.score))
                 bar1.update(n)
             #           print("--- %s seconds ---" % (time.time() - start_time))
-            eps, min_samples = self.cls.auto(metric=metric)
+            eps, min_samples = self.cls.auto()
         except ValueError:
             self.log_append('Error! Could not parse file or clustering failed\n')
             sys.exit(-1)
         else:
             self.log_append('Autoscan done... \n')
             bar1.finish()
-            self.log_append(('Number of clusters = {0:d}\nSilhouette Coefficient = {1:.3f}\n'
-                             'Calinski-Harabaz score = {4:.3f}\n'
-                             'EPS = {2:.1f} \u212B\nMIN_SAMPLES = {3:d}\n'
+            self.log_append(('Number of clusters = {0:d}\n{4:s} = {1:.3f}\n'
+                             'EPS = {2:.3f} \u212B\nMIN_SAMPLES = {3:d}\n'
                              'Percent of noise = {5:.2f} %{6:s}\n').format(
-                self.cls.n_clusters, self.cls.si_score, eps, min_samples, self.cls.calinski, self.cls.noise_percent(),
+                self.cls.n_clusters, self.cls.score, eps, min_samples,
+                self.cls.metrics_name[self.cls.metric], self.cls.noise_percent(),
                 (' !!WARNING!!!' if self.cls.noise_percent() > 30 else '')))
 
-    def noauto(self, eps: float, min_samples: int):
+    def noauto(self, eps: float, min_samples: int, metric: str):
         """
 
         :param eps:
@@ -116,15 +115,17 @@ class Cli:
             print("--eps and --min samples options are required with values > 0")
             sys.exit(-1)
         try:
-            self.cls.cluster(eps, min_samples)
+            self.cls.cluster(eps, min_samples, metric=metric)
         except ValueError:
             self.log_append('Error! Could not parse file or clustering failed\n')
             sys.exit(-1)
         else:
-            self.log_append(('Number of clusters = {0:d}\nSilhouette Coefficient = {1:.3f}\n'
-                             'Calinski-Harabaz score = {4:.3f}\nEPS = {2:.1f} \u212B\n'
-                             'MIN_SAMPLES = {3:d}\nPercent of noise = {5:.2f} %\n').format(
-                self.cls.n_clusters, self.cls.si_score, eps, min_samples, self.cls.calinski, self.cls.noise_percent()))
+            self.log_append(('Number of clusters = {0:d}\n{4:s} = {1:.3f}\n'
+                             'EPS = {2:.3f} \u212B\nMIN_SAMPLES = {3:d}\n'
+                             'Percent of noise = {5:.2f} %{6:s}\n').format(
+                self.cls.n_clusters, self.cls.score, eps, min_samples,
+                self.cls.metrics_name[self.cls.metric], self.cls.noise_percent(),
+                (' !!WARNING!!!' if self.cls.noise_percent() > 30 else '')))
 
     def graph(self, newdir: str, basefile: str):
         """

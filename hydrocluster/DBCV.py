@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""Created by lashkov on 22.06.18"""
 """
 Implimentation of Density-Based Clustering Validation "DBCV"
 Citation:
@@ -12,7 +9,7 @@ Society for Industrial and Applied Mathematics, 2014.
 import numpy as np
 from scipy.sparse import csgraph
 from scipy.sparse.csgraph import minimum_spanning_tree
-from scipy.spatial.distance import euclidean
+from scipy.spatial.distance import euclidean, cdist
 
 
 def DBCV(X, labels, dist_function=euclidean):
@@ -50,10 +47,9 @@ def _core_dist(point, neighbors, dist_function):
     n_features = np.shape(point)[0]
     n_neighbors = np.shape(neighbors)[1]
 
-    numerator = 0
-    for row in neighbors:
-        if not np.array_equal(point, row):
-            numerator += (1 / dist_function(point, row)) ** n_features
+    distance_vector = cdist(point.reshape(1, -1), neighbors)
+    distance_vector = distance_vector[distance_vector != 0]
+    numerator = ((1 / distance_vector) ** n_features).sum()
     core_dist = (numerator / (n_neighbors)) ** (-1 / n_features)
     return core_dist
 

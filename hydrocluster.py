@@ -13,6 +13,7 @@ class Parser(argparse.ArgumentParser):
     """
 
     """
+
     def __init__(self):
         super().__init__(prog='hydrocluster.py')
         self.parser_setup()
@@ -30,12 +31,17 @@ class Parser(argparse.ArgumentParser):
         self.add_argument('-g', '--gui', choices=['tkgui', 'cli', 'testlist'], type=str, default='tkgui',
                           help='UI modes')
         self.add_argument('-o', '--output', type=str, default='', help='Output directory name')
-        self.add_argument('-sc', '--score', choices=['si_score', 'calinski'], type=str, default='calinski',
-                          help='Score coefficient')
-        self.add_argument('-pt', '--ptable', choices=['hydropathy', 'nanodroplet', 'positive', 'negative'], type=str,
-                          default='hydropathy', help='Property table for weighting')
+        self.add_argument('-c', '--chains', type=str, default=None,
+                          help='Selected chains (separator: "_", example: A_B)')
+        self.add_argument('-pt', '--ptable', choices=['hydropathy', 'menv', 'fuzzyoildrop',
+                                                      'nanodroplet', 'positive', 'negative'],
+                          type=str, default='hydropathy', help='Property table for weighting')
         self.add_argument('-pH', '--pH', type=float, default=7.0,
                           help='pH value for calculatation of net charges (positive or negative) for --ptable ')
+        self.add_argument('-sc', '--score', choices=['si_score', 'calinski'], type=str, default='calinski',
+                          help='Score coefficient')
+        self.add_argument('-nf', '--noise_filter', action='store_const', const=True, default=False,
+                          help='Activate filter of noise for scoring function (Not recommended!!!')
         self.add_argument('-na', '--noauto', action='store_const', const=True, default=False,
                           help='No automatic mode. --eps and --min_samples options required')
         self.add_argument('-eps', '--eps', type=float, default=0, help='EPS value (A)')

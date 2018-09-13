@@ -24,6 +24,7 @@ class Cli:
     """
 
     """
+
     def __init__(self, namespace) -> None:
         self.namespace = namespace
         if namespace.output:
@@ -46,7 +47,8 @@ class Cli:
         self.log_name = os.path.join(newdir, '{:s}'.format(basefile + '.log'))
         self.cls = ClusterPdb()
         self.open_file(namespace.input)
-        self.parse_pdb(namespace.ptable, namespace.pH)
+        self.parse_pdb(namespace.ptable, namespace.pH, self.chainsSelect(namespace))
+        self.cls.noise_filter = namespace.noise_filter
         if namespace.noauto:
             self.noauto(namespace.eps, namespace.min_samples)
         else:
@@ -63,7 +65,7 @@ class Cli:
         :param line:
         """
         print(line, end='')
-        with open(self.log_name, 'at',  encoding='utf-8') as f:
+        with open(self.log_name, 'at', encoding='utf-8') as f:
             f.write(line)
 
     def run(self) -> None:
@@ -100,8 +102,9 @@ class Cli:
             self.log_append(('Number of clusters = {0:d}\nSilhouette Coefficient = {1:.3f}\n'
                              'Calinski-Harabaz score = {4:.3f}\n'
                              'EPS = {2:.1f} \u212B\nMIN_SAMPLES = {3:d}\n'
-                             'Percent of noise = {5:.2f} %\n').format(
-                self.cls.n_clusters, self.cls.si_score, eps, min_samples, self.cls.calinski, self.cls.noise_percent()))
+                             'Percent of noise = {5:.2f} %{6:s}\n').format(
+                self.cls.n_clusters, self.cls.si_score, eps, min_samples, self.cls.calinski, self.cls.noise_percent(),
+                (' !!WARNING!!!' if self.cls.noise_percent() > 30 else '')))
 
     def noauto(self, eps: float, min_samples: int):
         """
@@ -119,8 +122,9 @@ class Cli:
             sys.exit(-1)
         else:
             self.log_append(('Number of clusters = {0:d}\nSilhouette Coefficient = {1:.3f}\n'
-                             'Calinski-Harabaz score = {4:.3f}\nEPS = {2:.1f} \u212B\nMIN_SAMPLES = {3:d}\n').format(
-                self.cls.n_clusters, self.cls.si_score, eps, min_samples, self.cls.calinski))
+                             'Calinski-Harabaz score = {4:.3f}\nEPS = {2:.1f} \u212B\n'
+                             'MIN_SAMPLES = {3:d}\nPercent of noise = {5:.2f} %\n').format(
+                self.cls.n_clusters, self.cls.si_score, eps, min_samples, self.cls.calinski, self.cls.noise_percent()))
 
     def graph(self, newdir: str, basefile: str):
         """
@@ -180,11 +184,27 @@ class Cli:
             else:
                 self.log_append('File ID PDB: {0:s} successfully downloaded!\n'.format(filename))
 
-    def parse_pdb(self, htable: str, pH: float):
+    def chainsSelect(self, namespace: object) -> list:
+        if namespace.chains is None:
+            self.log_append("All chains selected!\n")
+            return None
+        selectChains = namespace.chains.strip().upper().split('_')
+        allChains = self.cls.preparser()
+        if set(selectChains).issubset(allChains):
+            self.log_append("Selected chains: {:s}\n".format(', '.join(selectChains)))
+            return selectChains
+        else:
+            self.log_append(
+                "Error! Chain(s): {:s} is not include in structure! Structure included: {:s} chain(s)!\n".format(
+                    ', '.join(set(selectChains).difference(set(allChains))), ','.join(allChains)))
+            sys.exit(-1)
+
+    def parse_pdb(self, htable: str, pH: float, chains: list = None):
         """
 
         :param htable:
         :param pH:
+        :param chains:
         :return:
         """
         if htable == 'positive' or htable == 'negative':
@@ -192,10 +212,10 @@ class Cli:
                 print("pH value range is 0-14")
                 sys.exit(-1)
         try:
-            parse_results = self.cls.parser(htable=htable, pH=pH)
+            parse_results = self.cls.parser(htable=htable, pH=pH, selectChains=chains)
         except ValueError:
             self.log_append('Error! Invalid file format\nor file does not contain {:s} residues\n'.format(
-                'hydrophobic' if htable in ('hydropathy', 'nanodroplet')
+                'hydrophobic' if htable in ('hydropathy', 'nanodroplet', 'menv', 'fuzzyoildrop')
                 else 'negative' if htable == 'negative' else 'positive'))
         else:
             self.log_append("No. of residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
@@ -237,7 +257,8 @@ class Cli:
             return
         for k, aa_list in dict_aa.items():
             self.log_append('\n{:s} cluster No. {:d} contains: {:s}'.format(
-                ("Core" if k[0] else "Non-core"), k[1], ", ".join(['{2:s}:{1:s}{0:d}'.format(*aac) for aac in aa_list])))
+                ("Core" if k[0] else "Non-core"), k[1],
+                ", ".join(['{2:s}:{1:s}{0:d}'.format(*aac) for aac in aa_list])))
         self.log_append('\n\n')
 
     def colormap(self, newdir: str, basefile: str):

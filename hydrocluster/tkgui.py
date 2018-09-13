@@ -5,11 +5,8 @@
 import sys
 import tkinter as tk
 import tkinter.ttk as ttk
-from tkinter.filedialog import askopenfilename
-from tkinter.filedialog import asksaveasfilename
-from tkinter.messagebox import askyesno
-from tkinter.messagebox import showerror
-from tkinter.messagebox import showinfo
+from tkinter.filedialog import askopenfilename, asksaveasfilename
+from tkinter.messagebox import askyesno, showerror, showinfo, showwarning
 from tkinter.simpledialog import askstring, askfloat
 from urllib.error import HTTPError
 
@@ -26,6 +23,7 @@ class TkGui(tk.Tk):
     """
 
     """
+
     def __init__(self, namespace) -> None:
         super().__init__()
         self.title('HydroCluster')
@@ -35,10 +33,10 @@ class TkGui(tk.Tk):
         fra1 = tk.Frame(self)
         fra1.grid(row=0, rowspan=2, column=0)
         lab1 = tk.LabelFrame(fra1, text='Parsing', labelanchor='n', borderwidth=5)
-        lab1.grid(row=0, column=0, pady=5)
+        lab1.pack(expand=1, fill=tk.X, pady=5, padx=5)
         lab11 = tk.LabelFrame(lab1, text='Property table', labelanchor='n', borderwidth=5)
         lab11.grid(row=0, column=0, pady=5, padx=5)
-        listbox_items = ['hydropathy', 'nanodroplet', 'positive', 'negative']
+        listbox_items = ['hydropathy', 'menv', 'fuzzyoildrop', 'nanodroplet', 'positive', 'negative']
         self.combox_p = ttk.Combobox(lab11, height=5, width=15, values=listbox_items)
         self.combox_p.pack()
         self.combox_p.set('hydropathy')
@@ -62,8 +60,16 @@ class TkGui(tk.Tk):
         l14.grid(row=3, column=0, pady=5, padx=5)
         self.l14 = tk.Label(fra11, text="{0:>5.3f}".format(0), anchor=tk.NW)
         self.l14.grid(row=3, column=1, pady=5, padx=5)
+        lab4 = tk.LabelFrame(fra1, text='Option', labelanchor='n', borderwidth=5)
+        lab4.pack(expand=1, fill=tk.X, pady=5, padx=5)
+        self.checkNoise = tk.BooleanVar()
+        self.nfCheckBox = tk.Checkbutton(lab4, text="Noise filter\n(Not recommended!)", variable=self.checkNoise,
+                                         anchor=tk.NW)
+        self.nfCheckBox.pack(expand=1, fill=tk.X, pady=5, padx=5)
+        lab2 = tk.LabelFrame(fra1, text='Auto mode', labelanchor='n', borderwidth=5)
+        lab2.pack(expand=1, fill=tk.X, pady=5, padx=5)
         lab3 = tk.LabelFrame(fra1, text='Manual mode', labelanchor='n', borderwidth=5)
-        lab3.grid(row=2, column=0, pady=5)
+        lab3.pack(expand=1, fill=tk.X, pady=5, padx=5)
         lab31 = tk.LabelFrame(lab3, text='EPS (\u212B)', labelanchor='n', borderwidth=5)
         lab31.grid(row=0, column=0, pady=5, padx=5)
         self.sca1 = tk.Scale(lab31, length=200, from_=1.0, to=15.0, showvalue=1, orient=tk.HORIZONTAL, resolution=0.1)
@@ -74,8 +80,6 @@ class TkGui(tk.Tk):
         self.sca2.pack()
         but1 = tk.Button(lab3, text='Start', command=lambda: self.run(auto=False))
         but1.grid(row=2, column=0, pady=5)
-        lab2 = tk.LabelFrame(fra1, text='Auto mode', labelanchor='n', borderwidth=5)
-        lab2.grid(row=1, column=0, pady=5)
         lab22 = tk.Frame(lab2)
         lab22.grid(row=1, column=0)
         l1 = tk.Label(lab22, text="Min EPS (\u212B):", anchor=tk.NW)
@@ -198,6 +202,7 @@ class TkGui(tk.Tk):
         om.add_command(label='Cores content', command=self.resi)
         om.add_command(label='Autotune colormap', command=self.colormap)
         om.add_command(label='Clear LOG', command=self.clean_txt)
+        om.add_command(label='Open PyMol', command=self.open_pymol)
         m.add_command(label='About', command=self.about)
 
     def close_win(self) -> None:
@@ -265,10 +270,14 @@ class TkGui(tk.Tk):
                 self.pb.update()
                 showerror("Error", "Not correct value for Max MIN_SAMPLES")
                 return
-            if self.cls.states and self.cls.auto_params == (min_eps, max_eps, step_eps,
-                                                            min_min_samples, max_min_samples):
+            if self.cls.states and self.cls.auto_params == (min_eps, max_eps,
+                                                            step_eps,
+                                                            min_min_samples,
+                                                            max_min_samples) and \
+                    self.cls.noise_filter == self.checkNoise.get():
                 eps, min_samples = self.cls.auto(metric=metric)
             else:
+                self.cls.noise_filter = self.checkNoise.get()
                 self.pb['maximum'] = self.cls.init_cycles(min_eps, max_eps, step_eps, min_min_samples, max_min_samples)
                 self.tx.configure(state='normal')
                 self.tx.insert(tk.END, ('Starting Autoscan (range EPS: {0:.2f} - {1:.2f} \u212B,'
@@ -294,6 +303,7 @@ class TkGui(tk.Tk):
             self.sca1.set(eps)
             self.sca2.set(min_samples)
         else:
+            self.cls.noise_filter = self.checkNoise.get()
             eps = self.sca1.get()
             min_samples = self.sca2.get()
             self.pb['maximum'] = 1
@@ -309,10 +319,14 @@ class TkGui(tk.Tk):
                                    'Calinski-Harabaz score = {4:.3f}\nEPS = {2:.1f} \u212B\nMIN_SAMPLES = {3:d}\n'
                                    ).format(self.cls.n_clusters, self.cls.si_score, eps, min_samples,
                                             self.cls.calinski))
+        if self.cls.noise_percent() > 30:
+            showwarning('Warning!', 'Percent of noise = {:.2f} %'.format(self.cls.noise_percent()))
         self.tx.configure(state='normal')
         self.tx.insert(tk.END, ('Number of clusters = {0:d}\nSilhouette Coefficient = {1:.3f}\n'
                                 'Calinski-Harabaz score = {4:.3f}\nEPS = {2:.1f} \u212B\nMIN_SAMPLES = {3:d}\n'
-                                ).format(self.cls.n_clusters, self.cls.si_score, eps, min_samples, self.cls.calinski))
+                                'Percent of noise = {5:.2f} %\n'
+                                ).format(self.cls.n_clusters, self.cls.si_score, eps, min_samples, self.cls.calinski,
+                                         self.cls.noise_percent()))
         self.tx.configure(state='disabled')
         self.graph()
         self.run_flag = False
@@ -417,16 +431,38 @@ class TkGui(tk.Tk):
         if self.run_flag:
             showerror('Error!', 'The calculation is still running!')
             return
+        self.win_choise = tk.Toplevel(self)
+        self.win_choise.title("Choice chains")
+        fra1 = ttk.Frame(self.win_choise)
+        fra1.grid(row=0, column=0)
+        checkVars = []
+        for chain in self.cls.preparser():
+            checkVar = tk.StringVar()
+            self.CheckBox = tk.Checkbutton(fra1, text="Chain {:s}".format(chain), variable=checkVar, onvalue=chain,
+                                           offvalue='', anchor=tk.NW)
+            self.CheckBox.select()
+            self.CheckBox.pack(expand=1, fill=tk.X, pady=5, padx=5)
+            checkVars.append(checkVar)
+        fra2 = ttk.Frame(self.win_choise)
+        fra2.grid(row=1, column=0)
+        butChoice = tk.Button(fra2, text='Choice', command=lambda: self.parse_pdb_main(
+            [ch for ch in (ch.get() for ch in checkVars) if ch]))
+        butChoice.grid(row=0, column=0, pady=5)
+        butAll = tk.Button(fra2, text='All', command=self.parse_pdb_main)
+        butAll.grid(row=0, column=1, pady=5)
+
+    def parse_pdb_main(self, chains=None):
+        self.win_choise.destroy()
         htable = self.combox_p.get()
         try:
             if htable == 'positive' or htable == 'negative':
                 pH = askfloat('Your pH', 'pH value:', initialvalue=7.0, minvalue=0.0, maxvalue=14.0)
-                parse_results = self.cls.parser(htable=htable, pH=pH)
+                parse_results = self.cls.parser(htable=htable, pH=pH, selectChains=chains)
             else:
-                parse_results = self.cls.parser(htable=htable)
+                parse_results = self.cls.parser(htable=htable, selectChains=chains)
         except ValueError:
             showerror('Error!', 'Invalid file format\nor file does not {:s} contain residues\n'.format(
-                'hydrophobic' if htable in ('hydropathy', 'nanodroplet')
+                'hydrophobic' if htable in ('hydropathy', 'menv', 'nanodroplet', 'fuzzyoildrop')
                 else 'negative' if htable == 'negative' else 'positive'))
             return
         else:
@@ -496,6 +532,10 @@ class TkGui(tk.Tk):
             self.ent_min_min_samples.insert(0, '{:d}'.format(min_min_samples))
             self.ent_max_min_samples.delete(0, tk.END)
             self.ent_max_min_samples.insert(0, '{:d}'.format(max_min_samples))
+            if self.cls.noise_filter:
+                self.nfCheckBox.select()
+            else:
+                self.nfCheckBox.deselect()
             self.run(auto=True)
 
     def save_state(self):
@@ -559,7 +599,7 @@ class TkGui(tk.Tk):
             return
         opt = {'parent': self,
                'filetypes': [('All supported formats', ('.eps', '.jpeg', '.jpg', '.pdf', '.pgf', '.png', '.ps',
-                                                      '.raw', '.rgba', '.svg', '.svgz', '.tif', '.tiff')), ],
+                                                        '.raw', '.rgba', '.svg', '.svgz', '.tif', '.tiff')), ],
                'initialfile': 'myfile.png',
                'title': 'Save plot'}
         sa = asksaveasfilename(**opt)
@@ -650,3 +690,12 @@ class TkGui(tk.Tk):
         toolbar = NavigationToolbar2TkAgg(canvas, fra4)
         toolbar.update()
         canvas._tkcanvas.pack(fill=tk.BOTH, side=tk.TOP, expand=1)
+
+    def open_pymol(self):
+        if self.run_flag:
+            showerror('Error!', 'The calculation is still running!')
+            return
+        try:
+            self.cls.open_pymol()
+        except FileNotFoundError:
+            showerror("Erros!", "PyMol not found!")

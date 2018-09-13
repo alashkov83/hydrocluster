@@ -6,6 +6,7 @@ import os.path
 import sys
 from queue import Queue
 from threading import Lock, Thread
+
 from .testlist import opendb, download, clusterThread
 
 

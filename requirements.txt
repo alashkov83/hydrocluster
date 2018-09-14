@@ -1,3 +1,4 @@
+scipy
 progressbar
 python-utils
 psutil

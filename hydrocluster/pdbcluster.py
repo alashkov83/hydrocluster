@@ -4,6 +4,7 @@
 
 import gzip
 import io
+import math
 import pickle
 import random
 import time
@@ -28,10 +29,19 @@ try:
 except ImportError:
     raise ImportError
 
+from .DBCV import DBCV
+
 warnings.filterwarnings("ignore")
 
 
 def filterXYZandRData(Label, XYZ, Dist):
+    """
+
+    :param Label:
+    :param XYZ:
+    :param Dist:
+    :return:
+    """
     filterLabel = Label[Label != -1]
     filterXYZ = XYZ[Label != -1]
     filterR = Dist[Label != -1, :][:, Label != -1]
@@ -39,7 +49,7 @@ def filterXYZandRData(Label, XYZ, Dist):
 
 
 def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, weight_array, eps: float, min_samples: int,
-                  metric: str = 'si_score', noise_filter: bool = False) -> tuple:
+                  metric: str = 'calinski', noise_filter: bool = False) -> tuple:
     """
 
     :param noise_filter:
@@ -98,11 +108,24 @@ def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, weight_array, eps: float, mi
             # T.Calinski and J.Harabasz, 1974. “A dendrite method for cluster analysis”.Communications in Statistics
         except ValueError:
             score = 0
+    elif metric == 'dbcv':
+        try:
+            score = DBCV(filterXYZ, filterLabel)
+            if math.isnan(score):
+                score = -1
+        except ValueError:
+            score = -1
     return labels, n_clusters, core_samples_mask, score
 
 
 def chunkIt(seq, num):
-    out = [[] for x in range(num)]
+    """
+
+    :param seq:
+    :param num:
+    :return:
+    """
+    out = [[] for _ in range(num)]
     seq = seq.copy()
     n = 0
     while seq:
@@ -166,7 +189,7 @@ class ClusterPdb:
     """
 
     def __init__(self) -> None:
-        self.metrics_name = {'calinski': 'Calinski-Harabaz score', 'si_score': 'Silhouette score'}
+        self.metrics_name = {'calinski': 'Calinski-Harabaz score', 'si_score': 'Silhouette score', 'dbcv': 'DBCV score'}
         self.X = None
         self.pdist = None
         self.labels = None
@@ -174,7 +197,7 @@ class ClusterPdb:
         self.core_samples_mask = []
         self.n_clusters = 0
         self.score = 0
-        self.metric = 'si_score'
+        self.metric = 'calinski'
         self.s_array = []
         self.htable = 'hydropathy'
         self.parse_results = (0, 0.0, 0.0, 0.0)
@@ -195,11 +218,11 @@ class ClusterPdb:
         self.htable = 'hydropathy'
         self.noise_filter = False
         self.parse_results = (0, 0.0, 0.0, 0.0)
-        self.auto_params = (0.0, 0.0, 0.0, 0, 0, 'si_score')
+        self.auto_params = (0.0, 0.0, 0.0, 0, 0, 'calinski')
         self.core_samples_mask = []
         self.n_clusters = 0
         self.score = 0
-        self.metric = 'si_score'
+        self.metric = 'calinski'
         self.weight_array.clear()
         self.aa_list.clear()
         self.states.clear()
@@ -209,6 +232,7 @@ class ClusterPdb:
     def cluster(self, eps: float, min_samples: int, metric):
         """
 
+        :param metric:
         :param eps:
         :param min_samples:
         """
@@ -274,7 +298,7 @@ class ClusterPdb:
                 k -= 1
                 continue
             self.states.append(clusterResults)
-            yield n, clusterResults[4], clusterResults[5]
+            yield n, clusterResults[4], clusterResults[5], clusterResults[2], clusterResults[3]
             n += 1
         for p in self.clusterThreads:
             p.join()
@@ -522,7 +546,7 @@ class ClusterPdb:
         z.shape = (y.size, x.size)
         fig = Figure(figsize=(12, 6))
         z_min = 0
-        if self.metric == 'si_score':
+        if self.metric == 'si_score' or self.metric == 'dbcv':
             try:
                 z_min = min([x for x in z.flat if x > -1.0])
             except ValueError:

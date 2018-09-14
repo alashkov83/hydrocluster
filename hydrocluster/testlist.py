@@ -233,6 +233,7 @@ def clusterThread(file, dir, cursor, conn, lock, min_eps, max_eps, step_eps,
                   min_min_samples, max_min_samples, n_jobs=1):
     """
 
+    :param n_jobs:
     :param file:
     :param dir:
     :param cursor:
@@ -261,24 +262,20 @@ def clusterThread(file, dir, cursor, conn, lock, min_eps, max_eps, step_eps,
         except OSError:
             print('Unable to create folder ' + dir_ptable)
             continue
-        try:
-            cls.init_cycles(min_eps, max_eps, step_eps, min_min_samples, max_min_samples, n_jobs=n_jobs)
-            for n in cls.auto_yield():
-                pass
-        except ValueError:
-            print('Error! Could not parse file or clustering failed\n')
-            continue
         for metric in metrics:
             try:
-                eps, min_samples = cls.auto(metric=metric)
+                cls.init_cycles(min_eps, max_eps, step_eps, min_min_samples, max_min_samples,
+                                n_jobs=n_jobs, metric=metric)
+                for _ in cls.auto_yield():
+                    pass
+                eps, min_samples = cls.auto()
             except ValueError:
                 print('Error! Could not parse file or clustering failed\n')
                 continue
             else:
                 print("Job completed for ID_PDB: {:s}, ptable: {:s}, metric: {:s}".format(file, htable, metric))
                 db_save(conn, cursor, lock, file, htable, ntres, mind, maxd, meand, metric,
-                        cls.si_score if metric == 'si_score' else cls.calinski,
-                        eps, min_samples, cls.n_clusters, cls.noise_percent())
+                        cls.score, eps, min_samples, cls.n_clusters, cls.noise_percent())
                 dir_metric = os.path.join(dir_ptable, metric)
                 try:
                     os.makedirs(dir_metric, exist_ok=True)
@@ -287,12 +284,11 @@ def clusterThread(file, dir, cursor, conn, lock, min_eps, max_eps, step_eps,
                     continue
                 save_pymol(cls, dir_metric, file)
                 graph(cls, dir_metric, file)
-        try:
-            colormap(cls, dir_ptable, file)
-        except ValueError as err:
-            print(err)
-            continue
-        save_state(cls, dir_ptable, file)
+                try:
+                    colormap(cls, dir_metric, file)
+                    save_state(cls, dir_metric, file)
+                except ValueError as err:
+                    print(err)
 
 
 def main(namespace):

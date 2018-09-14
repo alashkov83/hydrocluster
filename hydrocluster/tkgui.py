@@ -60,6 +60,12 @@ class TkGui(tk.Tk):
         l14.grid(row=3, column=0, pady=5, padx=5)
         self.l14 = tk.Label(fra11, text="{0:>5.3f}".format(0), anchor=tk.NW)
         self.l14.grid(row=3, column=1, pady=5, padx=5)
+        lab21 = tk.LabelFrame(fra1, text='Metric', labelanchor='n', borderwidth=5)
+        lab21.pack(expand=1, fill=tk.X, pady=5, padx=5)
+        listbox_items = ['calinski', 'si_score', 'dbcv']
+        self.combox = ttk.Combobox(lab21, height=5, width=15, values=listbox_items)
+        self.combox.pack()
+        self.combox.set('calinski')
         lab4 = tk.LabelFrame(fra1, text='Option', labelanchor='n', borderwidth=5)
         lab4.pack(expand=1, fill=tk.X, pady=5, padx=5)
         self.checkNoise = tk.BooleanVar()
@@ -78,7 +84,7 @@ class TkGui(tk.Tk):
         lab32.grid(row=1, column=0, pady=5, padx=5)
         self.sca2 = tk.Scale(lab32, length=200, from_=1, to=50, showvalue=1, orient=tk.HORIZONTAL)
         self.sca2.pack()
-        but1 = tk.Button(lab3, text='Start', command=lambda: self.run(auto=False))
+        but1 = tk.Button(lab3, text='Start', command=self.run)
         but1.grid(row=2, column=0, pady=5)
         lab22 = tk.Frame(lab2)
         lab22.grid(row=1, column=0)
@@ -114,12 +120,6 @@ class TkGui(tk.Tk):
         self.ent_max_min_samples.grid(row=4, column=1, pady=5, padx=5)
         but2 = tk.Button(lab2, text='Start', command=lambda: self.run(auto=True))
         but2.grid(row=3, column=0, pady=5)
-        lab21 = tk.LabelFrame(lab2, text='Metric shrink', labelanchor='n', borderwidth=5)
-        lab21.grid(row=0, column=0, pady=5, padx=5)
-        listbox_items = ['calinski', 'si_score']
-        self.combox = ttk.Combobox(lab21, height=5, width=15, values=listbox_items)
-        self.combox.pack()
-        self.combox.set('calinski')
         lab23 = tk.LabelFrame(lab2, text='Progress: ', labelanchor='n', borderwidth=5)
         lab23.grid(row=4, column=0, pady=5, padx=5)
         self.pb = ttk.Progressbar(lab23, orient='horizontal', mode='determinate', length=200)
@@ -146,6 +146,7 @@ class TkGui(tk.Tk):
         self.cls = ClusterPdb()
 
     def _bound_to_mousewheel(self, event, tx):
+        _ = event
         self.bind_all('<MouseWheel>', lambda e: self._on_mousewheel(e, tx))
         self.bind_all('<Button-4>', lambda e: self._on_mousewheel(e, tx))
         self.bind_all('<Button-5>', lambda e: self._on_mousewheel(e, tx))
@@ -153,6 +154,7 @@ class TkGui(tk.Tk):
         self.bind_all('<Down>', lambda e: self._on_mousewheel(e, tx))
 
     def _unbound_to_mousewheel(self, event):
+        _ = event
         self.unbind_all('<MouseWheel>')
         self.unbind_all('<Button-4>')
         self.unbind_all('<Button-5>')
@@ -218,14 +220,19 @@ class TkGui(tk.Tk):
         self.run_flag = True
         self.pb['value'] = 0
         self.pb.update()
+        noise_filter = self.checkNoise.get()
+        metric = self.combox.get()
+        if metric == 'dbcv':
+            if askyesno('Warning!', "Very sow function!\nA you sure?") != 'yes':
+                self.run_flag = False
+                return
         if auto:
-            metric = self.combox.get()
             try:
                 min_eps = float(self.ent_min_eps.get())
                 if min_eps < 0:
                     raise ValueError
             except ValueError:
-                self.run_flag = True
+                self.run_flag = False
                 self.pb['value'] = 0
                 self.pb.update()
                 showerror("Error", "Not correct value for Min EPS")
@@ -235,7 +242,7 @@ class TkGui(tk.Tk):
                 if max_eps < 0:
                     raise ValueError
             except ValueError:
-                self.run_flag = True
+                self.run_flag = False
                 self.pb['value'] = 0
                 self.pb.update()
                 showerror("Error", "Not correct value for Max EPS")
@@ -245,7 +252,7 @@ class TkGui(tk.Tk):
                 if step_eps < 0:
                     raise ValueError
             except ValueError:
-                self.run_flag = True
+                self.run_flag = False
                 self.pb['value'] = 0
                 self.pb.update()
                 showerror("Error", "Not correct value for Step EPS")
@@ -255,7 +262,7 @@ class TkGui(tk.Tk):
                 if min_min_samples < 0:
                     raise ValueError
             except ValueError:
-                self.run_flag = True
+                self.run_flag = False
                 self.pb['value'] = 0
                 self.pb.update()
                 showerror("Error", "Not correct value for Min MIN_SAMPLES")
@@ -265,7 +272,7 @@ class TkGui(tk.Tk):
                 if max_min_samples < 0:
                     raise ValueError
             except ValueError:
-                self.run_flag = True
+                self.run_flag = False
                 self.pb['value'] = 0
                 self.pb.update()
                 showerror("Error", "Not correct value for Max MIN_SAMPLES")
@@ -273,25 +280,27 @@ class TkGui(tk.Tk):
             if self.cls.states and self.cls.auto_params == (min_eps, max_eps,
                                                             step_eps,
                                                             min_min_samples,
-                                                            max_min_samples) and \
-                    self.cls.noise_filter == self.checkNoise.get():
-                eps, min_samples = self.cls.auto(metric=metric)
+                                                            max_min_samples, metric) and \
+                    self.cls.noise_filter == noise_filter:
+                self.run_flag = False
+                return
             else:
-                self.cls.noise_filter = self.checkNoise.get()
-                self.pb['maximum'] = self.cls.init_cycles(min_eps, max_eps, step_eps, min_min_samples, max_min_samples)
+                self.cls.noise_filter = noise_filter
+                self.pb['maximum'] = self.cls.init_cycles(min_eps, max_eps, step_eps,
+                                                          min_min_samples, max_min_samples, metric=metric)
                 self.tx.configure(state='normal')
                 self.tx.insert(tk.END, ('Starting Autoscan (range EPS: {0:.2f} - {1:.2f} \u212B,'
                                         'step EPS = {2:.2f} \u212B, range min_samples: {3:d} - {4:d}...\n').format(
                     min_eps, max_eps, step_eps, min_min_samples, max_min_samples))
                 try:
-                    for n, j, i in self.cls.auto_yield():
+                    for n, j, i, n_clusters, score in self.cls.auto_yield():
                         self.tx.insert(tk.END, 'Step No {0:d}: EPS = {1:.2f} \u212B, min_s = {2:d}, '
-                                               'No cls = {3:d}, Si sc = {4:.3f}, Calinski_sc = {5:.3f}\n'
-                                       .format(n, j, i, self.cls.n_clusters,
-                                               self.cls.si_score, self.cls.calinski))
+                                               'No cls = {3:d}, {4:s} = {5:.3f}\n'
+                                       .format(n, j, i, n_clusters,
+                                               self.cls.metrics_name[self.cls.metric], score))
                         self.pb['value'] = n
                         self.pb.update()
-                    eps, min_samples = self.cls.auto(metric=metric)
+                    eps, min_samples = self.cls.auto()
                     self.tx.insert(tk.END, 'Autoscan done... \n')
                     self.tx.configure(state='disabled')
                 except ValueError:
@@ -300,33 +309,31 @@ class TkGui(tk.Tk):
                     self.tx.configure(state='disabled')
                     self.run_flag = False
                     return
+            showinfo('Autoscan done', ('Number of clusters = {0:d}\n{4:s} = {1:.3f}\nEPS = {2:.1f} \u212B'
+                                       '\nMIN_SAMPLES = {3:d}\n').format(
+                self.cls.n_clusters, self.cls.score, eps, min_samples, self.cls.metrics_name[self.cls.metric]))
             self.sca1.set(eps)
             self.sca2.set(min_samples)
         else:
-            self.cls.noise_filter = self.checkNoise.get()
+            self.cls.noise_filter = noise_filter
             eps = self.sca1.get()
             min_samples = self.sca2.get()
             self.pb['maximum'] = 1
             try:
-                self.cls.cluster(eps, min_samples)
+                self.cls.cluster(eps, min_samples, metric)
                 self.pb['value'] = 1
                 self.pb.update()
             except ValueError:
                 showerror('Error!', 'Could not parse file or clustering failed')
                 self.run_flag = False
                 return
-        showinfo('Autoscan done', ('Number of clusters = {0:d}\nSilhouette Coefficient = {1:.3f}\n'
-                                   'Calinski-Harabaz score = {4:.3f}\nEPS = {2:.1f} \u212B\nMIN_SAMPLES = {3:d}\n'
-                                   ).format(self.cls.n_clusters, self.cls.si_score, eps, min_samples,
-                                            self.cls.calinski))
         if self.cls.noise_percent() > 30:
             showwarning('Warning!', 'Percent of noise = {:.2f} %'.format(self.cls.noise_percent()))
         self.tx.configure(state='normal')
-        self.tx.insert(tk.END, ('Number of clusters = {0:d}\nSilhouette Coefficient = {1:.3f}\n'
-                                'Calinski-Harabaz score = {4:.3f}\nEPS = {2:.1f} \u212B\nMIN_SAMPLES = {3:d}\n'
-                                'Percent of noise = {5:.2f} %\n'
-                                ).format(self.cls.n_clusters, self.cls.si_score, eps, min_samples, self.cls.calinski,
-                                         self.cls.noise_percent()))
+        self.tx.insert(tk.END, ('Number of clusters = {0:d}\n{1:s} = {4:.3f}\nEPS = {2:.1f} \u212B\n'
+                                'MIN_SAMPLES = {3:d}\nPercent of noise = {5:.2f} %\n{6:s}\n').format(
+            self.cls.n_clusters, self.cls.metrics_name[self.cls.metric], eps, min_samples, self.cls.score,
+            self.cls.noise_percent(), (' !!WARNING!!!' if self.cls.noise_percent() > 30 else '')))
         self.tx.configure(state='disabled')
         self.graph()
         self.run_flag = False
@@ -452,6 +459,11 @@ class TkGui(tk.Tk):
         butAll.grid(row=0, column=1, pady=5)
 
     def parse_pdb_main(self, chains=None):
+        """
+
+        :param chains:
+        :return:
+        """
         self.win_choise.destroy()
         htable = self.combox_p.get()
         try:
@@ -521,7 +533,7 @@ class TkGui(tk.Tk):
             self.l12.configure(text="{0:>5.3f}".format(mind))
             self.l13.configure(text="{0:>5.3f}".format(maxd))
             self.l14.configure(text="{0:>5.3f}".format(meand))
-            min_eps, max_eps, step_eps, min_min_samples, max_min_samples = self.cls.auto_params
+            min_eps, max_eps, step_eps, min_min_samples, max_min_samples, metric = self.cls.auto_params
             self.ent_min_eps.delete(0, tk.END)
             self.ent_min_eps.insert(0, '{:.1f}'.format(min_eps))
             self.ent_max_eps.delete(0, tk.END)
@@ -536,6 +548,7 @@ class TkGui(tk.Tk):
                 self.nfCheckBox.select()
             else:
                 self.nfCheckBox.deselect()
+            self.combox.set(metric)
             self.run(auto=True)
 
     def save_state(self):
@@ -692,6 +705,10 @@ class TkGui(tk.Tk):
         canvas._tkcanvas.pack(fill=tk.BOTH, side=tk.TOP, expand=1)
 
     def open_pymol(self):
+        """
+
+        :return:
+        """
         if self.run_flag:
             showerror('Error!', 'The calculation is still running!')
             return

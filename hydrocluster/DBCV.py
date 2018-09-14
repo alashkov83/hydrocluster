@@ -1,3 +1,4 @@
+# coding=utf-8
 """
 Implimentation of Density-Based Clustering Validation "DBCV"
 Citation:
@@ -19,10 +20,11 @@ def DBCV(X, labels, dist_function=euclidean):
         X (np.ndarray): ndarray with dimensions [n_samples, n_features]
             data to check validity of clustering
         labels (np.array): clustering assignments for data X
-        dist_dunction (func): function to determine distance between objects
+        dist_function (func): function to determine distance between objects
             func args must be [np.array, np.array] where each array is a point
     Returns: cluster_validity (float)
         score in range[-1, 1] indicating validity of clustering assignments
+        :param dist_function:
     """
     graph = _mutual_reach_dist_graph(X, labels, dist_function)
     mst = _mutual_reach_dist_MST(graph)
@@ -30,7 +32,7 @@ def DBCV(X, labels, dist_function=euclidean):
     return cluster_validity
 
 
-def _core_dist(point, neighbors, dist_function):
+def _core_dist(point, neighbors):
     """
     Computes the core distance of a point.
     Core distance is the inverse density of an object.
@@ -39,8 +41,6 @@ def _core_dist(point, neighbors, dist_function):
             point to compute core distance of
         neighbors (np.ndarray): array of dimensions (n_neighbors, n_features):
             array of all other points in object class
-        dist_dunction (func): function to determine distance between objects
-            func args must be [np.array, np.array] where each array is a point
     Returns: core_dist (float)
         inverse density of point
     """
@@ -50,7 +50,7 @@ def _core_dist(point, neighbors, dist_function):
     distance_vector = cdist(point.reshape(1, -1), neighbors)
     distance_vector = distance_vector[distance_vector != 0]
     numerator = ((1 / distance_vector) ** n_features).sum()
-    core_dist = (numerator / (n_neighbors)) ** (-1 / n_features)
+    core_dist = (numerator / n_neighbors) ** (-1 / n_features)
     return core_dist
 
 
@@ -67,13 +67,13 @@ def _mutual_reachability_dist(point_i, point_j, neighbors_i,
             array of all other points in object class of point i
         neighbors_j (np.ndarray): array of dims (n_neighbors, n_features):
             array of all other points in object class of point j
-        dist_dunction (func): function to determine distance between objects
+        dist_function (func): function to determine distance between objects
             func args must be [np.array, np.array] where each array is a point
     Returns: mutual_reachability (float)
         mutual reachability between points i and j
     """
-    core_dist_i = _core_dist(point_i, neighbors_i, dist_function)
-    core_dist_j = _core_dist(point_j, neighbors_j, dist_function)
+    core_dist_i = _core_dist(point_i, neighbors_i)
+    core_dist_j = _core_dist(point_j, neighbors_j)
     dist = dist_function(point_i, point_j)
     mutual_reachability = np.max([core_dist_i, core_dist_j, dist])
     return mutual_reachability
@@ -87,7 +87,7 @@ def _mutual_reach_dist_graph(X, labels, dist_function):
         X (np.ndarray): ndarray with dimensions [n_samples, n_features]
             data to check validity of clustering
         labels (np.array): clustering assignments for data X
-        dist_dunction (func): function to determine distance between objects
+        dist_function (func): function to determine distance between objects
             func args must be [np.array, np.array] where each array is a point
     Returns: graph (np.ndarray)
         array of dimensions (n_samples, n_samples)

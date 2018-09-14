@@ -85,10 +85,10 @@ class Cli:
         #       import time
         #       start_time = time.time()
         try:
-            for n, j, i in self.cls.auto_yield():
+            for n, j, i, n_clusters, score in self.cls.auto_yield():
                 self.log_append(('Step No. {0:d}: EPS = {1:.2f} \u212B, min_samples = {2:d}, No. of clusters = {3:d}, '
                                  '{4:s} = {5:.3f}\n').format(
-                    n, j, i, self.cls.n_clusters, self.cls.metrics_name[self.cls.metric], self.cls.score))
+                    n, j, i, n_clusters, self.cls.metrics_name[self.cls.metric], score))
                 bar1.update(n)
             #           print("--- %s seconds ---" % (time.time() - start_time))
             eps, min_samples = self.cls.auto()
@@ -108,6 +108,7 @@ class Cli:
     def noauto(self, eps: float, min_samples: int, metric: str):
         """
 
+        :param metric:
         :param eps:
         :param min_samples:
         """
@@ -186,6 +187,11 @@ class Cli:
                 self.log_append('File ID PDB: {0:s} successfully downloaded!\n'.format(filename))
 
     def chainsSelect(self, namespace: object) -> list:
+        """
+
+        :param namespace:
+        :return:
+        """
         if namespace.chains is None:
             self.log_append("All chains selected!\n")
             return None

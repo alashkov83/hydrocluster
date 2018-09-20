@@ -167,7 +167,7 @@ def ransacRegressor(X, Y):
             modelRAMSAC.score(X[modelRAMSAC.inlier_mask_], Y[modelRAMSAC.inlier_mask_]))
 
 
-def regr_cube(x: np.ndarray, y: np.ndarray, z: np.ndarray):
+def regr_cube(x: np.ndarray, y: np.ndarray, z: np.ndarray, z_correct):
     """
 
     :param x:
@@ -176,6 +176,7 @@ def regr_cube(x: np.ndarray, y: np.ndarray, z: np.ndarray):
     :return:
     """
     A = 4 * np.pi / 3
+    # z[z_correct] = np.nan
     X = np.array((A * x ** 3), ndmin=2).T
     k = z.argmax(axis=1)
     Y = np.array(y[k], ndmin=2).T
@@ -557,8 +558,7 @@ class ClusterPdb:
         """
         if not self.states:
             raise ValueError
-        colormap_data = [(state[5], state[4], state[3]) for state in self.states]
-        print(colormap_data)
+        colormap_data = [(state[5], state[4], state[3], state[0]) for state in self.states]
         colormap_data.sort(key=lambda i: i[0])
         colormap_data.sort(key=lambda i: i[1])
         x = np.array(sorted(list({data[0] for data in colormap_data})), ndmin=1)
@@ -582,16 +582,22 @@ class ClusterPdb:
         ax11 = fig.add_subplot(122)
         ax11.set_ylabel('MIN SAMPLES')
         ax11.set_xlabel(r'$V,\ \AA^3$')
-        V, N, = regr_cube(y, x, z)
+        z_correct = np.array([(True if (len(set(data[3]))) > 1 else False) for data in colormap_data], dtype=bool)
+        z_correct.shape = (y.size, x.size)
+        V, N, = regr_cube(y, x, z, z_correct)
         Nfit, C, B, R2 = lineaRegressor(V, N)
-        NRfit, CR, BR, SR = ransacRegressor(V, N)
         ax11.scatter(V, N, c='k')
         texLINEAR = 'Linear:\n' + r'$C_h\ =\ ' + '{:.4f}'.format(C) + r'\ \AA^{-3}$' + "\n" + r'$N_0\ =\ ' + \
                     '{:.1f}$'.format(B) + '\n' + r'$R^2\ =\ ' + '{:.4f}'.format(R2) + r'$'
         ax11.plot(V, Nfit, c='r', label=texLINEAR)
-        texRANSAC = 'RANSAC:\n' + r'$C_h\ =\ ' + '{:.4f}'.format(CR) + r'\ \AA^{-3}$' + "\n" + r'$N_0\ =\ ' + \
-                    '{:.1f}$'.format(BR) + '\n' + r'$R^2\ =\ ' + '{:.4f}'.format(SR) + r'$'
-        ax11.plot(V, NRfit, c='g', label=texRANSAC)
+        try:
+            NRfit, CR, BR, SR = ransacRegressor(V, N)
+
+            texRANSAC = 'RANSAC:\n' + r'$C_h\ =\ ' + '{:.4f}'.format(CR) + r'\ \AA^{-3}$' + "\n" + r'$N_0\ =\ ' + \
+                        '{:.1f}$'.format(BR) + '\n' + r'$R^2\ =\ ' + '{:.4f}'.format(SR) + r'$'
+            ax11.plot(V, NRfit, c='g', label=texRANSAC)
+        except ValueError:
+            pass
         ax11.legend(loc='best', fontsize=6)
         fig.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
         return fig

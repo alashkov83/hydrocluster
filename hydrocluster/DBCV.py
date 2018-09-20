@@ -1,4 +1,3 @@
-# coding=utf-8
 """
 Implimentation of Density-Based Clustering Validation "DBCV"
 Citation:
@@ -8,8 +7,7 @@ Society for Industrial and Applied Mathematics, 2014.
 """
 
 import numpy as np
-from scipy.sparse import csgraph
-from scipy.sparse.csgraph import minimum_spanning_tree
+from scipy.sparse.csgraph import minimum_spanning_tree, dijkstra
 from scipy.spatial.distance import euclidean, cdist
 
 
@@ -24,8 +22,9 @@ def DBCV(X, labels, dist_function=euclidean):
             func args must be [np.array, np.array] where each array is a point
     Returns: cluster_validity (float)
         score in range[-1, 1] indicating validity of clustering assignments
-        :param dist_function:
     """
+    if len(set(labels)) < 2 or len(set(labels)) > len(labels) - 1:
+        raise ValueError("Number of labels is 1. Valid values are 2 to n_samples - 1 (inclusive)")
     graph = _mutual_reach_dist_graph(X, labels, dist_function)
     mst = _mutual_reach_dist_MST(graph)
     cluster_validity = _clustering_validity_index(mst, labels)
@@ -49,8 +48,11 @@ def _core_dist(point, neighbors):
 
     distance_vector = cdist(point.reshape(1, -1), neighbors)
     distance_vector = distance_vector[distance_vector != 0]
-    numerator = ((1 / distance_vector) ** n_features).sum()
-    core_dist = (numerator / n_neighbors) ** (-1 / n_features)
+    if len(distance_vector) != 0:
+        numerator = ((1 / distance_vector) ** n_features).sum()
+        core_dist = ((numerator / n_neighbors) ** (-1 / n_features))
+    else:
+        core_dist = 0.0
     return core_dist
 
 
@@ -164,7 +166,7 @@ def _cluster_density_separation(MST, labels, cluster_i, cluster_j):
     """
     indices_i = np.where(labels == cluster_i)[0]
     indices_j = np.where(labels == cluster_j)[0]
-    shortest_paths = csgraph.dijkstra(MST, indices=indices_i)
+    shortest_paths = dijkstra(MST, indices=indices_i)
     relevant_paths = shortest_paths[:, indices_j]
     density_separation = np.min(relevant_paths)
     return density_separation

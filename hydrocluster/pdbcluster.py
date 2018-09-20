@@ -4,7 +4,6 @@
 
 import gzip
 import io
-import math
 import pickle
 import random
 import time
@@ -111,8 +110,6 @@ def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, weight_array, eps: float, mi
     elif metric == 'dbcv':
         try:
             score = DBCV(filterXYZ, filterLabel)
-            if math.isnan(score):
-                score = -1
         except ValueError:
             score = -1
     return labels, n_clusters, core_samples_mask, score
@@ -155,20 +152,34 @@ def calc_abs_charge(res_type: str, pH: float) -> dict:
                 if (1 / (1 + 10 ** (pKa_dict[res] - pH))) > shrink_value}
 
 
+def lineaRegressor(X, Y):
+    modelLinear = LinearRegression()
+    modelLinear.fit(X, Y)
+    YfitLinear = modelLinear.predict(X)
+    return YfitLinear, modelLinear.coef_[0][0], modelLinear.intercept_[0], modelLinear.score(X, Y)
+
+
+def ransacRegressor(X, Y):
+    modelRAMSAC = RANSACRegressor()
+    modelRAMSAC.fit(X, Y)
+    YfitRANSAC = modelRAMSAC.predict(X)
+    return (YfitRANSAC, modelRAMSAC.estimator_.coef_[0][0], modelRAMSAC.estimator_.intercept_[0],
+            modelRAMSAC.score(X[modelRAMSAC.inlier_mask_], Y[modelRAMSAC.inlier_mask_]))
+
+
 def regr_cube(x: np.ndarray, y: np.ndarray, z: np.ndarray):
+    """
+
+    :param x:
+    :param y:
+    :param z:
+    :return:
+    """
     A = 4 * np.pi / 3
     X = np.array((A * x ** 3), ndmin=2).T
     k = z.argmax(axis=1)
     Y = np.array(y[k], ndmin=2).T
-    modelLinear = LinearRegression()
-    modelLinear.fit(X, Y)
-    YfitLinear = modelLinear.predict(X)
-    modelRAMSAC = RANSACRegressor()
-    modelRAMSAC.fit(X, Y)
-    YfitRANSAC = modelRAMSAC.predict(X)
-    return X, Y, YfitLinear, modelLinear.coef_[0][0], modelLinear.intercept_[0], modelLinear.score(X, Y), \
-           YfitRANSAC, modelRAMSAC.estimator_.coef_[0][0], modelRAMSAC.estimator_.intercept_[0], \
-           modelRAMSAC.score(X[modelRAMSAC.inlier_mask_], Y[modelRAMSAC.inlier_mask_])
+    return X, Y
 
 
 def cmass(str_nparray: np.ndarray) -> list:
@@ -318,6 +329,10 @@ class ClusterPdb:
         return state[4], state[5]
 
     def noise_percent(self):
+        """
+
+        :return:
+        """
         if self.labels is not None:
             labflat = self.labels.flatten()
             n = len(labflat)
@@ -401,7 +416,8 @@ class ClusterPdb:
         # www.pnas.org/cgi/doi/10.1073/pnas.1616138113 # 1.0 - -7.55 kj/mol A; residues with delta mu < 0
         nanodroplet = {'ALA': 1.269, 'VAL': 1.094, 'PRO': 1.0, 'LEU': 1.147, 'ILE': 1.289, 'PHE': 1.223, 'MET': 1.013,
                        'TRP': 1.142, 'CYS': 0.746, 'GLY': 0.605, 'THR': 0.538, 'SER': 0.472}
-        # Quantitative expression of protein heterogeneity: Response of amino acid side chains to their local environment.
+        # Quantitative expression of protein heterogeneity:
+        # Response of amino acid side chains to their local environment.
         # Bandyopadhyay D, Mehler EL.
         # Proteins. 2008 Aug;72(2):646-59. doi: 10.1002/prot.21958. # 1.0 - 0.33; residues with values > 0
         menv = {'ALA': 1.0, 'VAL': 2.52, 'LEU': 2.64, 'ILE': 2.94, 'PHE': 2.58, 'MET': 1.64,
@@ -416,6 +432,8 @@ class ClusterPdb:
                         'TRP': 1.497, 'CYS': 1.748, 'THR': 0.538}
         # Kyte J, Doolittle RF. J Mol Biol. 1982 May 5;157(1):105-32. 1.0 - 1.8 residues with kdHydrophobicity > 0
         hydropathy = {'ALA': 1.0, 'VAL': 2.333, 'LEU': 2.111, 'ILE': 2.5, 'PHE': 1.556, 'MET': 1.056, 'CYS': 1.389}
+        hydropathy_h2o = {'GLY': 1.0, 'THR': 1.75, 'TRP': 2.25, 'SER': 2., 'TYR':
+            3.25, 'PRO': 4., 'HIS': 8., 'GLU': 8.75, 'GLN': 8.75, 'ASP': 8.75, 'ASN': 8.75, 'LYS': 9.75, 'ARG': 11.25}
         if htable == 'hydropathy':
             hydrfob = hydropathy
         elif htable == 'menv':
@@ -424,6 +442,8 @@ class ClusterPdb:
             hydrfob = fuzzyoildrop
         elif htable == 'nanodroplet':
             hydrfob = nanodroplet
+        elif htable == 'hydropathy_h2o':
+            hydrfob = hydropathy_h2o
         elif htable == 'positive' or htable == 'negative':
             hydrfob = calc_abs_charge(htable, pH)
         # OLD CA-BASED PARSER
@@ -538,6 +558,7 @@ class ClusterPdb:
         if not self.states:
             raise ValueError
         colormap_data = [(state[5], state[4], state[3]) for state in self.states]
+        print(colormap_data)
         colormap_data.sort(key=lambda i: i[0])
         colormap_data.sort(key=lambda i: i[1])
         x = np.array(sorted(list({data[0] for data in colormap_data})), ndmin=1)
@@ -561,7 +582,9 @@ class ClusterPdb:
         ax11 = fig.add_subplot(122)
         ax11.set_ylabel('MIN SAMPLES')
         ax11.set_xlabel(r'$V,\ \AA^3$')
-        V, N, Nfit, C, B, R2, NRfit, CR, BR, SR = regr_cube(y, x, z)
+        V, N, = regr_cube(y, x, z)
+        Nfit, C, B, R2 = lineaRegressor(V, N)
+        NRfit, CR, BR, SR = ransacRegressor(V, N)
         ax11.scatter(V, N, c='k')
         texLINEAR = 'Linear:\n' + r'$C_h\ =\ ' + '{:.4f}'.format(C) + r'\ \AA^{-3}$' + "\n" + r'$N_0\ =\ ' + \
                     '{:.1f}$'.format(B) + '\n' + r'$R^2\ =\ ' + '{:.4f}'.format(R2) + r'$'

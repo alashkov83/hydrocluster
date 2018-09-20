@@ -36,7 +36,7 @@ class TkGui(tk.Tk):
         lab1.pack(expand=1, fill=tk.X, pady=5, padx=5)
         lab11 = tk.LabelFrame(lab1, text='Property table', labelanchor='n', borderwidth=5)
         lab11.grid(row=0, column=0, pady=5, padx=5)
-        listbox_items = ['hydropathy', 'menv', 'fuzzyoildrop', 'nanodroplet', 'positive', 'negative']
+        listbox_items = ['hydropathy', 'menv', 'fuzzyoildrop', 'nanodroplet', 'hydropathy_h2o', 'positive', 'negative']
         self.combox_p = ttk.Combobox(lab11, height=5, width=15, values=listbox_items)
         self.combox_p.pack()
         self.combox_p.set('hydropathy')
@@ -223,7 +223,7 @@ class TkGui(tk.Tk):
         noise_filter = self.checkNoise.get()
         metric = self.combox.get()
         if metric == 'dbcv':
-            if askyesno('Warning!', "Very sow function!\nA you sure?") != 'yes':
+            if not askyesno('Warning!', "Very slow function!\nA you sure?"):
                 self.run_flag = False
                 return
         if auto:

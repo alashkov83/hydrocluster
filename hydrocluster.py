@@ -34,7 +34,7 @@ class Parser(argparse.ArgumentParser):
         self.add_argument('-c', '--chains', type=str, default=None,
                           help='Selected chains (separator: "_", example: A_B)')
         self.add_argument('-pt', '--ptable', choices=['hydropathy', 'menv', 'fuzzyoildrop',
-                                                      'nanodroplet', 'positive', 'negative'],
+                                                      'nanodroplet', 'hydropathy_h2o', 'positive', 'negative'],
                           type=str, default='hydropathy', help='Property table for weighting')
         self.add_argument('-pH', '--pH', type=float, default=7.0,
                           help='pH value for calculatation of net charges (positive or negative) for --ptable ')

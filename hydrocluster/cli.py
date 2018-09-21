@@ -186,7 +186,7 @@ class Cli:
             else:
                 self.log_append('File ID PDB: {0:s} successfully downloaded!\n'.format(filename))
 
-    def chainsSelect(self, namespace: object) -> list:
+    def chainsSelect(self, namespace) -> list:
         """
 
         :param namespace:

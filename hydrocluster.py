@@ -4,6 +4,11 @@
 
 @author: lashkov
 """
+# TODO: Написать нормальную документацию.
+# TODO: Создать ГИП на PyQt.
+# TODO: Создать WEB-приложение.
+# TODO: Выложить WEB-приложение на хостинг и запустить его.
+
 
 import argparse
 import sys
@@ -53,10 +58,12 @@ if __name__ == '__main__':
     namespace = parser.parse_args()
     if namespace.gui == 'tkgui':
         from hydrocluster.tkgui import TkGui
+
         gui = TkGui(namespace)
         gui.mainloop()
     elif namespace.gui == 'cli':
         from hydrocluster.cli import Cli
+
         cli = Cli(namespace)
     elif namespace.gui == 'testlist':
         if sys.platform == 'win32':

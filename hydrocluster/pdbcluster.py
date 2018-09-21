@@ -109,7 +109,7 @@ def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, weight_array, eps: float, mi
             score = 0
     elif metric == 'dbcv':
         try:
-            score = DBCV(filterXYZ, filterLabel)
+            score = DBCV(filterXYZ, filterLabel)  ##TODO: Провести оценку с уже реализованными функциями.
         except ValueError:
             score = -1
     return labels, n_clusters, core_samples_mask, score
@@ -153,6 +153,12 @@ def calc_abs_charge(res_type: str, pH: float) -> dict:
 
 
 def lineaRegressor(X, Y):
+    """
+
+    :param X:
+    :param Y:
+    :return:
+    """
     modelLinear = LinearRegression()
     modelLinear.fit(X, Y)
     YfitLinear = modelLinear.predict(X)
@@ -170,15 +176,19 @@ def ransacRegressor(X, Y):
 def regr_cube(x: np.ndarray, y: np.ndarray, z: np.ndarray, z_correct):
     """
 
+    :param z_correct:
     :param x:
     :param y:
     :param z:
     :return:
     """
     A = 4 * np.pi / 3
-    # z[z_correct] = np.nan
+    z_uncorrect = ~z_correct
+    z[z_uncorrect] = np.nan
+    x = x[~np.all(z_uncorrect, axis=1)]
+    z = z[~np.all(z_uncorrect, axis=1), :]
     X = np.array((A * x ** 3), ndmin=2).T
-    k = z.argmax(axis=1)
+    k = np.nanargmax(z, axis=1)
     Y = np.array(y[k], ndmin=2).T
     return X, Y
 
@@ -412,7 +422,7 @@ class ClusterPdb:
         :return:
         """
         self.clean()
-        self.htable = htable
+        self.htable = htable  # TODO: Оценить возможжность добавления в весовой коэффициент исключающего объёма а.о
         xyz_array = []
         # www.pnas.org/cgi/doi/10.1073/pnas.1616138113 # 1.0 - -7.55 kj/mol A; residues with delta mu < 0
         nanodroplet = {'ALA': 1.269, 'VAL': 1.094, 'PRO': 1.0, 'LEU': 1.147, 'ILE': 1.289, 'PHE': 1.223, 'MET': 1.013,
@@ -443,7 +453,7 @@ class ClusterPdb:
             hydrfob = fuzzyoildrop
         elif htable == 'nanodroplet':
             hydrfob = nanodroplet
-        elif htable == 'hydropathy_h2o':
+        elif htable == 'hydropathy_h2o':  # TODO: Понять биологический смысл кластеризации по этой таблице
             hydrfob = hydropathy_h2o
         elif htable == 'positive' or htable == 'negative':
             hydrfob = calc_abs_charge(htable, pH)
@@ -552,6 +562,7 @@ class ClusterPdb:
         return fig, ax
 
     def colormap(self, grid_state: bool) -> object:
+        # TODO: Продолжить рефкторинг
         """
 
         :return:
@@ -590,7 +601,7 @@ class ClusterPdb:
         texLINEAR = 'Linear:\n' + r'$C_h\ =\ ' + '{:.4f}'.format(C) + r'\ \AA^{-3}$' + "\n" + r'$N_0\ =\ ' + \
                     '{:.1f}$'.format(B) + '\n' + r'$R^2\ =\ ' + '{:.4f}'.format(R2) + r'$'
         ax11.plot(V, Nfit, c='r', label=texLINEAR)
-        try:
+        try:  # TODO: Осторожно костыль!
             NRfit, CR, BR, SR = ransacRegressor(V, N)
 
             texRANSAC = 'RANSAC:\n' + r'$C_h\ =\ ' + '{:.4f}'.format(CR) + r'\ \AA^{-3}$' + "\n" + r'$N_0\ =\ ' + \
@@ -628,7 +639,7 @@ class ClusterPdb:
         for pid in psutil.pids():
             if psutil.Process(pid).name() == 'pymol':
                 cmd = psutil.Process(pid).cmdline()
-                if len(cmd) == 2 and cmd[1] == '-R':
+                if (len(cmd) == 2 and cmd[1] == '-R') or (len(cmd) == 3 and cmd[2] == '-R'):
                     break
         else:
             Popen(args=('pymol', '-R'))

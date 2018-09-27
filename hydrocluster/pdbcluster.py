@@ -21,10 +21,11 @@ from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import axes3d
 
 try:
-    from sklearn.cluster import DBSCAN
+    from sklearn.cluster import dbscan
+    from sklearn.linear_model import LinearRegression, RANSACRegressor
     from sklearn.metrics import silhouette_score, calinski_harabaz_score
     from sklearn.metrics.pairwise import euclidean_distances
-    from sklearn.linear_model import LinearRegression, RANSACRegressor
+    from sklearn.neighbors import NearestNeighbors
 except ImportError:
     raise ImportError
 
@@ -47,7 +48,7 @@ def filterXYZandRData(Label, XYZ, Dist):
     return filterLabel, filterXYZ, filterR
 
 
-def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, weight_array, eps: float, min_samples: int,
+def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, sparse_n, weight_array, eps: float, min_samples: int,
                   metric: str = 'calinski', noise_filter: bool = False) -> tuple:
     """
 
@@ -60,8 +61,8 @@ def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, weight_array, eps: float, mi
     :param metric:
     :param: noise_filter:
     """
-    db = DBSCAN(eps=eps, min_samples=min_samples, n_jobs=-1, metric='precomputed'
-                ).fit(pdist, sample_weight=weight_array)
+    core_sample_indices, labels = dbscan(sparse_n, sample_weight=weight_array,
+                                         eps=eps, min_samples=min_samples, n_jobs=-1, metric='precomputed')
     # The DBSCAN algorithm considers clusters as areas of high density separated by areas of low density.
     # Due to this rather generic view, clusters found by DBSCAN can be of any shape,
     # as opposed to k-means which assumes that clusters are convex shaped.
@@ -77,9 +78,8 @@ def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, weight_array, eps: float, mi
     # Ester, M., H. P. Kriegel, J. Sander, and X. Xu,
     # In Proceedings of the 2nd International Conference on Knowledge Discovery and Data Mining,
     # Portland, OR, AAAI Press, pp. 226–231. 1996
-    core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
-    core_samples_mask[db.core_sample_indices_] = True
-    labels = db.labels_
+    core_samples_mask = np.zeros_like(labels, dtype=bool)
+    core_samples_mask[core_sample_indices] = True
     n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
     if noise_filter:
         filterLabel, filterXYZ, filterR = filterXYZandRData(labels, X, pdist)
@@ -108,8 +108,12 @@ def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, weight_array, eps: float, mi
         except ValueError:
             score = 0
     elif metric == 'dbcv':
+        # from hdbscan import validity_index as DBCV # TODO: Поэкспериментировать - работает быстрее, но странно
+        # score = DBCV(filterR, filterLabel, d=3)
         try:
-            score = DBCV(filterXYZ, filterLabel)  ##TODO: Провести оценку с уже реализованными функциями.
+            score = DBCV(filterXYZ, filterLabel)  # TODO: Провести оценку с уже реализованными функциями.
+            if np.isnan(score):
+                raise ValueError
         except ValueError:
             score = -1
     return labels, n_clusters, core_samples_mask, score
@@ -182,6 +186,7 @@ def regr_cube(x: np.ndarray, y: np.ndarray, z: np.ndarray, z_correct):
     :param z:
     :return:
     """
+    z = np.copy(z)
     A = 4 * np.pi / 3
     z_uncorrect = ~z_correct
     z[z_uncorrect] = np.nan
@@ -192,6 +197,30 @@ def regr_cube(x: np.ndarray, y: np.ndarray, z: np.ndarray, z_correct):
     Y = np.array(y[k], ndmin=2).T
     return X, Y
 
+
+def regr_cube_alt(x: np.ndarray, y: np.ndarray, z: np.ndarray, z_correct):
+    # TODO: Придумать алгоритм выбора функций repr_cube или repr_cube_alt
+    """
+
+    :param z_correct:
+    :param x:
+    :param y:
+    :param z:
+    :return:
+    """
+    A = 4 * np.pi / 3
+    z_uncorrect = ~z_correct
+    z[z_uncorrect] = np.nan
+    Y = np.array(y[~np.all(z_uncorrect, axis=0)], ndmin=2).T
+    z = z[:, ~np.all(z_uncorrect, axis=0)]
+    print(z.shape, Y.shape)
+    X = np.array((A * x ** 3), ndmin=2).T
+    print(X.shape)
+    k = np.nanargmax(z, axis=0)
+    print(k.shape)
+    X = np.array(X[k], ndmin=2)
+    print(X.shape)
+    return X, Y
 
 def cmass(str_nparray: np.ndarray) -> list:
     """Calculate the position of the center of mass."""
@@ -214,6 +243,7 @@ class ClusterPdb:
         self.metrics_name = {'calinski': 'Calinski-Harabaz score', 'si_score': 'Silhouette score', 'dbcv': 'DBCV score'}
         self.X = None
         self.pdist = None
+        self.sparse_n = None
         self.labels = None
         self.noise_filter = False
         self.core_samples_mask = []
@@ -227,6 +257,7 @@ class ClusterPdb:
         self.weight_array = []
         self.aa_list = []
         self.states = []
+        self.figs = {'colormap': None, 'linear': None, 'ransac': None}
         self.clusterThreads = []
         self.queue = Queue()
 
@@ -236,18 +267,20 @@ class ClusterPdb:
         """
         self.X = None
         self.pdist = None
+        self.sparse_n = None
         self.labels = None
         self.htable = 'hydropathy'
         self.noise_filter = False
         self.parse_results = (0, 0.0, 0.0, 0.0)
         self.auto_params = (0.0, 0.0, 0.0, 0, 0, 'calinski')
-        self.core_samples_mask = []
+        self.core_samples_mask.clear()
         self.n_clusters = 0
         self.score = 0
         self.metric = 'calinski'
         self.weight_array.clear()
         self.aa_list.clear()
         self.states.clear()
+        self.figs = {'colormap': None, 'linear': None, 'ransac': None}
         self.clusterThreads.clear()
         self.queue = Queue()
 
@@ -262,7 +295,7 @@ class ClusterPdb:
             raise ValueError
         self.metric = metric
         self.labels, self.n_clusters, self.core_samples_mask, self.score = clusterDBSCAN(
-            self.X, self.pdist, self.weight_array, eps, min_samples, metric, self.noise_filter)
+            self.X, self.pdist, self.sparse_n, self.weight_array, eps, min_samples, metric, self.noise_filter)
 
     def clusterThread(self, subParams):
         """
@@ -271,7 +304,7 @@ class ClusterPdb:
         """
         for eps, min_samples in subParams:
             labels, n_clusters, core_samples_mask, score = clusterDBSCAN(
-                self.X, self.pdist, self.weight_array, eps, min_samples, self.metric, self.noise_filter)
+                self.X, self.pdist, self.sparse_n, self.weight_array, eps, min_samples, self.metric, self.noise_filter)
             clusterResults = labels, core_samples_mask, n_clusters, score, eps, min_samples
             self.queue.put(clusterResults)
         self.queue.put(None)
@@ -337,6 +370,30 @@ class ClusterPdb:
         self.core_samples_mask = state[1]
         self.n_clusters = state[2]
         self.score = state[3]
+        colormap_data = [(state[5], state[4], state[3], state[0]) for state in self.states]
+        colormap_data.sort(key=lambda i: i[0])
+        colormap_data.sort(key=lambda i: i[1])
+        x = np.array(sorted(list({data[0] for data in colormap_data})), ndmin=1)
+        y = np.array(sorted(list({data[1] for data in colormap_data})), ndmin=1)
+        z = np.array([data[2] for data in colormap_data])
+        z.shape = (y.size, x.size)
+        if self.metric == 'si_score' or self.metric == 'dbcv':
+            try:
+                z_min = min([x for x in z.flat if x > -1.0])
+            except ValueError:
+                z_min = -1.0
+        else:
+            z_min = 0
+        self.figs['colormap'] = (x, y, z, z_min)
+        z_correct = np.array([(True if (len(set(data[3]))) > 1 else False) for data in colormap_data], dtype=bool)
+        z_correct.shape = (y.size, x.size)
+        V, N, = regr_cube(y, x, z, z_correct)
+        Nfit, C, B, R2 = lineaRegressor(V, N)
+        self.figs['linear'] = (V, N, Nfit, C, B, R2)
+        try:
+            self.figs['ransac'] = ransacRegressor(V, N)
+        except ValueError:
+            self.figs['ransac'] = None
         return state[4], state[5]
 
     def noise_percent(self):
@@ -422,7 +479,7 @@ class ClusterPdb:
         :return:
         """
         self.clean()
-        self.htable = htable  # TODO: Оценить возможжность добавления в весовой коэффициент исключающего объёма а.о
+        self.htable = htable
         xyz_array = []
         # www.pnas.org/cgi/doi/10.1073/pnas.1616138113 # 1.0 - -7.55 kj/mol A; residues with delta mu < 0
         nanodroplet = {'ALA': 1.269, 'VAL': 1.094, 'PRO': 1.0, 'LEU': 1.147, 'ILE': 1.289, 'PHE': 1.223, 'MET': 1.013,
@@ -443,6 +500,9 @@ class ClusterPdb:
                         'TRP': 1.497, 'CYS': 1.748, 'THR': 0.538}
         # Kyte J, Doolittle RF. J Mol Biol. 1982 May 5;157(1):105-32. 1.0 - 1.8 residues with kdHydrophobicity > 0
         hydropathy = {'ALA': 1.0, 'VAL': 2.333, 'LEU': 2.111, 'ILE': 2.5, 'PHE': 1.556, 'MET': 1.056, 'CYS': 1.389}
+        # Ikai, A.J. (1980) Thermostability and aliphatic index of globular proteins. J. Biochem. 88, 1895-1898
+        aliphatic_core = {'ALA': 1.0, 'VAL': 2.9, 'LEU': 3.9, 'ILE': 3.9}
+        # Reversed hydropathy table
         hydropathy_h2o = {'GLY': 1.0, 'THR': 1.75, 'TRP': 2.25, 'SER': 2., 'TYR':
             3.25, 'PRO': 4., 'HIS': 8., 'GLU': 8.75, 'GLN': 8.75, 'ASP': 8.75, 'ASN': 8.75, 'LYS': 9.75, 'ARG': 11.25}
         if htable == 'hydropathy':
@@ -453,16 +513,12 @@ class ClusterPdb:
             hydrfob = fuzzyoildrop
         elif htable == 'nanodroplet':
             hydrfob = nanodroplet
+        elif htable == 'aliphatic_core':  # TODO: Понять биологический смысл кластеризации по этой таблице
+            hydrfob = aliphatic_core
         elif htable == 'hydropathy_h2o':  # TODO: Понять биологический смысл кластеризации по этой таблице
             hydrfob = hydropathy_h2o
         elif htable == 'positive' or htable == 'negative':
             hydrfob = calc_abs_charge(htable, pH)
-        # OLD CA-BASED PARSER
-        # for s in strarr:
-        #     if s[0:6] == 'ATOM  ' and (s[17:20] in hydrfob) and s[12:16] == ' CA ':
-        #         xyz = [float(s[30:38]), float(s[38:46]), float(s[46:54])]
-        #         xyz_array = np.hstack((xyz_array, xyz))
-        #         self.weight_array.append(hydrfob[s[17:20]])
         xyzm_array = []
         current_resn = None
         current_chainn = None
@@ -479,7 +535,7 @@ class ClusterPdb:
             ' D': 2.0}
         if selectChains is None:
             selectChains = self.preparser()
-        for s in (s for s in self.s_array if (s[21] in selectChains)):
+        for s in (s for s in self.s_array if (len(s) > 21 and s[21] in selectChains)):
             if s[0:6] == 'ATOM  ' and (s[17:20] in hydrfob) and ((current_resn is None or current_chainn is None) or (
                     current_resn == int(s[22:26]) and current_chainn == s[21])):
                 current_resn = int(s[22:26])
@@ -494,7 +550,7 @@ class ClusterPdb:
                     xyzm_array.shape = (-1, 4)
                 except AttributeError:
                     raise ValueError
-                xyz_array = np.hstack((xyz_array, cmass(xyzm_array)))
+                xyz_array = np.concatenate((xyz_array, cmass(xyzm_array)))
                 xyzm_array = []
                 current_resn = int(s[22:26])
                 current_chainn = s[21]
@@ -505,11 +561,13 @@ class ClusterPdb:
             xyz_array.shape = (-1, 3)
         except AttributeError:
             raise ValueError
-        self.X = xyz_array
-        self.pdist = euclidean_distances(self.X)
-        self.parse_results = len(self.aa_list), np.min(self.pdist[np.nonzero(
-            self.pdist)]), np.max(self.pdist[np.nonzero(self.pdist)]), np.mean(self.pdist[np.nonzero(self.pdist)])
-        return self.parse_results
+        pdist = euclidean_distances(xyz_array)
+        parse_results = len(self.aa_list), np.min(pdist[np.nonzero(
+            pdist)]), np.max(pdist[np.nonzero(pdist)]), np.mean(pdist[np.nonzero(pdist)])
+        sparse_n = NearestNeighbors(radius=parse_results[2], algorithm='brute').fit(xyz_array).radius_neighbors_graph(
+            xyz_array, mode='distance')
+        self.X, self.pdist, self.parse_results, self.sparse_n = xyz_array, pdist, parse_results, sparse_n
+        return parse_results
 
     def graph(self, grid_state: bool, legend_state: bool) -> tuple:
         """
@@ -569,20 +627,11 @@ class ClusterPdb:
         """
         if not self.states:
             raise ValueError
-        colormap_data = [(state[5], state[4], state[3], state[0]) for state in self.states]
-        colormap_data.sort(key=lambda i: i[0])
-        colormap_data.sort(key=lambda i: i[1])
-        x = np.array(sorted(list({data[0] for data in colormap_data})), ndmin=1)
-        y = np.array(sorted(list({data[1] for data in colormap_data})), ndmin=1)
-        z = np.array([data[2] for data in colormap_data])
-        z.shape = (y.size, x.size)
+        if self.figs is not None:
+            x, y, z, z_min = self.figs['colormap']
+        else:
+            raise ValueError
         fig = Figure(figsize=(12, 6))
-        z_min = 0
-        if self.metric == 'si_score' or self.metric == 'dbcv':
-            try:
-                z_min = min([x for x in z.flat if x > -1.0])
-            except ValueError:
-                z_min = -1.0
         ax1 = fig.add_subplot(121)
         ax1.set_title(self.metrics_name[self.metric])
         ax1.set_ylabel('EPS, \u212B')
@@ -590,25 +639,19 @@ class ClusterPdb:
         ax1.grid(grid_state)
         pc1 = ax1.pcolor(x, y, z, cmap='gnuplot', vmin=z_min)
         fig.colorbar(pc1, ax=ax1, extend='max', extendfrac=0.1)
+        V, N, Nfit, C, B, R2 = self.figs['linear']
         ax11 = fig.add_subplot(122)
         ax11.set_ylabel('MIN SAMPLES')
         ax11.set_xlabel(r'$V,\ \AA^3$')
-        z_correct = np.array([(True if (len(set(data[3]))) > 1 else False) for data in colormap_data], dtype=bool)
-        z_correct.shape = (y.size, x.size)
-        V, N, = regr_cube(y, x, z, z_correct)
-        Nfit, C, B, R2 = lineaRegressor(V, N)
         ax11.scatter(V, N, c='k')
         texLINEAR = 'Linear:\n' + r'$C_h\ =\ ' + '{:.4f}'.format(C) + r'\ \AA^{-3}$' + "\n" + r'$N_0\ =\ ' + \
                     '{:.1f}$'.format(B) + '\n' + r'$R^2\ =\ ' + '{:.4f}'.format(R2) + r'$'
         ax11.plot(V, Nfit, c='r', label=texLINEAR)
-        try:  # TODO: Осторожно костыль!
-            NRfit, CR, BR, SR = ransacRegressor(V, N)
-
+        if self.figs['ransac'] is not None:
+            NRfit, CR, BR, SR = self.figs['ransac']
             texRANSAC = 'RANSAC:\n' + r'$C_h\ =\ ' + '{:.4f}'.format(CR) + r'\ \AA^{-3}$' + "\n" + r'$N_0\ =\ ' + \
                         '{:.1f}$'.format(BR) + '\n' + r'$R^2\ =\ ' + '{:.4f}'.format(SR) + r'$'
             ax11.plot(V, NRfit, c='g', label=texRANSAC)
-        except ValueError:
-            pass
         ax11.legend(loc='best', fontsize=6)
         fig.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
         return fig
@@ -710,8 +753,9 @@ class ClusterPdb:
         glob_state = {
             'X': self.X,
             'pdist': self.pdist,
+            'sparse_n': self.sparse_n,
             'labels': self.labels,
-            'noise_filer': self.noise_filter,
+            'noise_filter': self.noise_filter,
             'core_samples_mask': self.core_samples_mask,
             'n_clusters': self.n_clusters,
             'score': self.score,
@@ -722,7 +766,8 @@ class ClusterPdb:
             'htable': self.htable,
             'parse_results': self.parse_results,
             'auto_params': self.auto_params,
-            'states': self.states}
+            'states': self.states,
+            'figs': self.figs}
         with gzip.open(file, 'wb') as f:
             pickle.dump(glob_state, f)
 
@@ -737,6 +782,7 @@ class ClusterPdb:
         self.X = global_state['X']
         self.pdist = global_state['pdist']
         self.labels = global_state['labels']
+        self.sparse_n = global_state['sparse_n']
         self.noise_filter = global_state['noise_filter']
         self.core_samples_mask = global_state['core_samples_mask']
         self.n_clusters = global_state['n_clusters']
@@ -749,3 +795,4 @@ class ClusterPdb:
         self.weight_array = global_state['weight_array']
         self.aa_list = global_state['aa_list']
         self.states = global_state['states']
+        self.figs = global_state['figs']

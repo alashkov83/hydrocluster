@@ -31,15 +31,15 @@ class Parser(argparse.ArgumentParser):
         self.add_argument('-emin', '--emin', type=float, default=3.0, help='Minimum EPS value (A)')
         self.add_argument('-emax', '--emax', type=float, default=15.0, help='Maximum EPS value (A)')
         self.add_argument('-es', '--estep', type=float, default=0.1, help='Step of EPS (A)')
-        self.add_argument('-smin', '--smin', type=int, default=2, help='Minimum MIN SAMPLES')
+        self.add_argument('-smin', '--smin', type=int, default=3, help='Minimum MIN SAMPLES')
         self.add_argument('-smax', '--smax', type=int, default=50, help='Minimum MIN SAMPLES')
         self.add_argument('-g', '--gui', choices=['tkgui', 'cli', 'testlist'], type=str, default='tkgui',
                           help='UI modes')
         self.add_argument('-o', '--output', type=str, default='', help='Output directory name')
         self.add_argument('-c', '--chains', type=str, default=None,
                           help='Selected chains (separator: "_", example: A_B)')
-        self.add_argument('-pt', '--ptable', choices=['hydropathy', 'menv', 'fuzzyoildrop',
-                                                      'nanodroplet', 'hydropathy_h2o', 'positive', 'negative'],
+        self.add_argument('-pt', '--ptable', choices=['hydropathy', 'menv', 'fuzzyoildrop', 'nanodroplet',
+                                                      'aliphatic_core', 'hydropathy_h2o', 'positive', 'negative'],
                           type=str, default='hydropathy', help='Property table for weighting')
         self.add_argument('-pH', '--pH', type=float, default=7.0,
                           help='pH value for calculatation of net charges (positive or negative) for --ptable ')
@@ -49,8 +49,8 @@ class Parser(argparse.ArgumentParser):
                           help='Activate filter of noise for scoring function (Not recommended!!!')
         self.add_argument('-na', '--noauto', action='store_const', const=True, default=False,
                           help='No automatic mode. --eps and --min_samples options required')
-        self.add_argument('-eps', '--eps', type=float, default=0, help='EPS value (A)')
-        self.add_argument('-min_samples', '--min_samples', type=int, default=0, help='MIN SAMPLES')
+        self.add_argument('-eps', '--eps', type=float, default=3.0, help='EPS value (A)')
+        self.add_argument('-min_samples', '--min_samples', type=int, default=3, help='MIN SAMPLES')
 
 
 if __name__ == '__main__':

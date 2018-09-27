@@ -36,7 +36,8 @@ class TkGui(tk.Tk):
         lab1.pack(expand=1, fill=tk.X, pady=5, padx=5)
         lab11 = tk.LabelFrame(lab1, text='Property table', labelanchor='n', borderwidth=5)
         lab11.grid(row=0, column=0, pady=5, padx=5)
-        listbox_items = ['hydropathy', 'menv', 'fuzzyoildrop', 'nanodroplet', 'hydropathy_h2o', 'positive', 'negative']
+        listbox_items = ['hydropathy', 'menv', 'fuzzyoildrop', 'nanodroplet',
+                         'aliphatic_core', 'hydropathy_h2o', 'positive', 'negative']
         self.combox_p = ttk.Combobox(lab11, height=5, width=15, values=listbox_items)
         self.combox_p.pack()
         self.combox_p.set('hydropathy')
@@ -79,10 +80,12 @@ class TkGui(tk.Tk):
         lab31 = tk.LabelFrame(lab3, text='EPS (\u212B)', labelanchor='n', borderwidth=5)
         lab31.grid(row=0, column=0, pady=5, padx=5)
         self.sca1 = tk.Scale(lab31, length=200, from_=1.0, to=15.0, showvalue=1, orient=tk.HORIZONTAL, resolution=0.1)
+        self.sca1.set(3.0)
         self.sca1.pack()
         lab32 = tk.LabelFrame(lab3, text='MIN_SAMPLES', labelanchor='n', borderwidth=5)
         lab32.grid(row=1, column=0, pady=5, padx=5)
         self.sca2 = tk.Scale(lab32, length=200, from_=1, to=50, showvalue=1, orient=tk.HORIZONTAL)
+        self.sca2.set(3)
         self.sca2.pack()
         but1 = tk.Button(lab3, text='Start', command=self.run)
         but1.grid(row=2, column=0, pady=5)
@@ -110,7 +113,7 @@ class TkGui(tk.Tk):
         l4.grid(row=3, column=0, pady=5, padx=5)
         self.ent_min_min_samples = tk.Entry(lab22, width=4, bd=3)
         self.ent_min_min_samples.delete(0, tk.END)
-        self.ent_min_min_samples.insert(0, '2')
+        self.ent_min_min_samples.insert(0, '3')
         self.ent_min_min_samples.grid(row=3, column=1, pady=5, padx=5)
         l5 = tk.Label(lab22, text="Max MIN_SAMPLES:", anchor=tk.NW)
         l5.grid(row=4, column=0, pady=5, padx=5)
@@ -212,7 +215,7 @@ class TkGui(tk.Tk):
         if askyesno('Quit', 'Are your sure?'):
             self.destroy()
 
-    def run(self, auto: bool = False) -> None:
+    def run(self, auto: bool = False, load_state: bool = False) -> None:
         """The main algorithm of the program."""
         if self.run_flag:
             showerror('Error!', 'The calculation is still running!')
@@ -276,6 +279,10 @@ class TkGui(tk.Tk):
                 self.pb['value'] = 0
                 self.pb.update()
                 showerror("Error", "Not correct value for Max MIN_SAMPLES")
+                return
+            if load_state:
+                self.graph()
+                self.run_flag = False
                 return
             if self.cls.states and self.cls.auto_params == (min_eps, max_eps,
                                                             step_eps,
@@ -499,6 +506,9 @@ class TkGui(tk.Tk):
                        "No. of residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
                        "Maximum distance = {:.3f} \u212B\nMean distance = {:.3f} \u212B\n\n".format(*parse_results))
         self.tx.configure(state='disabled')
+        self.sca1.set(parse_results[1])
+        self.ent_min_eps.delete(0, tk.END)
+        self.ent_min_eps.insert(0, '{:.1f}'.format(parse_results[1]))
 
     def clean_txt(self):
         """
@@ -544,12 +554,29 @@ class TkGui(tk.Tk):
             self.ent_min_min_samples.insert(0, '{:d}'.format(min_min_samples))
             self.ent_max_min_samples.delete(0, tk.END)
             self.ent_max_min_samples.insert(0, '{:d}'.format(max_min_samples))
+            _, _, _, _, eps, min_samples = self.cls.states[0]
+            self.clean_txt()
+            self.tx.configure(state='normal')
+            self.tx.insert(tk.END, 'PTable: {:s}\n'.format(htable) +
+                           "No. of residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
+                           "Maximum distance = {:.3f} \u212B\n"
+                           "Mean distance = {:.3f} \u212B\n\n".format(nor, mind, maxd, meand))
+            self.tx.insert(tk.END, ('Autoscan range EPS: {0:.2f} - {1:.2f} \u212B,'
+                                    'step EPS = {2:.2f} \u212B, min_samples: {3:d} - {4:d}...\n').format(
+                min_eps, max_eps, step_eps, min_min_samples, max_min_samples))
+            self.tx.insert(tk.END, ('Number of clusters = {0:d}\n{1:s} = {4:.3f}\nEPS = {2:.1f} \u212B\n'
+                                    'MIN_SAMPLES = {3:d}\nPercent of noise = {5:.2f} %\n{6:s}\n').format(
+                self.cls.n_clusters, self.cls.metrics_name[self.cls.metric], eps, min_samples, self.cls.score,
+                self.cls.noise_percent(), (' !!WARNING!!!' if self.cls.noise_percent() > 30 else '')))
+            self.tx.configure(state='disabled')
+            self.sca1.set(eps)
+            self.sca2.set(min_samples)
             if self.cls.noise_filter:
                 self.nfCheckBox.select()
             else:
                 self.nfCheckBox.deselect()
             self.combox.set(metric)
-            self.run(auto=True)
+            self.run(auto=True, load_state=True)
 
     def save_state(self):
         """

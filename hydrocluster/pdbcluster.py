@@ -6,6 +6,7 @@ import gzip
 import io
 import pickle
 import random
+import re
 import time
 import warnings
 from collections import OrderedDict
@@ -52,6 +53,7 @@ def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, sparse_n, weight_array, eps:
                   metric: str = 'calinski', noise_filter: bool = False) -> tuple:
     """
 
+    :param sparse_n:
     :param noise_filter:
     :param X:
     :param pdist:
@@ -170,6 +172,12 @@ def lineaRegressor(X, Y):
 
 
 def ransacRegressor(X, Y):
+    """
+
+    :param X:
+    :param Y:
+    :return:
+    """
     modelRAMSAC = RANSACRegressor()
     modelRAMSAC.fit(X, Y)
     YfitRANSAC = modelRAMSAC.predict(X)
@@ -222,6 +230,7 @@ def regr_cube_alt(x: np.ndarray, y: np.ndarray, z: np.ndarray, z_correct):
     print(X.shape)
     return X, Y
 
+
 def cmass(str_nparray: np.ndarray) -> list:
     """Calculate the position of the center of mass."""
     mass_sum = float(str_nparray[:, 3].sum())
@@ -273,7 +282,7 @@ class ClusterPdb:
         self.noise_filter = False
         self.parse_results = (0, 0.0, 0.0, 0.0)
         self.auto_params = (0.0, 0.0, 0.0, 0, 0, 'calinski')
-        self.core_samples_mask.clear()
+        self.core_samples_mask = []
         self.n_clusters = 0
         self.score = 0
         self.metric = 'calinski'
@@ -396,6 +405,16 @@ class ClusterPdb:
             self.figs['ransac'] = None
         return state[4], state[5]
 
+    def get_conc(self):
+        if self.figs is None:
+            return 0.0, 0.0, 0.0, 0.0
+        cl, r2l = self.figs['linear'][3], self.figs['linear'][5]
+        if self.figs['ransac'] is None:
+            cr, r2r = 0.0, 0.0
+        else:
+            cr, r2r = self.figs['ransac'][1], self.figs['ransac'][3]
+        return cl, cr, r2l, r2r
+
     def noise_percent(self):
         """
 
@@ -471,7 +490,7 @@ class ClusterPdb:
     def preparser(self) -> list:
         return list(sorted(set((s[21] for s in self.s_array if s[0:6] == 'ATOM  '))))
 
-    def parser(self, selectChains: list = None, htable: str = 'hydropathy', pH: float = 7.0) -> tuple:
+    def parser(self, selectChains: list = None, htable: str = 'hydropathy', pH: float = 7.0, res: str = '') -> tuple:
         """
         :param selectChains:
         :param htable:
@@ -503,8 +522,8 @@ class ClusterPdb:
         # Ikai, A.J. (1980) Thermostability and aliphatic index of globular proteins. J. Biochem. 88, 1895-1898
         aliphatic_core = {'ALA': 1.0, 'VAL': 2.9, 'LEU': 3.9, 'ILE': 3.9}
         # Reversed hydropathy table
-        hydropathy_h2o = {'GLY': 1.0, 'THR': 1.75, 'TRP': 2.25, 'SER': 2., 'TYR':
-            3.25, 'PRO': 4., 'HIS': 8., 'GLU': 8.75, 'GLN': 8.75, 'ASP': 8.75, 'ASN': 8.75, 'LYS': 9.75, 'ARG': 11.25}
+        hydropathy_h2o = {'GLY': 1.0, 'THR': 1.75, 'TRP': 2.25, 'SER': 2., 'TYR': 3.25, 'PRO': 4., 'HIS': 8.,
+                          'GLU': 8.75, 'GLN': 8.75, 'ASP': 8.75, 'ASN': 8.75, 'LYS': 9.75, 'ARG': 11.25}
         if htable == 'hydropathy':
             hydrfob = hydropathy
         elif htable == 'menv':
@@ -535,7 +554,13 @@ class ClusterPdb:
             ' D': 2.0}
         if selectChains is None:
             selectChains = self.preparser()
-        for s in (s for s in self.s_array if (len(s) > 21 and s[21] in selectChains)):
+        if res:
+            list_res = list(map(lambda x: (re.findall(r'[A-Z]', x)[0], int(re.findall(r'\d{1,4}', x)[0])),
+                                re.findall(r'[A-Z]\d{1,4}', res.strip().upper())))
+            s_array = [s for s in self.s_array if (s[0:6] == 'ATOM  ' and (s[21], int(s[22:26])) in list_res)]
+        else:
+            s_array = self.s_array
+        for s in (s for s in s_array if (len(s) > 21 and s[21] in selectChains)):
             if s[0:6] == 'ATOM  ' and (s[17:20] in hydrfob) and ((current_resn is None or current_chainn is None) or (
                     current_resn == int(s[22:26]) and current_chainn == s[21])):
                 current_resn = int(s[22:26])
@@ -564,8 +589,8 @@ class ClusterPdb:
         pdist = euclidean_distances(xyz_array)
         parse_results = len(self.aa_list), np.min(pdist[np.nonzero(
             pdist)]), np.max(pdist[np.nonzero(pdist)]), np.mean(pdist[np.nonzero(pdist)])
-        sparse_n = NearestNeighbors(radius=parse_results[2], algorithm='brute').fit(xyz_array).radius_neighbors_graph(
-            xyz_array, mode='distance')
+        sparse_n = NearestNeighbors(radius=parse_results[2], algorithm='brute', n_jobs=-1,
+                                    ).fit(xyz_array).radius_neighbors_graph(xyz_array, mode='distance')
         self.X, self.pdist, self.parse_results, self.sparse_n = xyz_array, pdist, parse_results, sparse_n
         return parse_results
 
@@ -620,7 +645,6 @@ class ClusterPdb:
         return fig, ax
 
     def colormap(self, grid_state: bool) -> object:
-        # TODO: Продолжить рефкторинг
         """
 
         :return:

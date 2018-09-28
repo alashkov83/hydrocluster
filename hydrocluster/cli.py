@@ -3,6 +3,7 @@
 """Created by lashkov on 04.05.18"""
 
 import os
+import re
 import shutil
 import sys
 from urllib.error import HTTPError
@@ -47,7 +48,7 @@ class Cli:
         self.log_name = os.path.join(newdir, '{:s}'.format(basefile + '.log'))
         self.cls = ClusterPdb()
         self.open_file(namespace.input)
-        self.parse_pdb(namespace.ptable, namespace.pH, self.chainsSelect(namespace))
+        self.parse_pdb(namespace.ptable, namespace.pH, self.chainsSelect(namespace), namespace.reslist)
         self.cls.noise_filter = namespace.noise_filter
         if namespace.noauto:
             self.noauto(namespace.eps, namespace.min_samples, self.namespace.score)
@@ -195,7 +196,7 @@ class Cli:
         if namespace.chains is None:
             self.log_append("All chains selected!\n")
             return None
-        selectChains = namespace.chains.strip().upper().split('_')
+        selectChains = re.findall(r'[A-Z]', namespace.chains.strip().upper())
         allChains = self.cls.preparser()
         if set(selectChains).issubset(allChains):
             self.log_append("Selected chains: {:s}\n".format(', '.join(selectChains)))
@@ -206,9 +207,10 @@ class Cli:
                     ', '.join(set(selectChains).difference(set(allChains))), ','.join(allChains)))
             sys.exit(-1)
 
-    def parse_pdb(self, htable: str, pH: float, chains: list = None):
+    def parse_pdb(self, htable: str, pH: float, chains: list = None, res=''):
         """
 
+        :param res:
         :param htable:
         :param pH:
         :param chains:
@@ -219,7 +221,7 @@ class Cli:
                 print("pH value range is 0-14")
                 sys.exit(-1)
         try:
-            parse_results = self.cls.parser(htable=htable, pH=pH, selectChains=chains)
+            parse_results = self.cls.parser(htable=htable, pH=pH, selectChains=chains, res=res)
         except ValueError:
             self.log_append('Error! Invalid file format\nor file does not contain {:s} residues\n'.format(
                 'hydrophobic' if htable in ('hydropathy', 'nanodroplet', 'menv', 'fuzzyoildrop')

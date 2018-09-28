@@ -36,8 +36,8 @@ class Parser(argparse.ArgumentParser):
         self.add_argument('-g', '--gui', choices=['tkgui', 'cli', 'testlist'], type=str, default='tkgui',
                           help='UI modes')
         self.add_argument('-o', '--output', type=str, default='', help='Output directory name')
-        self.add_argument('-c', '--chains', type=str, default=None,
-                          help='Selected chains (separator: "_", example: A_B)')
+        self.add_argument('-c', '--chains', type=str, default=None, help='Selected chains')
+        self.add_argument('-rl', '--reslist', type=str, default=None, help='Selected amino acid residues')
         self.add_argument('-pt', '--ptable', choices=['hydropathy', 'menv', 'fuzzyoildrop', 'nanodroplet',
                                                       'aliphatic_core', 'hydropathy_h2o', 'positive', 'negative'],
                           type=str, default='hydropathy', help='Property table for weighting')

@@ -22,7 +22,7 @@ except ImportError:
 
 warnings.filterwarnings("ignore")
 pH = 7.0
-htables = ['hydropathy', 'nanodroplet', 'menv', 'fuzzyoildrop', 'positive', 'negative']
+htables = ['hydropathy', 'nanodroplet', 'menv', 'fuzzyoildrop', 'aliphatic_core', 'positive', 'negative']
 metrics = ['si_score', 'calinski']
 
 
@@ -64,6 +64,10 @@ EPS REAL NOT NULL,
 MIN_SAMPLES INTEGER NOT NULL,
 N_CLUSTERS INTEGER NOT NULL,
 P_NOISE REAL NOT NULL,
+CL REAL NOT NULL,
+CR REAL NOT NULL,
+R2L REAL NOT NULL,
+R2R REAL NOT NULL, 
 FOREIGN KEY(IDPDB) REFERENCES Structures(IDPDB))""")
         except sqlite3.DatabaseError as err:
             print("Error: ", err)
@@ -74,7 +78,7 @@ FOREIGN KEY(IDPDB) REFERENCES Structures(IDPDB))""")
     return cursor, conn
 
 
-def download(filelist, q, lock, cursor, conn, dir):
+def download(filelist, q, lock, cursor, conn, dir_nane):
     """
 
     :param filelist:
@@ -84,14 +88,18 @@ def download(filelist, q, lock, cursor, conn, dir):
     :param conn:
     :param dir:
     """
+    with open('status_tmp.txt', 'w') as f:
+        f.write('')
     for file in filelist:
+        if file in open('status_tmp.txt').readlines():
+            continue
         pdbl = PDBList()
-        pdbl.retrieve_pdb_file(file, pdir=os.path.join(dir, file), file_format='pdb')
-        if not os.path.exists(os.path.join(dir, file, 'pdb{:s}.ent'.format(file))):
+        pdbl.retrieve_pdb_file(file, pdir=os.path.join(dir_nane, file), file_format='pdb')
+        if not os.path.exists(os.path.join(dir_nane, file, 'pdb{:s}.ent'.format(file))):
             print("File with ID PDB: {:s} not found!".format(file))
             continue
         parser = PDBParser()
-        structure = parser.get_structure('{:s}', os.path.join(dir, file, 'pdb{:s}.ent'.format(file)))
+        structure = parser.get_structure('{:s}', os.path.join(dir_nane, file, 'pdb{:s}.ent'.format(file)))
         name = parser.header.get('name', '')
         head = parser.header.get('head', '')
         method = parser.header.get('structure_method', '')
@@ -126,10 +134,13 @@ NRES, MMASS, EC) VALUES ("{:s}", "{:s}", "{:s}", "{:s}", {:.2f}, {:d}, {:d},{:d}
             q.put(file)
         finally:
             lock.release()
+            with open('status_tmp.txt', 'at') as f:
+                f.write((file + '\n'))
+    os.remove('status_tmp.txt')
     q.put(None)
 
 
-def graph(cls, dir, basefile):
+def graph(cls, dir_name, basefile):
     """
 
     :param dir:
@@ -138,7 +149,7 @@ def graph(cls, dir, basefile):
     :return:
     """
     grid, legend = True, True
-    sa = os.path.join(dir, '{:s}'.format(basefile + '.png'))
+    sa = os.path.join(dir_name, '{:s}'.format(basefile + '.png'))
     try:
         fig, ax = cls.graph(grid, legend)
         canvas = FigureCanvasAgg(fig)
@@ -195,9 +206,10 @@ def save_pymol(cls, newdir: str, basefile: str):
 
 
 def db_save(con, curr, lock, file, htable, ntres, mind, maxd,
-            meand, metric, score, eps, min_samples, n_clusters, p_noise):
+            meand, metric, score, eps, min_samples, n_clusters, p_noise, cl, cr, r2l, r2r):
     """
 
+    :param cl:
     :param p_noise:
     :param con:
     :param curr:
@@ -218,8 +230,10 @@ def db_save(con, curr, lock, file, htable, ntres, mind, maxd,
     lock.acquire()
     try:
         curr.execute("""INSERT INTO Results (IDPDB, HTABLE, NTRES, MIND, MAXD, MEAND, SCORING_FUNCTION, SCORE_MAX, EPS,
-MIN_SAMPLES, N_CLUSTERS, P_NOISE) VALUES ("{:s}", "{:s}", {:d}, {:.2f}, {:.2f}, {:.2f}, "{:s}", {:.3f}, {:.2f}, {:d}, {:d}, {:.2f})""".format(
-            file, htable, ntres, mind, maxd, meand, metric, score, eps, min_samples, n_clusters, p_noise))
+MIN_SAMPLES, N_CLUSTERS, P_NOISE, CL, CR, R2L, R2R) VALUES ("{:s}", "{:s}", {:d}, {:.2f}, {:.2f}, {:.2f}, "{:s}", {:.3f}, {:.2f}, {:d}, {:d}, {:.2f}, {:.4f},{:.4f},{:.2f},{:.2f})""".format(
+            file, htable, ntres, mind, maxd, meand,
+            metric, score, eps, min_samples, n_clusters, p_noise,
+            cl, cr, r2l, r2r))
     except sqlite3.DatabaseError as err:
         print("Error: ", err)
         return
@@ -229,7 +243,7 @@ MIN_SAMPLES, N_CLUSTERS, P_NOISE) VALUES ("{:s}", "{:s}", {:d}, {:.2f}, {:.2f}, 
         lock.release()
 
 
-def clusterThread(file, dir, cursor, conn, lock, min_eps, max_eps, step_eps,
+def clusterThread(file, dir_name, cursor, conn, lock, min_eps, max_eps, step_eps,
                   min_min_samples, max_min_samples, n_jobs=1):
     """
 
@@ -247,7 +261,7 @@ def clusterThread(file, dir, cursor, conn, lock, min_eps, max_eps, step_eps,
     :return:
     """
     cls = ClusterPdb()
-    cls.open_pdb(os.path.join(dir, file, 'pdb{:s}.ent'.format(file)))
+    cls.open_pdb(os.path.join(dir_name, file, 'pdb{:s}.ent'.format(file)))
     for htable in htables:
         try:
             ntres, mind, maxd, meand = cls.parser(htable=htable, pH=pH)
@@ -256,7 +270,7 @@ def clusterThread(file, dir, cursor, conn, lock, min_eps, max_eps, step_eps,
                 'hydrophobic' if htable in ('hydropathy', 'nanodroplet')
                 else 'negative' if htable == 'negative' else 'positive'))
             return
-        dir_ptable = os.path.join(dir, file, htable)
+        dir_ptable = os.path.join(dir_name, file, htable)
         try:
             os.makedirs(dir_ptable, exist_ok=True)
         except OSError:
@@ -273,9 +287,10 @@ def clusterThread(file, dir, cursor, conn, lock, min_eps, max_eps, step_eps,
                 print('Error! Could not parse file or clustering failed\n')
                 continue
             else:
+                cl, cr, r2l, r2r = cls.get_conc()
                 print("Job completed for ID_PDB: {:s}, ptable: {:s}, metric: {:s}".format(file, htable, metric))
                 db_save(conn, cursor, lock, file, htable, ntres, mind, maxd, meand, metric,
-                        cls.score, eps, min_samples, cls.n_clusters, cls.noise_percent())
+                        cls.score, eps, min_samples, cls.n_clusters, cls.noise_percent(), cl, cr, r2l, r2r)
                 dir_metric = os.path.join(dir_ptable, metric)
                 try:
                     os.makedirs(dir_metric, exist_ok=True)
@@ -286,7 +301,7 @@ def clusterThread(file, dir, cursor, conn, lock, min_eps, max_eps, step_eps,
                 graph(cls, dir_metric, file)
                 try:
                     colormap(cls, dir_metric, file)
-                    save_state(cls, dir_metric, file)
+                    # save_state(cls, dir_metric, file) # Занимает много места на жд
                 except ValueError as err:
                     print(err)
 

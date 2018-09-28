@@ -445,40 +445,76 @@ class TkGui(tk.Tk):
         if self.run_flag:
             showerror('Error!', 'The calculation is still running!')
             return
-        self.win_choise = tk.Toplevel(self)
-        self.win_choise.title("Choice chains")
-        fra1 = ttk.Frame(self.win_choise)
+        win = tk.Toplevel(self)
+        x = (self.winfo_screenwidth() - self.winfo_reqwidth()) // 2
+        y = (self.winfo_screenheight() - self.winfo_reqheight()) // 2
+        win.wm_geometry("+{:d}+{:d}".format(x, y))
+        win.title("Choice chains")
+        fra1 = tk.Frame(win)
         fra1.grid(row=0, column=0)
         checkVars = []
         for chain in self.cls.preparser():
             checkVar = tk.StringVar()
-            self.CheckBox = tk.Checkbutton(fra1, text="Chain {:s}".format(chain), variable=checkVar, onvalue=chain,
-                                           offvalue='', anchor=tk.NW)
-            self.CheckBox.select()
-            self.CheckBox.pack(expand=1, fill=tk.X, pady=5, padx=5)
+            CheckBox = tk.Checkbutton(fra1, text="Chain {:s}".format(chain), variable=checkVar, onvalue=chain,
+                                      offvalue='', anchor=tk.NW)
+            CheckBox.select()
+            CheckBox.pack(expand=1, fill=tk.X, pady=5, padx=5)
             checkVars.append(checkVar)
-        fra2 = ttk.Frame(self.win_choise)
+        fra2 = tk.Frame(win)
         fra2.grid(row=1, column=0)
-        butChoice = tk.Button(fra2, text='Choice', command=lambda: self.parse_pdb_main(
-            [ch for ch in (ch.get() for ch in checkVars) if ch]))
+        butChoice = tk.Button(fra2, text='Choice', command=lambda: (self.parse_pdb_main(
+            [ch for ch in (ch.get() for ch in checkVars) if ch], win)))
         butChoice.grid(row=0, column=0, pady=5)
-        butAll = tk.Button(fra2, text='All', command=self.parse_pdb_main)
+        butAll = tk.Button(fra2, text='All', command=lambda: self.parse_pdb_main(win=win))
         butAll.grid(row=0, column=1, pady=5)
+        butRes = tk.Button(fra2, text='Select residues', command=lambda: self.choise_residues(win=win))
+        butRes.grid(row=1, column=0, columnspan=2, pady=5)
 
-    def parse_pdb_main(self, chains=None):
+    def choise_residues(self, win=None):
         """
 
+        :param win:
+        """
+        if win:
+            win.destroy()
+        win = tk.Toplevel(self)
+        x = (self.winfo_screenwidth() - self.winfo_reqwidth()) // 2
+        y = (self.winfo_screenheight() - self.winfo_reqheight()) // 2
+        win.wm_geometry("+{:d}+{:d}".format(x, y))
+        win.title("Choice residues")
+        fra1 = tk.Frame(win)
+        fra1.grid(row=0, column=0)
+        tx = tk.Text(fra1, width=30, height=8, wrap=tk.WORD)
+        scr = tk.Scrollbar(fra1, command=self.tx.yview)
+        tx.configure(yscrollcommand=scr.set)
+        tx.pack(side=tk.LEFT)
+        scr.pack(side=tk.RIGHT, fill=tk.Y)
+        tx.bind('<Enter>', lambda e: self._bound_to_mousewheel(e, tx))
+        tx.bind('<Leave>', self._unbound_to_mousewheel)
+        fra2 = tk.Frame(win)
+        fra2.grid(row=1, column=0)
+        butChoice = tk.Button(fra2, text='Choice',
+                              command=lambda x=tx: self.parse_pdb_main(residues=x.get('1.0', tk.END), win=win))
+        butChoice.grid(row=0, column=0, pady=5)
+        butCancel = tk.Button(fra2, text='Cancel', command=lambda: self.parse_pdb_main(win=win))
+        butCancel.grid(row=0, column=1, pady=5)
+
+    def parse_pdb_main(self, chains=None, win=None, residues=None):
+        """
+
+        :param win:
         :param chains:
         :return:
         """
-        self.win_choise.destroy()
+        if win:
+            win.destroy()
         htable = self.combox_p.get()
         try:
             if htable == 'positive' or htable == 'negative':
                 pH = askfloat('Your pH', 'pH value:', initialvalue=7.0, minvalue=0.0, maxvalue=14.0)
-                parse_results = self.cls.parser(htable=htable, pH=pH, selectChains=chains)
+                parse_results = self.cls.parser(htable=htable, pH=pH, selectChains=chains, res=residues)
             else:
-                parse_results = self.cls.parser(htable=htable, selectChains=chains)
+                parse_results = self.cls.parser(htable=htable, selectChains=chains, res=residues)
         except ValueError:
             showerror('Error!', 'Invalid file format\nor file does not {:s} contain residues\n'.format(
                 'hydrophobic' if htable in ('hydropathy', 'menv', 'nanodroplet', 'fuzzyoildrop')

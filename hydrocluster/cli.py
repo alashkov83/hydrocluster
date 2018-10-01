@@ -6,6 +6,7 @@ import os
 import re
 import shutil
 import sys
+import time
 from urllib.error import HTTPError
 
 from matplotlib.backends.backend_agg import FigureCanvasAgg
@@ -34,6 +35,7 @@ class Log:
     
         :param line:
         """
+        line = time.asctime() + ': ' + line
         print(line, end='')
         with open(self.log_name, 'at', encoding='utf-8') as f:
             f.write(line)

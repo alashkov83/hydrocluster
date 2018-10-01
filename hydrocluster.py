@@ -62,9 +62,9 @@ if __name__ == '__main__':
         gui = TkGui(namespace)
         gui.mainloop()
     elif namespace.gui == 'cli':
-        from hydrocluster.cli import Cli
+        from hydrocluster.cli import cli
 
-        cli = Cli(namespace)
+        cli(namespace)
     elif namespace.gui == 'testlist':
         if sys.platform == 'win32':
             from hydrocluster.testlist_win import main

@@ -140,10 +140,10 @@ NRES, MMASS, EC) VALUES ("{:s}", "{:s}", "{:s}", "{:s}", {:.2f}, {:d}, {:d},{:d}
     q.put(None)
 
 
-def graph(cls, dir_name, basefile):
+def graph(cls: ClusterPdb, dir_name: str, basefile):
     """
 
-    :param dir:
+    :param dir_name:
     :param cls:
     :param basefile:
     :return:

@@ -502,6 +502,7 @@ class TkGui(tk.Tk):
     def parse_pdb_main(self, chains=None, win=None, residues=None):
         """
 
+        :param residues:
         :param win:
         :param chains:
         :return:

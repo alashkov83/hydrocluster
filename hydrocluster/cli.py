@@ -71,7 +71,7 @@ def run(cls: ClusterPdb, log: Log, namespace) -> None:
     else:
         log.append('Autoscan done... \n')
         bar1.finish()
-        log.append(('Number of clusters = {0:d}\n{4:s} = {1:.3f}\n'
+        log.append(('\nNumber of clusters = {0:d}\n{4:s} = {1:.3f}\n'
                     'EPS = {2:.3f} \u212B\nMIN_SAMPLES = {3:d}\n'
                     'Percent of noise = {5:.2f} %{6:s}\n').format(
             cls.n_clusters, cls.score, eps, min_samples,
@@ -97,7 +97,7 @@ def noauto(cls: ClusterPdb, log: Log, eps: float, min_samples: int, metric: str)
         log.append('Error! Could not parse file or clustering failed\n')
         sys.exit(-1)
     else:
-        log.append(('Number of clusters = {0:d}\n{4:s} = {1:.3f}\n'
+        log.append(('\nNumber of clusters = {0:d}\n{4:s} = {1:.3f}\n'
                     'EPS = {2:.3f} \u212B\nMIN_SAMPLES = {3:d}\n'
                     'Percent of noise = {5:.2f} %{6:s}\n').format(cls.n_clusters, cls.score, eps, min_samples,
                                                                   cls.metrics_name[cls.metric], cls.noise_percent(),
@@ -208,11 +208,11 @@ def parse_pdb(cls: ClusterPdb, log: Log, htable: str, pH: float, chains: list = 
     try:
         parse_results = cls.parser(htable=htable, pH=pH, selectChains=chains, res=res)
     except ValueError:
-        log.append('Error! Invalid file format\nor file does not contain {:s} residues\n'.format(
+        log.append('\nError! Invalid file format\nor file does not contain {:s} residues\n'.format(
             'hydrophobic' if htable in ('hydropathy', 'nanodroplet', 'menv', 'fuzzyoildrop')
             else 'negative' if htable == 'negative' else 'positive'))
     else:
-        log.append("No. of residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
+        log.append("\nNo. of residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
                    "Maximum distance = {:.3f} \u212B\nMean distance = {:.3f} \u212B\n".format(*parse_results))
 
 
@@ -301,8 +301,7 @@ def cli(namespace) -> None:
     except OSError:
         print('Unable to create folder ' + newdir)
         sys.exit(-1)
-    log_name = os.path.join(newdir, '{:s}'.format(basefile + '.log'))
-    log = Log(log_name)
+    log = Log(os.path.join(newdir, '{:s}'.format(basefile + '.log')))
     cls = ClusterPdb()
     open_file(cls, log, namespace.input)
     parse_pdb(cls, log, namespace.ptable, namespace.pH, chainsSelect(cls, log, namespace), namespace.reslist)

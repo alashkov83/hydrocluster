@@ -13,7 +13,7 @@ from urllib.error import HTTPError
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 try:
-    from core.pdbcluster import ClusterPdb
+    from ..core.pdbcluster import ClusterPdb
 except ImportError:
     showerror('Error!', 'Scikit-learn not installed!')
     sys.exit()

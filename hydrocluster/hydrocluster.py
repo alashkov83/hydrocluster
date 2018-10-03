@@ -55,21 +55,25 @@ class Parser(argparse.ArgumentParser):
         self.add_argument('-min_samples', '--min_samples', type=int, default=3, help='MIN SAMPLES')
 
 
-if __name__ == '__main__':
+def main():
     parser = Parser()
     namespace = parser.parse_args()
     if namespace.gui == 'tkgui':
-        from ui.tkgui import TkGui
+        from .ui.tkgui import TkGui
 
         gui = TkGui()
         gui.mainloop()
     elif namespace.gui == 'cli':
-        from ui.cli import cli
+        from .ui.cli import cli
 
         cli(namespace)
     elif namespace.gui == 'testlist':
         if sys.platform == 'win32':
-            from dbcreator.testlist_win import main
+            from .dbcreator.testlist_win import main
         else:
-            from dbcreator.testlist import main
+            from .dbcreator.testlist import main
         main(namespace)
+
+
+if __name__ == '__main__':
+    main()

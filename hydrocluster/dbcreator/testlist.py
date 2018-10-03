@@ -15,7 +15,7 @@ from Bio.SeqUtils.ProtParam import ProteinAnalysis
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 
 try:
-    from ..core.pdbcluster import ClusterPdb
+    from core.pdbcluster import ClusterPdb
 except ImportError:
     print('Error! Scikit-learn not installed!')
     sys.exit()

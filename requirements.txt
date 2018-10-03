@@ -1,5 +1,4 @@
 scipy
-progressbar
 python-utils
 psutil
 progressbar2

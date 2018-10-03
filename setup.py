@@ -1,11 +1,11 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # coding=utf-8
-from setuptools import setup, find_packages
+from setuptools import setup
 
 setup(
-    name='hydrocluster',
+    name='Hydrocluster',
     version='1.0',
-    packages=find_packages(exclude=['Publication', "PDB_LISTS", 'PDB_TESTS']),
+    packages=['hydrocluster', 'hydrocluster.ui', 'hydrocluster.core', 'hydrocluster.dbcreator'],
     url='https://github.com/alashkov83/hydrocluster',
     license='GPL v.3',
     author='Aleksandr Lashkov',

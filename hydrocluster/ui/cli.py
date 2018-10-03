@@ -12,14 +12,11 @@ from urllib.error import HTTPError
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 
 try:
-    from ..core.pdbcluster import ClusterPdb
+    from core.pdbcluster import ClusterPdb
 except ImportError:
     print('Error! Scikit-learn not installed!')
     sys.exit()
-try:
-    import progressbar2 as progressbar
-except ImportError:
-    import progressbar
+import progressbar as progressbar
 
 
 class Log:
@@ -30,12 +27,13 @@ class Log:
     def __init__(self, log_name):
         self.log_name = log_name
 
-    def append(self, line: str):
+    def append(self, line: str, ascitime=False):
         """
     
         :param line:
         """
-        line = time.asctime() + ': ' + line
+        if ascitime:
+            line = time.asctime() + ': ' + line
         print(line, end='')
         with open(self.log_name, 'at', encoding='utf-8') as f:
             f.write(line)
@@ -209,7 +207,7 @@ def parse_pdb(cls: ClusterPdb, log: Log, htable: str, pH: float, chains: list = 
             'hydrophobic' if htable in ('hydropathy', 'nanodroplet', 'menv', 'fuzzyoildrop')
             else 'negative' if htable == 'negative' else 'positive'))
     else:
-        log.append("\nNo. of residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
+        log.append("No. of residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
                    "Maximum distance = {:.3f} \u212B\nMean distance = {:.3f} \u212B\n".format(*parse_results))
 
 

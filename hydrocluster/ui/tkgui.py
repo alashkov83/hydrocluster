@@ -10,10 +10,10 @@ from tkinter.messagebox import askyesno, showerror, showinfo, showwarning
 from tkinter.simpledialog import askstring, askfloat
 from urllib.error import HTTPError
 
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 try:
-    from .pdbcluster import ClusterPdb
+    from ..core.pdbcluster import ClusterPdb
 except ImportError:
     showerror('Error!', 'Scikit-learn not installed!')
     sys.exit()
@@ -24,7 +24,7 @@ class TkGui(tk.Tk):
 
     """
 
-    def __init__(self, namespace) -> None:
+    def __init__(self) -> None:
         super().__init__()
         self.title('HydroCluster')
         self.resizable(False, False)
@@ -145,10 +145,9 @@ class TkGui(tk.Tk):
         self.toolbar = None
         self.grid = False
         self.legend = False
-        self.namespace = namespace
         self.cls = ClusterPdb()
 
-    def _bound_to_mousewheel(self, event, tx):
+    def _bound_to_mousewheel(self, event: tk.EventType, tx: tk.Text):
         _ = event
         self.bind_all('<MouseWheel>', lambda e: self._on_mousewheel(e, tx))
         self.bind_all('<Button-4>', lambda e: self._on_mousewheel(e, tx))
@@ -156,7 +155,7 @@ class TkGui(tk.Tk):
         self.bind_all('<Up>', lambda e: self._on_mousewheel(e, tx))
         self.bind_all('<Down>', lambda e: self._on_mousewheel(e, tx))
 
-    def _unbound_to_mousewheel(self, event):
+    def _unbound_to_mousewheel(self, event: tk.EventType):
         _ = event
         self.unbind_all('<MouseWheel>')
         self.unbind_all('<Button-4>')
@@ -165,7 +164,7 @@ class TkGui(tk.Tk):
         self.unbind_all('<Down>')
 
     @staticmethod
-    def _on_mousewheel(event, tx):
+    def _on_mousewheel(event: tk.EventType, tx: tk.Text):
         if event.num == 4 or event.keysym == 'Up':
             tx.yview_scroll(-1, 'units')
         elif event.num == 5 or event.keysym == 'Down':
@@ -363,11 +362,7 @@ class TkGui(tk.Tk):
             return
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.fra3)
         ax.mouse_init()
-        # self.canvas.draw()
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-        # self.toolbar = NavigationToolbar2TkAgg(self.canvas, self.fra3)
-        # self.toolbar.update()
-        # self.canvas._tkcanvas.pack(fill=tk.BOTH, side=tk.TOP, expand=1)
 
     def open_pdb(self):
         """
@@ -470,7 +465,7 @@ class TkGui(tk.Tk):
         butRes = tk.Button(fra2, text='Select residues', command=lambda: self.choise_residues(win=win))
         butRes.grid(row=1, column=0, columnspan=2, pady=5)
 
-    def choise_residues(self, win=None):
+    def choise_residues(self, win: tk.Toplevel = None):
         """
 
         :param win:

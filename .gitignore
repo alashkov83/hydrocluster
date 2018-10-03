@@ -99,3 +99,4 @@ ENV/
 .mypy_cache/
 Будет удалено hydrocluster/__pycache__/
 Будет удалено .idea/
+/hydrocluster.cdm3

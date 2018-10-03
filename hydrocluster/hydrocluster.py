@@ -5,6 +5,8 @@
 @author: lashkov
 """
 # TODO: Написать нормальную документацию.
+# TODO: Оформить релиз и выложить его в PyPi
+# TODO: Добавить возможность выбора других решений кластеризации.
 # TODO: Создать ГИП на PyQt.
 # TODO: Создать WEB-приложение.
 # TODO: Выложить WEB-приложение на хостинг и запустить его.
@@ -57,17 +59,17 @@ if __name__ == '__main__':
     parser = Parser()
     namespace = parser.parse_args()
     if namespace.gui == 'tkgui':
-        from hydrocluster.tkgui import TkGui
+        from .ui.tkgui import TkGui
 
-        gui = TkGui(namespace)
+        gui = TkGui()
         gui.mainloop()
     elif namespace.gui == 'cli':
-        from hydrocluster.cli import cli
+        from .ui.cli import cli
 
         cli(namespace)
     elif namespace.gui == 'testlist':
         if sys.platform == 'win32':
-            from hydrocluster.testlist_win import main
+            from .dbcreator.testlist_win import main
         else:
-            from hydrocluster.testlist import main
+            from .dbcreator.testlist import main
         main(namespace)

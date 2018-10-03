@@ -15,7 +15,7 @@ from Bio.SeqUtils.ProtParam import ProteinAnalysis
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 
 try:
-    from .pdbcluster import ClusterPdb
+    from ..core.pdbcluster import ClusterPdb
 except ImportError:
     print('Error! Scikit-learn not installed!')
     sys.exit()
@@ -26,19 +26,15 @@ htables = ['hydropathy', 'nanodroplet', 'menv', 'fuzzyoildrop', 'aliphatic_core'
 metrics = ['si_score', 'calinski']
 
 
-def opendb(fiename: str):
+def opendb(fiename: str) -> tuple:
     """
 
     :param fiename:
     :return:
     """
     isDbExists = os.path.exists("{:s}.db".format(fiename))
-    # Создаем соединение с нашей базой данных
     conn = sqlite3.connect("{:s}.db".format(fiename), check_same_thread=False)
-    # Создаем курсор - это специальный объект который делает запросы и получает их результаты
     cursor = conn.cursor()
-    # cursor.execute("PRAGMA synchronous = OFF")
-    # cursor.execute("PRAGMA journal_mode = MEMORY")
     if not isDbExists:
         try:
             cursor.execute("""CREATE TABLE "Structures"  (IDPDB TEXT PRIMARY KEY UNIQUE,
@@ -78,7 +74,7 @@ FOREIGN KEY(IDPDB) REFERENCES Structures(IDPDB))""")
     return cursor, conn
 
 
-def download(filelist, q, lock, cursor, conn, dir_nane):
+def download(filelist: list, q: Queue, lock: Lock, cursor: sqlite3.Cursor, conn: sqlite3.Connection, dir_name):
     """
 
     :param filelist:
@@ -86,7 +82,7 @@ def download(filelist, q, lock, cursor, conn, dir_nane):
     :param lock:
     :param cursor:
     :param conn:
-    :param dir:
+    :param dir_name:
     """
     with open('status_tmp.txt', 'w') as f:
         f.write('')
@@ -94,12 +90,12 @@ def download(filelist, q, lock, cursor, conn, dir_nane):
         if file in open('status_tmp.txt').readlines():
             continue
         pdbl = PDBList()
-        pdbl.retrieve_pdb_file(file, pdir=os.path.join(dir_nane, file), file_format='pdb')
-        if not os.path.exists(os.path.join(dir_nane, file, 'pdb{:s}.ent'.format(file))):
+        pdbl.retrieve_pdb_file(file, pdir=os.path.join(dir_name, file), file_format='pdb')
+        if not os.path.exists(os.path.join(dir_name, file, 'pdb{:s}.ent'.format(file))):
             print("File with ID PDB: {:s} not found!".format(file))
             continue
         parser = PDBParser()
-        structure = parser.get_structure('{:s}', os.path.join(dir_nane, file, 'pdb{:s}.ent'.format(file)))
+        structure = parser.get_structure('{:s}', os.path.join(dir_name, file, 'pdb{:s}.ent'.format(file)))
         name = parser.header.get('name', '')
         head = parser.header.get('head', '')
         method = parser.header.get('structure_method', '')
@@ -158,7 +154,7 @@ def graph(cls: ClusterPdb, dir_name: str, basefile):
         print('Error! Failed to plot!\n')
 
 
-def colormap(cls, newdir: str, basefile: str):
+def colormap(cls: ClusterPdb, newdir: str, basefile: str):
     """
 
     :param cls:
@@ -175,7 +171,7 @@ def colormap(cls, newdir: str, basefile: str):
         print('Error! Failed to plot!\n')
 
 
-def save_state(cls, newdir: str, basefile: str):
+def save_state(cls: ClusterPdb, newdir: str, basefile: str):
     """
 
     :param cls:
@@ -190,7 +186,7 @@ def save_state(cls, newdir: str, basefile: str):
         return
 
 
-def save_pymol(cls, newdir: str, basefile: str):
+def save_pymol(cls: ClusterPdb, newdir: str, basefile: str):
     """
 
     :param cls:
@@ -205,10 +201,14 @@ def save_pymol(cls, newdir: str, basefile: str):
         return
 
 
-def db_save(con, curr, lock, file, htable, ntres, mind, maxd,
-            meand, metric, score, eps, min_samples, n_clusters, p_noise, cl, cr, r2l, r2r):
+def db_save(con: sqlite3.Connection, curr: sqlite3.Cursor, lock: Lock, file: str, htable: str, ntres: int,
+            mind: float, maxd: float, meand, metric: str, score: float, eps: float, min_samples: int, n_clusters: int,
+            p_noise: float, cl: float, cr: float, r2l: float, r2r: float):
     """
 
+    :param r2r:
+    :param cr:
+    :param r2l:
     :param cl:
     :param p_noise:
     :param con:
@@ -243,13 +243,14 @@ MIN_SAMPLES, N_CLUSTERS, P_NOISE, CL, CR, R2L, R2R) VALUES ("{:s}", "{:s}", {:d}
         lock.release()
 
 
-def clusterThread(file, dir_name, cursor, conn, lock, min_eps, max_eps, step_eps,
-                  min_min_samples, max_min_samples, n_jobs=1):
+def clusterThread(file: str, dir_name: str, cursor: sqlite3.Cursor, conn: sqlite3.Connection, lock: Lock,
+                  min_eps: float, max_eps: float, step_eps: float, min_min_samples: int, max_min_samples: int,
+                  n_jobs: int = 1):
     """
 
     :param n_jobs:
     :param file:
-    :param dir:
+    :param dir_name:
     :param cursor:
     :param conn:
     :param lock:

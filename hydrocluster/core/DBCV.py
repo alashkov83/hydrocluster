@@ -98,7 +98,6 @@ def _mutual_reach_dist_graph(X, labels, dist_function):
     """
     n_samples = np.shape(X)[0]
     graph = []
-    counter = 0
     for row in range(n_samples):
         graph_row = []
         for col in range(n_samples):
@@ -112,7 +111,6 @@ def _mutual_reach_dist_graph(X, labels, dist_function):
                                              members_i, members_j,
                                              dist_function)
             graph_row.append(dist)
-        counter += 1
         graph.append(graph_row)
     graph = np.array(graph)
     return graph

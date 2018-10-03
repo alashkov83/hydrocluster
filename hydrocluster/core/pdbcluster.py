@@ -121,7 +121,7 @@ def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, sparse_n, weight_array, eps:
     return labels, n_clusters, core_samples_mask, score
 
 
-def chunkIt(seq, num):
+def chunkIt(seq: list, num: int) -> list:
     """
 
     :param seq:
@@ -158,7 +158,7 @@ def calc_abs_charge(res_type: str, pH: float) -> dict:
                 if (1 / (1 + 10 ** (pKa_dict[res] - pH))) > shrink_value}
 
 
-def lineaRegressor(X, Y):
+def lineaRegressor(X: np.ndarray, Y: np.ndarray) -> tuple:
     """
 
     :param X:
@@ -171,7 +171,7 @@ def lineaRegressor(X, Y):
     return YfitLinear, modelLinear.coef_[0][0], modelLinear.intercept_[0], modelLinear.score(X, Y)
 
 
-def ransacRegressor(X, Y):
+def ransacRegressor(X: np.ndarray, Y: np.ndarray) -> tuple:
     """
 
     :param X:
@@ -221,13 +221,9 @@ def regr_cube_alt(x: np.ndarray, y: np.ndarray, z: np.ndarray, z_correct):
     z[z_uncorrect] = np.nan
     Y = np.array(y[~np.all(z_uncorrect, axis=0)], ndmin=2).T
     z = z[:, ~np.all(z_uncorrect, axis=0)]
-    print(z.shape, Y.shape)
     X = np.array((A * x ** 3), ndmin=2).T
-    print(X.shape)
     k = np.nanargmax(z, axis=0)
-    print(k.shape)
     X = np.array(X[k], ndmin=2)
-    print(X.shape)
     return X, Y
 
 
@@ -492,6 +488,7 @@ class ClusterPdb:
 
     def parser(self, selectChains: list = None, htable: str = 'hydropathy', pH: float = 7.0, res: str = '') -> tuple:
         """
+        :param res:
         :param selectChains:
         :param htable:
         :param pH:
@@ -608,7 +605,6 @@ class ClusterPdb:
         ax = axes3d.Axes3D(fig)
         colors = [cm.get_cmap('rainbow')(each) for each in np.linspace(0, 1, len(unique_labels))]
         for k, col in zip(unique_labels, colors):
-            # Noise is marked in black.
             col = np.array(col, ndmin=2)
             if k == -1:
                 xyz_noise = np.array([x for i, x in enumerate(xyz_all) if self.labels[i] == k])

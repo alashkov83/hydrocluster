@@ -12,7 +12,7 @@ from urllib.error import HTTPError
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 
 try:
-    from .pdbcluster import ClusterPdb
+    from ..core.pdbcluster import ClusterPdb
 except ImportError:
     print('Error! Scikit-learn not installed!')
     sys.exit()
@@ -55,15 +55,12 @@ def run(cls: ClusterPdb, log: Log, namespace) -> None:
         min_eps, max_eps, step_eps, min_min_samples, max_min_samples))
     bar1 = progressbar.ProgressBar(maxval=cls.init_cycles(
         min_eps, max_eps, step_eps, min_min_samples, max_min_samples, metric=metric), redirect_stdout=True).start()
-    #       import time
-    #       start_time = time.time()
     try:
         for n, j, i, n_clusters, score in cls.auto_yield():
             log.append(('Step No. {0:d}: EPS = {1:.2f} \u212B, min_samples = {2:d}, No. of clusters = {3:d}, '
                         '{4:s} = {5:.3f}\n').format(
                 n, j, i, n_clusters, cls.metrics_name[cls.metric], score))
             bar1.update(n)
-        #           print("--- %s seconds ---" % (time.time() - start_time))
         eps, min_samples = cls.auto()
     except ValueError:
         log.append('Error! Could not parse file or clustering failed\n')

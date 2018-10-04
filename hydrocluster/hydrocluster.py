@@ -56,6 +56,9 @@ class Parser(argparse.ArgumentParser):
 
 
 def main():
+    """
+
+    """
     parser = Parser()
     namespace = parser.parse_args()
     if namespace.gui == 'tkgui':

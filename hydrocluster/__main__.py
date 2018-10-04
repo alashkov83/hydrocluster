@@ -1,1 +1,0 @@
-/home/lashkov/hydrocluster/hydrocluster/hydrocluster.py

@@ -315,7 +315,7 @@ class ClusterPdb:
         self.queue.put(None)
 
     def init_cycles(self, min_eps: float, max_eps: float, step_eps: float,
-                    min_min_samples: int, max_min_samples: int, n_jobs=0, metric: str = 'si_score') -> tuple:
+                    min_min_samples: int, max_min_samples: int, n_jobs=0, metric: str = 'si_score') -> int:
         """
 
         :param n_jobs:
@@ -332,6 +332,7 @@ class ClusterPdb:
         for eps in np.arange(min_eps, max_eps + step_eps, step_eps):
             for min_samples in range(min_min_samples, max_min_samples + 1):
                 hyperParams.append((eps, min_samples))
+        n_cycles = len(hyperParams)
         if n_jobs == 0:
             if psutil.cpu_count() == 1:
                 n_jobs = 1
@@ -344,7 +345,7 @@ class ClusterPdb:
             p.start()
             self.clusterThreads.append(p)
         self.auto_params = min_eps, max_eps, step_eps, min_min_samples, max_min_samples, metric
-        return (max_min_samples - min_min_samples + 1) * np.arange(min_eps, max_eps + step_eps, step_eps).size
+        return n_cycles
 
     def auto_yield(self) -> iter:
         """
@@ -369,7 +370,7 @@ class ClusterPdb:
 
         :return:
         """
-        self.states.sort(key=lambda x: x[3], reverse=True)
+        self.states.sort(key=lambda l: l[3], reverse=True)
         state = self.states[0]
         self.labels = state[0]
         self.core_samples_mask = state[1]
@@ -402,6 +403,10 @@ class ClusterPdb:
         return state[4], state[5]
 
     def get_conc(self):
+        """
+
+        :return:
+        """
         if self.figs is None:
             return 0.0, 0.0, 0.0, 0.0
         cl, r2l = self.figs['linear'][3], self.figs['linear'][5]
@@ -484,6 +489,10 @@ class ClusterPdb:
                 self.s_array = f.readlines()
 
     def preparser(self) -> list:
+        """
+
+        :return:
+        """
         return list(sorted(set((s[21] for s in self.s_array if s[0:6] == 'ATOM  '))))
 
     def parser(self, selectChains: list = None, htable: str = 'hydropathy', pH: float = 7.0, res: str = '') -> tuple:
@@ -699,6 +708,10 @@ class ClusterPdb:
         return dict_aa
 
     def open_pymol(self):
+        """
+
+        :return:
+        """
         for pid in psutil.pids():
             if psutil.Process(pid).name() == 'pymol':
                 cmd = psutil.Process(pid).cmdline()

@@ -30,6 +30,7 @@ class Log:
     def append(self, line: str, ascitime=False):
         """
     
+        :param ascitime:
         :param line:
         """
         if ascitime:
@@ -283,7 +284,7 @@ def cli(namespace) -> None:
         newdir = namespace.output
         basefile = namespace.output
     else:
-        if namespace.input.count('.') > 0:
+        if namespace.input.count('.') > 0:  # FIXME: Переделать
             newdir = namespace.input.split('.')[-2]
             basefile = os.path.basename(namespace.input).split('.')[-2]
         else:

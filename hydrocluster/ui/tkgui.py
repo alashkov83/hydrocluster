@@ -351,7 +351,6 @@ class TkGui(tk.Tk):
         """
         try:
             self.canvas.get_tk_widget().destroy()
-            # self.toolbar.destroy()
             self.fig = None
         except AttributeError:
             pass
@@ -489,7 +488,7 @@ class TkGui(tk.Tk):
         fra2 = tk.Frame(win)
         fra2.grid(row=1, column=0)
         butChoice = tk.Button(fra2, text='Choice',
-                              command=lambda x=tx: self.parse_pdb_main(residues=x.get('1.0', tk.END), win=win))
+                              command=lambda: self.parse_pdb_main(residues=tx.get('1.0', tk.END), win=win))
         butChoice.grid(row=0, column=0, pady=5)
         butCancel = tk.Button(fra2, text='Cancel', command=lambda: self.parse_pdb_main(win=win))
         butCancel.grid(row=0, column=1, pady=5)
@@ -658,17 +657,21 @@ class TkGui(tk.Tk):
             except FileNotFoundError:
                 pass
 
-    def save_graph(self):
+    def save_graph(self, fig=None):
         """
 
         :return:
         """
-        if self.run_flag:
-            showerror('Error!', 'The calculation is still running!')
-            return
-        if self.fig is None:
-            showerror('Error!', 'Failed to plot!')
-            return
+        if fig is None:
+            if self.run_flag:
+                showerror('Error!', 'The calculation is still running!')
+                return
+            if self.fig is None:
+                showerror('Error!', 'Failed to plot!')
+                return
+            fig = self.fig
+        else:
+            fig = fig
         opt = {'parent': self,
                'filetypes': [('All supported formats', ('.eps', '.jpeg', '.jpg', '.pdf', '.pgf', '.png', '.ps',
                                                         '.raw', '.rgba', '.svg', '.svgz', '.tif', '.tiff')), ],
@@ -677,7 +680,7 @@ class TkGui(tk.Tk):
         sa = asksaveasfilename(**opt)
         if sa:
             try:
-                self.fig.savefig(sa, dpi=600)
+                fig.savefig(sa, dpi=600)
             except FileNotFoundError:
                 return
             except AttributeError:
@@ -754,14 +757,16 @@ class TkGui(tk.Tk):
         win_cls.title("ColorMaps")
         win_cls.minsize(width=600, height=600)
         win_cls.resizable(False, False)
+        m = tk.Menu(win_cls)
+        win_cls.config(menu=m)
+        fm = tk.Menu(m)
+        m.add_cascade(label='File', menu=fm)
+        fm.add_command(label='Save picture', command=lambda: self.save_graph(fig=fig))
+        fm.add_command(label='Quit', command=lambda: win_cls.destroy())
         fra4 = ttk.Frame(win_cls)
         fra4.grid(row=0, column=0)
         canvas = FigureCanvasTkAgg(fig, master=fra4)
-        canvas.draw()
         canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-        toolbar = NavigationToolbar2TkAgg(canvas, fra4)
-        toolbar.update()
-        canvas._tkcanvas.pack(fill=tk.BOTH, side=tk.TOP, expand=1)
 
     def open_pymol(self):
         """

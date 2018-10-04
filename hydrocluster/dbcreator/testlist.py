@@ -21,6 +21,7 @@ except ImportError:
     sys.exit()
 
 warnings.filterwarnings("ignore")
+# TODO: Сделать выбор через командную строку
 pH = 7.0
 htables = ['hydropathy', 'nanodroplet', 'menv', 'fuzzyoildrop', 'aliphatic_core', 'positive', 'negative']
 metrics = ['si_score', 'calinski']

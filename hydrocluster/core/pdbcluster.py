@@ -30,9 +30,15 @@ try:
 except ImportError:
     raise ImportError
 
-from .DBCV import DBCV
+from .dbcv import DBCV
 
 warnings.filterwarnings("ignore")
+
+Vcoeff = 4 * np.pi / 3
+
+n_usecpus = psutil.cpu_count()
+if n_usecpus > 2:
+    n_usecpus -= 1
 
 
 def filterXYZandRData(Label, XYZ, Dist):
@@ -195,12 +201,11 @@ def regr_cube(x: np.ndarray, y: np.ndarray, z: np.ndarray, z_correct):
     :return:
     """
     z = np.copy(z)
-    A = 4 * np.pi / 3
     z_uncorrect = ~z_correct
     z[z_uncorrect] = np.nan
     x = x[~np.all(z_uncorrect, axis=1)]
     z = z[~np.all(z_uncorrect, axis=1), :]
-    X = np.array((A * x ** 3), ndmin=2).T
+    X = np.array((Vcoeff * x ** 3), ndmin=2).T
     k = np.nanargmax(z, axis=1)
     Y = np.array(y[k], ndmin=2).T
     return X, Y
@@ -216,12 +221,11 @@ def regr_cube_alt(x: np.ndarray, y: np.ndarray, z: np.ndarray, z_correct):
     :param z:
     :return:
     """
-    A = 4 * np.pi / 3
     z_uncorrect = ~z_correct
     z[z_uncorrect] = np.nan
     Y = np.array(y[~np.all(z_uncorrect, axis=0)], ndmin=2).T
     z = z[:, ~np.all(z_uncorrect, axis=0)]
-    X = np.array((A * x ** 3), ndmin=2).T
+    X = np.array((Vcoeff * x ** 3), ndmin=2).T
     k = np.nanargmax(z, axis=0)
     X = np.array(X[k], ndmin=2)
     return X, Y
@@ -254,6 +258,8 @@ class ClusterPdb:
         self.core_samples_mask = []
         self.n_clusters = 0
         self.score = 0
+        self.min_samples = 3
+        self.eps = 3.0
         self.metric = 'calinski'
         self.s_array = []
         self.htable = 'hydropathy'
@@ -281,6 +287,8 @@ class ClusterPdb:
         self.core_samples_mask = []
         self.n_clusters = 0
         self.score = 0
+        self.min_samples = 3
+        self.eps = 3.0
         self.metric = 'calinski'
         self.weight_array.clear()
         self.aa_list.clear()
@@ -298,6 +306,8 @@ class ClusterPdb:
         """
         if self.X is None or self.pdist is None:
             raise ValueError
+        self.min_samples = min_samples
+        self.eps = eps
         self.metric = metric
         self.labels, self.n_clusters, self.core_samples_mask, self.score = clusterDBSCAN(
             self.X, self.pdist, self.sparse_n, self.weight_array, eps, min_samples, metric, self.noise_filter)
@@ -334,10 +344,7 @@ class ClusterPdb:
                 hyperParams.append((eps, min_samples))
         n_cycles = len(hyperParams)
         if n_jobs == 0:
-            if psutil.cpu_count() == 1:
-                n_jobs = 1
-            else:
-                n_jobs = psutil.cpu_count() - 1
+            n_jobs = n_usecpus
         hyperParams = chunkIt(hyperParams, n_jobs)
         self.clusterThreads.clear()
         for subParams in hyperParams:
@@ -376,6 +383,7 @@ class ClusterPdb:
         self.core_samples_mask = state[1]
         self.n_clusters = state[2]
         self.score = state[3]
+        self.eps, self.min_samples = state[4], state[5]
         colormap_data = [(state[5], state[4], state[3], state[0]) for state in self.states]
         colormap_data.sort(key=lambda i: i[0])
         colormap_data.sort(key=lambda i: i[1])
@@ -400,7 +408,7 @@ class ClusterPdb:
             self.figs['ransac'] = ransacRegressor(V, N)
         except ValueError:
             self.figs['ransac'] = None
-        return state[4], state[5]
+        return self.eps, self.min_samples
 
     def get_conc(self):
         """
@@ -540,7 +548,7 @@ class ClusterPdb:
             hydrfob = nanodroplet
         elif htable == 'aliphatic_core':  # TODO: Понять биологический смысл кластеризации по этой таблице
             hydrfob = aliphatic_core
-        elif htable == 'hydropathy_h2o':  # TODO: Понять биологический смысл кластеризации по этой таблице
+        elif htable == 'hydrophilic':  # TODO: Понять биологический смысл кластеризации по этой таблице
             hydrfob = hydropathy_h2o
         elif htable == 'positive' or htable == 'negative':
             hydrfob = calc_abs_charge(htable, pH)
@@ -666,13 +674,14 @@ class ClusterPdb:
         ax1.set_ylabel('EPS, \u212B')
         ax1.set_xlabel('MIN SAMPLES')
         ax1.grid(grid_state)
-        pc1 = ax1.pcolor(x, y, z, cmap='gnuplot', vmin=z_min)
+        pc1 = ax1.pcolor(x, y, z, cmap='gnuplot', vmin=z_min)  # TODO: Поменять x и y оси?
         fig.colorbar(pc1, ax=ax1, extend='max', extendfrac=0.1)
         V, N, Nfit, C, B, R2 = self.figs['linear']
         ax11 = fig.add_subplot(122)
         ax11.set_ylabel('MIN SAMPLES')
         ax11.set_xlabel(r'$V,\ \AA^3$')
         ax11.scatter(V, N, c='k')
+        ax11.scatter(Vcoeff * self.eps ** 3, self.min_samples, c='r', label='Current')
         texLINEAR = 'Linear:\n' + r'$C_h\ =\ ' + '{:.4f}'.format(C) + r'\ \AA^{-3}$' + "\n" + r'$N_0\ =\ ' + \
                     '{:.1f}$'.format(B) + '\n' + r'$R^2\ =\ ' + '{:.4f}'.format(R2) + r'$'
         ax11.plot(V, Nfit, c='r', label=texLINEAR)
@@ -792,6 +801,8 @@ class ClusterPdb:
             'core_samples_mask': self.core_samples_mask,
             'n_clusters': self.n_clusters,
             'score': self.score,
+            'eps': self.eps,
+            'min_samoles': self.min_samples,
             'metric': self.metric,
             'weight_array': self.weight_array,
             'aa_list': self.aa_list,
@@ -824,6 +835,8 @@ class ClusterPdb:
         self.parse_results = global_state['parse_results']
         self.auto_params = global_state['auto_params']
         self.score = global_state['score']
+        self.eps = global_state['eps'],
+        self.min_samples = global_state['min_samples']
         self.metric = global_state['metric']
         self.weight_array = global_state['weight_array']
         self.aa_list = global_state['aa_list']

@@ -5,6 +5,9 @@ Citation:
 Moulavi, Davoud, et al. "Density-based clustering validation."
 Proceedings of the 2014 SIAM International Conference on Data Mining.
 Society for Industrial and Applied Mathematics, 2014.
+
+Author: Christopher Jenness (christopherjenness@gmail.com)
+Original source: https://github.com/christopherjenness/DBCV
 """
 
 import numpy as np

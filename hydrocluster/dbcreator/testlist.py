@@ -8,14 +8,13 @@ import sys
 import warnings
 from multiprocessing import Queue, Process, Lock
 
-import psutil
 from Bio.PDB import PDBParser, PDBList
 from Bio.PDB.Polypeptide import PPBuilder
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 
 try:
-    from ..core.pdbcluster import ClusterPdb
+    from ..core.pdbcluster import ClusterPdb, n_usecpus
 except ImportError:
     print('Error! Scikit-learn not installed!')
     sys.exit()
@@ -23,8 +22,16 @@ except ImportError:
 warnings.filterwarnings("ignore")
 # TODO: Сделать выбор через командную строку
 pH = 7.0
-htables = ['hydropathy', 'nanodroplet', 'menv', 'fuzzyoildrop', 'aliphatic_core', 'positive', 'negative']
-metrics = ['si_score', 'calinski']
+htables = ['hydropathy',
+           'nanodroplet',
+           'menv', 'fuzzyoildrop',
+           'aliphatic_core',
+           'hydrophilic',
+           'positive',
+           'negative']
+
+metrics = ['si_score',
+           'calinski']
 
 
 def opendb(fiename: str) -> tuple:
@@ -303,7 +310,7 @@ def clusterThread(file: str, dir_name: str, cursor: sqlite3.Cursor, conn: sqlite
                 graph(cls, dir_metric, file)
                 try:
                     colormap(cls, dir_metric, file)
-                    # save_state(cls, dir_metric, file) # Занимает много места на жд
+                    # save_state(cls, dir_metric, file) # Занимает много места на жд TODO: выбор через командную строку
                 except ValueError as err:
                     print(err)
 
@@ -354,7 +361,7 @@ def main(namespace):
     n = 1
     tmp_dict = {}
     while not TaskDone:
-        while len(clusterTasks) < psutil.cpu_count() - 1:
+        while len(clusterTasks) < n_usecpus:
             item = q.get()
             if item is None:
                 TaskDone = True

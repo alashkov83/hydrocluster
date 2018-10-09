@@ -4,12 +4,11 @@
 
 @author: lashkov
 """
+
 # TODO: Написать нормальную документацию.
 # TODO: Оформить релиз и выложить его в PyPi
+# TODO: Возможно следует удалить текстовый вывод на каждой итерации автоподбора параметров
 # TODO: Добавить возможность выбора других решений кластеризации.
-# TODO: Создать ГИП на PyQt.
-# TODO: Создать WEB-приложение.
-# TODO: Выложить WEB-приложение на хостинг и запустить его.
 
 
 import argparse
@@ -41,7 +40,7 @@ class Parser(argparse.ArgumentParser):
         self.add_argument('-c', '--chains', type=str, default=None, help='Selected chains')
         self.add_argument('-rl', '--reslist', type=str, default=None, help='Selected amino acid residues')
         self.add_argument('-pt', '--ptable', choices=['hydropathy', 'menv', 'fuzzyoildrop', 'nanodroplet',
-                                                      'aliphatic_core', 'hydropathy_h2o', 'positive', 'negative'],
+                                                      'aliphatic_core', 'hydrophilic', 'positive', 'negative'],
                           type=str, default='hydropathy', help='Property table for weighting')
         self.add_argument('-pH', '--pH', type=float, default=7.0,
                           help='pH value for calculatation of net charges (positive or negative) for --ptable ')
@@ -59,6 +58,8 @@ def main():
     """
 
     """
+    if sys.version_info[0] < 3:
+        raise RuntimeError("Must use at least python version 3")
     parser = Parser()
     namespace = parser.parse_args()
     if namespace.gui == 'tkgui':

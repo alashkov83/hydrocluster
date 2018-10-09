@@ -37,7 +37,7 @@ class TkGui(tk.Tk):
         lab11 = tk.LabelFrame(lab1, text='Property table', labelanchor='n', borderwidth=5)
         lab11.grid(row=0, column=0, pady=5, padx=5)
         listbox_items = ['hydropathy', 'menv', 'fuzzyoildrop', 'nanodroplet',
-                         'aliphatic_core', 'hydropathy_h2o', 'positive', 'negative']
+                         'aliphatic_core', 'hydrophilic', 'positive', 'negative']
         self.combox_p = ttk.Combobox(lab11, height=5, width=15, values=listbox_items)
         self.combox_p.pack()
         self.combox_p.set('hydropathy')
@@ -70,7 +70,8 @@ class TkGui(tk.Tk):
         lab4 = tk.LabelFrame(fra1, text='Option', labelanchor='n', borderwidth=5)
         lab4.pack(expand=1, fill=tk.X, pady=5, padx=5)
         self.checkNoise = tk.BooleanVar()
-        self.nfCheckBox = tk.Checkbutton(lab4, text="Noise filter\n(Not recommended!)", variable=self.checkNoise,
+        self.nfCheckBox = tk.Checkbutton(lab4, text="Noise filter\n(Not recommended!)",
+                                         variable=self.checkNoise,
                                          anchor=tk.NW)
         self.nfCheckBox.pack(expand=1, fill=tk.X, pady=5, padx=5)
         lab2 = tk.LabelFrame(fra1, text='Auto mode', labelanchor='n', borderwidth=5)
@@ -79,12 +80,14 @@ class TkGui(tk.Tk):
         lab3.pack(expand=1, fill=tk.X, pady=5, padx=5)
         lab31 = tk.LabelFrame(lab3, text='EPS (\u212B)', labelanchor='n', borderwidth=5)
         lab31.grid(row=0, column=0, pady=5, padx=5)
-        self.sca1 = tk.Scale(lab31, length=200, from_=1.0, to=15.0, showvalue=1, orient=tk.HORIZONTAL, resolution=0.1)
+        self.sca1 = tk.Scale(lab31, length=200, from_=1.0, to=15.0, showvalue=1,
+                             orient=tk.HORIZONTAL, resolution=0.1)
         self.sca1.set(3.0)
         self.sca1.pack()
         lab32 = tk.LabelFrame(lab3, text='MIN_SAMPLES', labelanchor='n', borderwidth=5)
         lab32.grid(row=1, column=0, pady=5, padx=5)
-        self.sca2 = tk.Scale(lab32, length=200, from_=1, to=50, showvalue=1, orient=tk.HORIZONTAL)
+        self.sca2 = tk.Scale(lab32, length=200, from_=1, to=50, showvalue=1,
+                             orient=tk.HORIZONTAL)
         self.sca2.set(3)
         self.sca2.pack()
         but1 = tk.Button(lab3, text='Start', command=self.run)
@@ -146,8 +149,10 @@ class TkGui(tk.Tk):
         self.grid = False
         self.legend = False
         self.cls = ClusterPdb()
+        self.eval('tk::PlaceWindow {:s} center'.format(self.winfo_pathname(self.winfo_id())))  # Center on screen
+        self.tk.eval('::msgcat::mclocale en')  # Set the English language for standard tkinter dialog
 
-    def _bound_to_mousewheel(self, event: tk.EventType, tx: tk.Text):
+    def _bound_to_mousewheel(self, event, tx: tk.Text):
         _ = event
         self.bind_all('<MouseWheel>', lambda e: self._on_mousewheel(e, tx))
         self.bind_all('<Button-4>', lambda e: self._on_mousewheel(e, tx))
@@ -155,7 +160,7 @@ class TkGui(tk.Tk):
         self.bind_all('<Up>', lambda e: self._on_mousewheel(e, tx))
         self.bind_all('<Down>', lambda e: self._on_mousewheel(e, tx))
 
-    def _unbound_to_mousewheel(self, event: tk.EventType):
+    def _unbound_to_mousewheel(self, event):
         _ = event
         self.unbind_all('<MouseWheel>')
         self.unbind_all('<Button-4>')
@@ -164,7 +169,7 @@ class TkGui(tk.Tk):
         self.unbind_all('<Down>')
 
     @staticmethod
-    def _on_mousewheel(event: tk.EventType, tx: tk.Text):
+    def _on_mousewheel(event, tx: tk.Text):
         if event.num == 4 or event.keysym == 'Up':
             tx.yview_scroll(-1, 'units')
         elif event.num == 5 or event.keysym == 'Down':
@@ -218,6 +223,8 @@ class TkGui(tk.Tk):
         """The main algorithm of the program."""
         if self.run_flag:
             showerror('Error!', 'The calculation is still running!')
+            return
+        if self.cls.X is None:
             return
         self.run_flag = True
         self.pb['value'] = 0
@@ -298,12 +305,14 @@ class TkGui(tk.Tk):
                 self.tx.insert(tk.END, ('Starting Autoscan (range EPS: {0:.2f} - {1:.2f} \u212B,'
                                         'step EPS = {2:.2f} \u212B, range min_samples: {3:d} - {4:d}...\n').format(
                     min_eps, max_eps, step_eps, min_min_samples, max_min_samples))
+                self.tx.see(tk.END)
                 try:
                     for n, j, i, n_clusters, score in self.cls.auto_yield():
                         self.tx.insert(tk.END, 'Step No {0:d}: EPS = {1:.2f} \u212B, min_s = {2:d}, '
                                                'No cls = {3:d}, {4:s} = {5:.3f}\n'
                                        .format(n, j, i, n_clusters,
                                                self.cls.metrics_name[self.cls.metric], score))
+                        self.tx.see(tk.END)
                         self.pb['value'] = n
                         self.pb.update()
                     eps, min_samples = self.cls.auto()
@@ -312,6 +321,7 @@ class TkGui(tk.Tk):
                 except ValueError:
                     showerror('Error!', 'Could not parse file or clustering failed')
                     self.tx.insert(tk.END, 'Error! Could not parse file or clustering failed\n')
+                    self.tx.see(tk.END)
                     self.tx.configure(state='disabled')
                     self.run_flag = False
                     return
@@ -340,7 +350,8 @@ class TkGui(tk.Tk):
                                 'MIN_SAMPLES = {3:d}\nPercent of noise = {5:.2f} %\n{6:s}\n').format(
             self.cls.n_clusters, self.cls.metrics_name[self.cls.metric], eps, min_samples, self.cls.score,
             self.cls.noise_percent(), (' !!WARNING!!!' if self.cls.noise_percent() > 30 else '')))
-        self.tx.configure(state='disabled')
+        self.tx.see(tk.END)
+        self.tx.configure(state='disabled')  # TODO: Может сразу выводить Core context?
         self.graph()
         self.run_flag = False
 
@@ -393,7 +404,7 @@ class TkGui(tk.Tk):
             showerror('Error!', 'The calculation is still running!')
             return
         url = askstring('Download', 'ID PDB:')
-        if url is not None:
+        if url:
             try:
                 self.cls.open_url(url)
             except ImportError:
@@ -440,10 +451,14 @@ class TkGui(tk.Tk):
             showerror('Error!', 'The calculation is still running!')
             return
         win = tk.Toplevel(self)
-        x = (self.winfo_screenwidth() - self.winfo_reqwidth()) // 2
-        y = (self.winfo_screenheight() - self.winfo_reqheight()) // 2
+        x = self.winfo_x() + self.winfo_width() // 2
+        y = self.winfo_y() + self.winfo_height() // 2
         win.wm_geometry("+{:d}+{:d}".format(x, y))
         win.title("Choice chains")
+        self.resizable(False, False)
+        win.transient(self)
+        win.grab_set()
+        win.focus_force()
         fra1 = tk.Frame(win)
         fra1.grid(row=0, column=0)
         checkVars = []
@@ -472,8 +487,13 @@ class TkGui(tk.Tk):
         if win:
             win.destroy()
         win = tk.Toplevel(self)
-        x = (self.winfo_screenwidth() - self.winfo_reqwidth()) // 2
-        y = (self.winfo_screenheight() - self.winfo_reqheight()) // 2
+        win.title("Choice chains")
+        self.resizable(False, False)
+        win.transient(self)
+        win.grab_set()
+        win.focus_force()
+        x = self.winfo_x() + self.winfo_width() // 2
+        y = self.winfo_y() + self.winfo_height() // 2
         win.wm_geometry("+{:d}+{:d}".format(x, y))
         win.title("Choice residues")
         fra1 = tk.Frame(win)
@@ -527,7 +547,6 @@ class TkGui(tk.Tk):
         self.pb.update()
         try:
             self.canvas.get_tk_widget().destroy()
-            # self.toolbar.destroy()
         except AttributeError:
             pass
         self.fig = None
@@ -536,6 +555,7 @@ class TkGui(tk.Tk):
         self.tx.insert(tk.END, 'PTable: {:s}\n'.format(htable) +
                        "No. of residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
                        "Maximum distance = {:.3f} \u212B\nMean distance = {:.3f} \u212B\n\n".format(*parse_results))
+        self.tx.see(tk.END)
         self.tx.configure(state='disabled')
         self.sca1.set(parse_results[1])
         self.ent_min_eps.delete(0, tk.END)
@@ -547,6 +567,7 @@ class TkGui(tk.Tk):
         """
         self.tx.configure(state='normal')
         self.tx.delete('1.0', tk.END)
+        self.tx.see(tk.END)
         self.tx.configure(state='disabled')
 
     def open_state(self):
@@ -559,55 +580,57 @@ class TkGui(tk.Tk):
             return
         opt = {'filetypes': [('Data file', ('.dat', '.DAT')), ('All files', '.*')], 'title': 'Load state'}
         state = askopenfilename(**opt)
-        try:
-            self.cls.loadstate(state)
-        except FileNotFoundError:
-            return
-        except (ValueError, OSError):
-            showerror("Error!", "Invalid file format!")
-            return
-        else:
-            htable = self.cls.htable
-            self.combox_p.set(htable)
-            nor, mind, maxd, meand = self.cls.parse_results
-            self.l11.configure(text="{0:>5d}".format(nor))
-            self.l12.configure(text="{0:>5.3f}".format(mind))
-            self.l13.configure(text="{0:>5.3f}".format(maxd))
-            self.l14.configure(text="{0:>5.3f}".format(meand))
-            min_eps, max_eps, step_eps, min_min_samples, max_min_samples, metric = self.cls.auto_params
-            self.ent_min_eps.delete(0, tk.END)
-            self.ent_min_eps.insert(0, '{:.1f}'.format(min_eps))
-            self.ent_max_eps.delete(0, tk.END)
-            self.ent_max_eps.insert(0, '{:.1f}'.format(max_eps))
-            self.ent_step_eps.delete(0, tk.END)
-            self.ent_step_eps.insert(0, '{:.1f}'.format(step_eps))
-            self.ent_min_min_samples.delete(0, tk.END)
-            self.ent_min_min_samples.insert(0, '{:d}'.format(min_min_samples))
-            self.ent_max_min_samples.delete(0, tk.END)
-            self.ent_max_min_samples.insert(0, '{:d}'.format(max_min_samples))
-            _, _, _, _, eps, min_samples = self.cls.states[0]
-            self.clean_txt()
-            self.tx.configure(state='normal')
-            self.tx.insert(tk.END, 'PTable: {:s}\n'.format(htable) +
-                           "No. of residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
-                           "Maximum distance = {:.3f} \u212B\n"
-                           "Mean distance = {:.3f} \u212B\n\n".format(nor, mind, maxd, meand))
-            self.tx.insert(tk.END, ('Autoscan range EPS: {0:.2f} - {1:.2f} \u212B,'
-                                    'step EPS = {2:.2f} \u212B, min_samples: {3:d} - {4:d}...\n').format(
-                min_eps, max_eps, step_eps, min_min_samples, max_min_samples))
-            self.tx.insert(tk.END, ('Number of clusters = {0:d}\n{1:s} = {4:.3f}\nEPS = {2:.1f} \u212B\n'
-                                    'MIN_SAMPLES = {3:d}\nPercent of noise = {5:.2f} %\n{6:s}\n').format(
-                self.cls.n_clusters, self.cls.metrics_name[self.cls.metric], eps, min_samples, self.cls.score,
-                self.cls.noise_percent(), (' !!WARNING!!!' if self.cls.noise_percent() > 30 else '')))
-            self.tx.configure(state='disabled')
-            self.sca1.set(eps)
-            self.sca2.set(min_samples)
-            if self.cls.noise_filter:
-                self.nfCheckBox.select()
+        if state:
+            try:
+                self.cls.loadstate(state)
+            except (FileNotFoundError, TypeError):
+                return
+            except (ValueError, OSError):
+                showerror("Error!", "Invalid file format!")
+                return
             else:
-                self.nfCheckBox.deselect()
-            self.combox.set(metric)
-            self.run(auto=True, load_state=True)
+                htable = self.cls.htable
+                self.combox_p.set(htable)
+                nor, mind, maxd, meand = self.cls.parse_results
+                self.l11.configure(text="{0:>5d}".format(nor))
+                self.l12.configure(text="{0:>5.3f}".format(mind))
+                self.l13.configure(text="{0:>5.3f}".format(maxd))
+                self.l14.configure(text="{0:>5.3f}".format(meand))
+                min_eps, max_eps, step_eps, min_min_samples, max_min_samples, metric = self.cls.auto_params
+                self.ent_min_eps.delete(0, tk.END)
+                self.ent_min_eps.insert(0, '{:.1f}'.format(min_eps))
+                self.ent_max_eps.delete(0, tk.END)
+                self.ent_max_eps.insert(0, '{:.1f}'.format(max_eps))
+                self.ent_step_eps.delete(0, tk.END)
+                self.ent_step_eps.insert(0, '{:.1f}'.format(step_eps))
+                self.ent_min_min_samples.delete(0, tk.END)
+                self.ent_min_min_samples.insert(0, '{:d}'.format(min_min_samples))
+                self.ent_max_min_samples.delete(0, tk.END)
+                self.ent_max_min_samples.insert(0, '{:d}'.format(max_min_samples))
+                _, _, _, _, eps, min_samples = self.cls.states[0]
+                self.clean_txt()
+                self.tx.configure(state='normal')
+                self.tx.insert(tk.END, 'PTable: {:s}\n'.format(htable) +
+                               "No. of residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
+                               "Maximum distance = {:.3f} \u212B\n"
+                               "Mean distance = {:.3f} \u212B\n\n".format(nor, mind, maxd, meand))
+                self.tx.insert(tk.END, ('Autoscan range EPS: {0:.2f} - {1:.2f} \u212B,'
+                                        'step EPS = {2:.2f} \u212B, min_samples: {3:d} - {4:d}...\n').format(
+                    min_eps, max_eps, step_eps, min_min_samples, max_min_samples))
+                self.tx.insert(tk.END, ('Number of clusters = {0:d}\n{1:s} = {4:.3f}\nEPS = {2:.1f} \u212B\n'
+                                        'MIN_SAMPLES = {3:d}\nPercent of noise = {5:.2f} %\n{6:s}\n').format(
+                    self.cls.n_clusters, self.cls.metrics_name[self.cls.metric], eps, min_samples, self.cls.score,
+                    self.cls.noise_percent(), (' !!WARNING!!!' if self.cls.noise_percent() > 30 else '')))
+                self.tx.see(tk.END)
+                self.tx.configure(state='disabled')
+                self.sca1.set(eps)
+                self.sca2.set(min_samples)
+                if self.cls.noise_filter:
+                    self.nfCheckBox.select()
+                else:
+                    self.nfCheckBox.deselect()
+                self.combox.set(metric)
+                self.run(auto=True, load_state=True)
 
     def save_state(self):
         """
@@ -620,10 +643,11 @@ class TkGui(tk.Tk):
         opt = {'filetypes': [('Data file', ('.dat', '.DAT')), ('All files', '.*')], 'initialfile': 'myfile.dat',
                'title': 'Save state'}
         state = asksaveasfilename(**opt)
-        try:
-            self.cls.savestate(state)
-        except FileNotFoundError:
-            return
+        if state:
+            try:
+                self.cls.savestate(state)
+            except FileNotFoundError:
+                return
 
     def save_pymol_script(self):
         """
@@ -636,12 +660,13 @@ class TkGui(tk.Tk):
         opt = {'filetypes': [('PyMOL script', ('.py',)), ('All files', '.*')], 'initialfile': 'myfile.py',
                'title': 'Save PyMOL script'}
         pmlf = asksaveasfilename(**opt)
-        try:
-            self.cls.save_pymol_script(pmlf)
-        except FileNotFoundError:
-            return
-        except AttributeError:
-            showerror('Error!', 'Script unavailable!')
+        if pmlf:
+            try:
+                self.cls.save_pymol_script(pmlf)
+            except FileNotFoundError:
+                return
+            except AttributeError:
+                showerror('Error!', 'Script unavailable!')
 
     def save_log(self):
         """
@@ -734,9 +759,11 @@ class TkGui(tk.Tk):
             self.tx.configure(state='normal')
             self.tx.insert(tk.END, '\n{:s} cluster No. {:d} contains: {:s}'.format(
                 ("Core" if k[0] else "Uncore"), k[1], ", ".join(['{2:s}:{1:s}{0:d}'.format(*aac) for aac in aa_list])))
+            self.tx.see(tk.END)
             self.tx.configure(state='disabled')
         self.tx.configure(state='normal')
         self.tx.insert(tk.END, '\n\n')
+        self.tx.see(tk.END)
         self.tx.configure(state='disabled')
 
     def colormap(self):

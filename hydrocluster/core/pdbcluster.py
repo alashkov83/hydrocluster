@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Created by lashkov on 04.05.18"""
 
-import gzip
+import bz2
 import io
 import pickle
 import random
@@ -816,15 +816,15 @@ class ClusterPdb:
             'auto_params': self.auto_params,
             'states': self.states,
             'figs': self.figs}
-        with gzip.open(file, 'wb') as f:
-            pickle.dump(glob_state, f)
+        with bz2.open(file, 'wb') as f:
+            pickle.dump(glob_state, f, protocol=4)
 
     def loadstate(self, file: str):
         """
 
         :param file:
         """
-        with gzip.open(file) as f:
+        with bz2.open(file) as f:
             global_state = pickle.load(f)
             self.clean()
         self.X = global_state['X']

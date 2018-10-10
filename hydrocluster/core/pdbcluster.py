@@ -212,7 +212,6 @@ def regr_cube(x: np.ndarray, y: np.ndarray, z: np.ndarray, z_correct):
 
 
 def regr_cube_alt(x: np.ndarray, y: np.ndarray, z: np.ndarray, z_correct):
-    # TODO: Придумать алгоритм выбора функций repr_cube или repr_cube_alt
     """
 
     :param z_correct:
@@ -221,6 +220,7 @@ def regr_cube_alt(x: np.ndarray, y: np.ndarray, z: np.ndarray, z_correct):
     :param z:
     :return:
     """
+    z = np.copy(z)
     z_uncorrect = ~z_correct
     z[z_uncorrect] = np.nan
     Y = np.array(y[~np.all(z_uncorrect, axis=0)], ndmin=2).T
@@ -398,11 +398,15 @@ class ClusterPdb:
                 z_min = -1.0
         else:
             z_min = 0
-        self.figs['colormap'] = (x, y, z, z_min)
+        self.figs['colormap'] = (y, x, z.copy().T, z_min)
         z_correct = np.array([(True if (len(set(data[3]))) > 1 else False) for data in colormap_data], dtype=bool)
         z_correct.shape = (y.size, x.size)
         V, N, = regr_cube(y, x, z, z_correct)
+        V_alt, N_alt = regr_cube_alt(y, x, z, z_correct)
         Nfit, C, B, R2 = lineaRegressor(V, N)
+        Nfit_alt, C_alt, B_alt, R2_alt = lineaRegressor(V_alt, N_alt)
+        if R2_alt > R2:
+            V, N, Nfit, C, B, R2 = V_alt, N_alt, Nfit_alt, C_alt, B_alt, R2_alt
         self.figs['linear'] = (V, N, Nfit, C, B, R2)
         try:
             self.figs['ransac'] = ransacRegressor(V, N)
@@ -665,16 +669,16 @@ class ClusterPdb:
         if not self.states:
             raise ValueError
         if self.figs is not None:
-            x, y, z, z_min = self.figs['colormap']
+            es, ms, z, z_min = self.figs['colormap']
         else:
             raise ValueError
         fig = Figure(figsize=(12, 6))
         ax1 = fig.add_subplot(121)
         ax1.set_title(self.metrics_name[self.metric])
-        ax1.set_ylabel('EPS, \u212B')
-        ax1.set_xlabel('MIN SAMPLES')
+        ax1.set_xlabel('EPS, \u212B')
+        ax1.set_ylabel('MIN SAMPLES')
         ax1.grid(grid_state)
-        pc1 = ax1.pcolor(x, y, z, cmap='gnuplot', vmin=z_min)  # TODO: Поменять x и y оси?
+        pc1 = ax1.pcolor(es, ms, z, cmap='gnuplot', vmin=z_min)
         fig.colorbar(pc1, ax=ax1, extend='max', extendfrac=0.1)
         V, N, Nfit, C, B, R2 = self.figs['linear']
         ax11 = fig.add_subplot(122)
@@ -802,7 +806,7 @@ class ClusterPdb:
             'n_clusters': self.n_clusters,
             'score': self.score,
             'eps': self.eps,
-            'min_samoles': self.min_samples,
+            'min_samples': self.min_samples,
             'metric': self.metric,
             'weight_array': self.weight_array,
             'aa_list': self.aa_list,
@@ -835,7 +839,7 @@ class ClusterPdb:
         self.parse_results = global_state['parse_results']
         self.auto_params = global_state['auto_params']
         self.score = global_state['score']
-        self.eps = global_state['eps'],
+        self.eps = global_state['eps']
         self.min_samples = global_state['min_samples']
         self.metric = global_state['metric']
         self.weight_array = global_state['weight_array']

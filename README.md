@@ -12,10 +12,10 @@ mmtf-python>=1.1.0
 msgpack>=0.5.6
 
 To easily browse through db files you will need a DB Browser for SQLite (<https://sqlitebrowser.org>).
-It is recommended to install Pymol molecular viewer (version: 1.7 - 1.9).
+It is recommended to install Pymol molecular viewer (version: 1.7+).
 
 
-### For MS Windows:
+##### For MS Windows:
 Use Anaconda (<https://anaconda.org>) for Windows - it includes majority of the dependencies required.
 But mmtf-python and msgpack not available on Anaconda - need to use pip.
 Define environment variable PYTHONIOENCODING to UTF-8.

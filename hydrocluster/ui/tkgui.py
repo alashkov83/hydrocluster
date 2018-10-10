@@ -208,7 +208,6 @@ class TkGui(tk.Tk):
         m.add_cascade(label='Options', menu=om)
         om.add_command(label='Plot grid', command=self.grid_set)
         om.add_command(label='Plot legend', command=self.legend_set)
-        om.add_command(label='Cores content', command=self.resi)
         om.add_command(label='Autotune colormap', command=self.colormap)
         om.add_command(label='Clear LOG', command=self.clean_txt)
         om.add_command(label='Open PyMol', command=self.open_pymol)
@@ -235,7 +234,7 @@ class TkGui(tk.Tk):
             if not askyesno('Warning!', "Very slow function!\nA you sure?"):
                 self.run_flag = False
                 return
-        if auto:
+        if auto and not load_state:
             try:
                 min_eps = float(self.ent_min_eps.get())
                 if min_eps < 0:
@@ -330,7 +329,7 @@ class TkGui(tk.Tk):
                 self.cls.n_clusters, self.cls.score, eps, min_samples, self.cls.metrics_name[self.cls.metric]))
             self.sca1.set(eps)
             self.sca2.set(min_samples)
-        else:
+        elif not auto and not load_state:
             self.cls.noise_filter = noise_filter
             eps = self.sca1.get()
             min_samples = self.sca2.get()
@@ -347,11 +346,20 @@ class TkGui(tk.Tk):
             showwarning('Warning!', 'Percent of noise = {:.2f} %'.format(self.cls.noise_percent()))
         self.tx.configure(state='normal')
         self.tx.insert(tk.END, ('Number of clusters = {0:d}\n{1:s} = {4:.3f}\nEPS = {2:.1f} \u212B\n'
-                                'MIN_SAMPLES = {3:d}\nPercent of noise = {5:.2f} %\n{6:s}\n').format(
-            self.cls.n_clusters, self.cls.metrics_name[self.cls.metric], eps, min_samples, self.cls.score,
+                                'MIN_SAMPLES = {3:d}\nPercent of noise = {5:.2f} %{6:s}\n').format(
+            self.cls.n_clusters, self.cls.metrics_name[self.cls.metric],
+            self.cls.eps, self.cls.min_samples, self.cls.score,
             self.cls.noise_percent(), (' !!WARNING!!!' if self.cls.noise_percent() > 30 else '')))
         self.tx.see(tk.END)
-        self.tx.configure(state='disabled')  # TODO: Может сразу выводить Core context?
+        dict_aa = self.cls.get_dict_aa()
+        if dict_aa:
+            for k, aa_list in dict_aa.items():
+                self.tx.configure(state='normal')
+                self.tx.insert(tk.END, '\n{:s} cluster No. {:d} contains: {:s}'.format(
+                    ("Core" if k[0] else "Uncore"), k[1],
+                    ", ".join(['{2:s}:{1:s}{0:d}'.format(*aac) for aac in aa_list])))
+            self.tx.insert(tk.END, '\n')
+        self.tx.configure(state='disabled')
         self.graph()
         self.run_flag = False
 
@@ -556,6 +564,7 @@ class TkGui(tk.Tk):
                        "No. of residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
                        "Maximum distance = {:.3f} \u212B\nMean distance = {:.3f} \u212B\n\n".format(*parse_results))
         self.tx.see(tk.END)
+
         self.tx.configure(state='disabled')
         self.sca1.set(parse_results[1])
         self.ent_min_eps.delete(0, tk.END)
@@ -609,20 +618,6 @@ class TkGui(tk.Tk):
                 self.ent_max_min_samples.insert(0, '{:d}'.format(max_min_samples))
                 _, _, _, _, eps, min_samples = self.cls.states[0]
                 self.clean_txt()
-                self.tx.configure(state='normal')
-                self.tx.insert(tk.END, 'PTable: {:s}\n'.format(htable) +
-                               "No. of residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
-                               "Maximum distance = {:.3f} \u212B\n"
-                               "Mean distance = {:.3f} \u212B\n\n".format(nor, mind, maxd, meand))
-                self.tx.insert(tk.END, ('Autoscan range EPS: {0:.2f} - {1:.2f} \u212B,'
-                                        'step EPS = {2:.2f} \u212B, min_samples: {3:d} - {4:d}...\n').format(
-                    min_eps, max_eps, step_eps, min_min_samples, max_min_samples))
-                self.tx.insert(tk.END, ('Number of clusters = {0:d}\n{1:s} = {4:.3f}\nEPS = {2:.1f} \u212B\n'
-                                        'MIN_SAMPLES = {3:d}\nPercent of noise = {5:.2f} %\n{6:s}\n').format(
-                    self.cls.n_clusters, self.cls.metrics_name[self.cls.metric], eps, min_samples, self.cls.score,
-                    self.cls.noise_percent(), (' !!WARNING!!!' if self.cls.noise_percent() > 30 else '')))
-                self.tx.see(tk.END)
-                self.tx.configure(state='disabled')
                 self.sca1.set(eps)
                 self.sca2.set(min_samples)
                 if self.cls.noise_filter:
@@ -743,28 +738,6 @@ class TkGui(tk.Tk):
         except AttributeError:
             pass
         self.graph()
-
-    def resi(self):
-        """
-
-        :return:
-        """
-        if self.run_flag:
-            showerror('Error!', 'The calculation is still running!')
-            return
-        dict_aa = self.cls.get_dict_aa()
-        if not dict_aa:
-            return
-        for k, aa_list in dict_aa.items():
-            self.tx.configure(state='normal')
-            self.tx.insert(tk.END, '\n{:s} cluster No. {:d} contains: {:s}'.format(
-                ("Core" if k[0] else "Uncore"), k[1], ", ".join(['{2:s}:{1:s}{0:d}'.format(*aac) for aac in aa_list])))
-            self.tx.see(tk.END)
-            self.tx.configure(state='disabled')
-        self.tx.configure(state='normal')
-        self.tx.insert(tk.END, '\n\n')
-        self.tx.see(tk.END)
-        self.tx.configure(state='disabled')
 
     def colormap(self):
         """

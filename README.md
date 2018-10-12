@@ -126,7 +126,7 @@ with graphics interface.**
 hydrocluster -i subpdb.txt -g testlist -o subpdb
 ```
 
-Processing of file\_name.txt by textlist.py, file\_name.db file and
+Processing of file\_name.txt by testlist.py, file\_name.db file and
 file\_name\_data folder consisting of tree structure with data files on
 return
 

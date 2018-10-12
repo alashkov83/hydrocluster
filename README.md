@@ -3,6 +3,8 @@ Hydrocluster - Bioimformatics Tool
 
 Short description
 -----------------
+The program Hydrocluster is designed to determine the position, size and content of hydrophobic,
+hydrophilic and charged clusters in protein molecules. The program is based on the DBSCAN algorithm.
 
 **Keywords:** molecular modeling, bioinformatic, protein structure,
 hydrophobic core, hydrophobic cluster, DBSCAN

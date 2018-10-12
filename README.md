@@ -1,117 +1,118 @@
-Hydrocluster - Bioimformatics Tool'
+Hydrocluster - Bioimformatics Tool
+==================================
 
 Short description
-=================
+-----------------
 
 **Keywords:** molecular modeling, bioinformatic, protein structure,
 hydrophobic core, hydrophobic cluster, DBSCAN
 
 Installation
-============
+------------
 
-\$ pip install --upgrade hydrocluster
-
+```shell
+pip install --upgrade hydrocluster
+```
 (or pip3 in distributive with default python 2 version
 
 User Interface
-==============
+--------------
 
-Command line 
--------------
+### Command line
 
 The program is called with the command ’hydrocluster’ and following
 parameters:
+```shell
+hydrocluster [-h][-i INPUT][-emin EMIN][-emax EMAX][-es ESTEP][-smin SMIN][-smax SMAX][-g {tkgui,cli,testlist}]
+[-o OUTPUT][-c CHAINS][-rl RESLIST][-pt{hydropathy,menv,fuzzyoildrop,nanodroplet,aliphatic_core,hydrophilic,positive,negative}]
+[-pH PH][-sc {si_score,calinski,dbcv}][-nf][-na][-eps EPS][-min_samples MIN_SAMPLES]
+```
+#### Arguments:
 
-hydrocluster \[-h] \[-i INPUT] \[-emin EMIN] \[-emax EMAX] \[-es ESTEP] \[-smin SMIN] \[-smax SMAX] \[-g {tkgui,cli,testlist}] \[-o OUTPUT] \[-c CHAINS]
-\[-rl RESLIST] \[-pt{hydropathy,menv,fuzzyoildrop,nanodroplet,aliphatic_core,hydrophilic,positive,negative}] \[-pH PH] \[-sc {si_score,calinski,dbcv}]
-\[-nf] \[-na] \[-eps EPS] \[-min_samples MIN_SAMPLES]
-
-### Arguments:
-
-### -h, --help
+**-h, --help**
 
 show help message and exit
 
-### -i INPUT, --input INPUT
+**-i INPUT, --input INPUT**
 
 Input file name (pdb, txt, cif, ent) - pdb file name, cif file name,
 idpdb or list of ispdbs
 
-### -emin EMIN, --emin EMIN
+**-emin EMIN, --emin EMIN**
 
 Minimum EPS value (A). Default=3.0
 
-### -emax EMAX, --emax EMAX
+**-emax EMAX, --emax EMAX**
 
 Maximum EPS value (A). Default=15.0
 
-### -es ESTEP, --estep ESTEP
+**-es ESTEP, --estep ESTEP**
 
 Step of EPS (A). Default=0.1
 
-### -pts,--ptables
+**-pts,--ptables**
 
 Property table’s list for testlist.py. Separator: ’,’
 
-### -scs, --scores
+**-scs, --scores**
 
 Score coefficients list for testlist. Separator: ’,’
 
-### -smin SMIN, --smin SMIN
+**-smin SMIN, --smin SMIN**
 
 Minimum MIN SAMPLES. Default=3
 
-### -ss --save\_state
+**-ss --save\_state**
 
 Save states on testlist.py
 
-### -smax SMAX, --smax SMAX
+**-smax SMAX, --smax SMAX**
 
 Minimum MIN SAMPLES. Default=50
 
-### -g {tkgui,cli,testlist}, --gui
+**-g {tkgui,cli,testlist}, --gui**
 
 UI modes. Default=’tkgui’ (tkgui - graphic interface, cli - command
 line, testlist - using testlist module for data processing (see -i
 filename.txt and -o filename of data base).
 
-### -o OUTPUT, --output OUTPUT
+**-o OUTPUT, --output OUTPUT**
 
 Output directory name/file name or db name
 
-### -c CHAINS, --chains CHAINS
+**-c CHAINS, --chains CHAINS**
 
 Selected chains. Default=None
 
-### -rl RESLIST, --reslist RESLIST
+**-rl RESLIST, --reslist RESLIST**
 
 Selected amino acid residues. Default=None
 
-### -pt{hydropathy,menv,fuzzyoildrop,nanodroplet,aliphatic\_core,hydrophilic,positive,negative}, --ptable
+**-pt{hydropathy,menv,fuzzyoildrop,nanodroplet,aliphatic\_core,hydrophilic,positive,negative}, --ptable**
 
 Property table for weighting. Default=’hydropathy’
 
-### -pH PH
+**-pH PH**
 
 pH value for calculatation of net charges (positive or negative). Default=7.0
 
-### -sc {si\_score,calinski,dbcv}, --score {si\_score,calinski,dbcv}
+**-sc {si\_score,calinski,dbcv}, --score {si\_score,calinski,dbcv}**
 
 Score coefficient. Default=’calinski’
 
-### -nf, --noise\_filter {#nf---noise_filter .unnumbered}
+**-nf, --noise\_filter**
 
-Activate filter of noise for scoring function (Not recommended!!!).
+Activate filter of noise for scoring function (**Not recommended!!!**).
 
-### -na, --noauto {#na---noauto .unnumbered}
+**-na, --noauto**
 
 No automatic mode.
 
-### -eps EPS  {#eps-eps .unnumbered}
+**-eps EPS**
 
 EPS value (A). Default=3.0
 
-### -min\_samples MIN\_SAMPLES
+**-min\_samples MIN\_SAMPLES**
 
 MIN SAMPLES value. Default=3
 
@@ -119,15 +120,17 @@ MIN SAMPLES value. Default=3
 with graphics interface.**
 
 ### Examples:
-
-### \$./hydrocluster.py -i subpdb.txt -g testlist -o subpdb
+```shell
+hydrocluster -i subpdb.txt -g testlist -o subpdb
+```
 
 Processing of file\_name.txt by textlist.py, file\_name.db file and
 file\_name\_data folder consisting of tree structure with data files on
 return
 
-### \$./hydrocluster.py -i 1atg.pdb -g cli -o 1atg
-
+```shell
+hydrocluster -i 1atg.pdb -g cli -o 1atg
+```
 Processing of file\_name.pdb by command line interface and file\_name
 folder on return
 
@@ -181,7 +184,7 @@ Fig.3
 
 ### Menu options:
 
-### File-&gt;
+**File-&gt;**
 
 Open PDB - opens pdb file on disk
 
@@ -202,7 +205,7 @@ Save LOG saves log file of the current session
 
 Quit quit from the program
 
-### Options-&gt;
+**Options-&gt;**
 
 Plot grid - makes coordinate grid in the Cluster analysis window
 
@@ -218,7 +221,7 @@ Clear log - clears log file in the appropriate window.
 Open PyMol - opens PyMol for further data display.
 
 Theory
-==================
+------
 
 Hydrophobic cores and hydrophobic clusters play an important role in the
 folding of the protein, being the skeleton for functionally important
@@ -259,7 +262,7 @@ followed by sorting the results according to the criterion of maximizing
 the value of the corresponding estimated coefficient.
 
 Requirements
-============
+------------
 
 * Python 3.4 or higher (CPython only support)
 * psutil
@@ -284,7 +287,7 @@ family).
 
 
 References
-==========
+----------
 1. J. Kyte, R. F. Doolittle. J Mol Biol. 1982. 157 \[1]], 105-132.
 
 2. B. Kalinowska, M. Banach, Z. Wisniowski, L. Konieczny, I. Roterman. J

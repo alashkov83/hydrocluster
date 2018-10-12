@@ -176,7 +176,7 @@ on the picture.
 
 The Log window shows the numerical results of clustering, namely the
 number of chains and clusters, the percentage of noise and the optimal
-values of the hyper parameters (eps,min\_samples) and the metric used.
+values of the hyperparameters (eps,min\_samples) and the metric used.
 Further study of the macromolecule can be carried out using the PyMol
 program (Options-&gt; OpenPyMol) (Fig. 3).
 
@@ -290,7 +290,7 @@ family).
 
 References
 ----------
-1. J. Kyte, R. F. Doolittle. J Mol Biol. 1982. 157 \[1]], 105-132.
+1. J. Kyte, R. F. Doolittle. J Mol Biol. 1982. 157, 105-132.
 
 2. B. Kalinowska, M. Banach, Z. Wisniowski, L. Konieczny, I. Roterman. J
 Mol Model. 2017. 23 , 205.

@@ -37,9 +37,10 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: Implementation :: CPython',
         'Topic :: Scientific/Engineering :: Bio-Informatics'],
-    description='Cluster analysis of hydrophobic or charged regions of macromolecules',
+    description='Cluster analysis of hydrophobic or charged regions of macromolecules. '
+                'The program is based on the DBSCAN algorithm.',
     long_description=long_description,
-    keywords='',
+    keywords='molecular modeling, bioinformatic, protein structure, hydrophobic core, hydrophobic cluster, DBSCAN',
     long_description_content_type="text/markdown",
     install_requires=requirements,
     entry_points={'console_scripts': ['hydrocluster = hydrocluster.hydrocluster:main']})

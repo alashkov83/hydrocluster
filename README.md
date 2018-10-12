@@ -145,11 +145,9 @@ Graphical User Interface
 
 GUI was realized using Tkinter. It consists of a panel for selecting the
 operation mode, a window for graphical representation of clustering
-results Cluster analysis, and a window for displaying log file, shown below (Fig. 1)
+results Cluster analysis, and a window for displaying log file, shown below.
 
 ![image](screenshots/main_window.png)
-
-Fig 1.
 
 At the beginning of working with the graphical interface, it is
 necessary to select the desired hydrophobicity / hydrophilicity table in
@@ -163,11 +161,9 @@ automatic mode, when you click Options -&gt; Dispplay colormap, you can
 get a graphical interpretation of the process of selecting the optimal
 values namely dependencies eps (min\_sample) and eps (min\_samples<sup>3</sup>).
 The point corresponding to the optimal parameters is marked in
-color (Fig. 2).
+color.
 
 ![image](screenshots/colormap.png)
-
-Fig.2
 
 The Cluster analysis window presents a three-dimensional image of
 clusters selected by the program in a protein molecule. Appropriate mtnu
@@ -178,11 +174,9 @@ The Log window shows the numerical results of clustering, namely the
 number of chains and clusters, the percentage of noise and the optimal
 values of the hyperparameters (eps,min\_samples) and the metric used.
 Further study of the macromolecule can be carried out using the PyMol
-program (Options-&gt; OpenPyMol) (Fig. 3).
+program (Options-&gt; OpenPyMol).
 
 ![image](screenshots/pymol_view.png)
-
-Fig.3
 
 ### Menu options:
 

@@ -6,7 +6,6 @@ import os.path
 import sqlite3
 import sys
 import warnings
-from multiprocessing import Queue, Process, Lock
 
 from Bio.PDB import PDBParser, PDBList
 from Bio.PDB.Polypeptide import PPBuilder
@@ -20,18 +19,6 @@ except ImportError:
     sys.exit()
 
 warnings.filterwarnings("ignore")
-# TODO: Сделать выбор через командную строку
-pH = 7.0
-htables = ['hydropathy',
-           'nanodroplet',
-           'menv', 'fuzzyoildrop',
-           'aliphatic_core',
-           'hydrophilic',
-           'positive',
-           'negative']
-
-metrics = ['si_score',
-           'calinski']
 
 
 def opendb(fiename: str) -> tuple:
@@ -82,7 +69,7 @@ FOREIGN KEY(IDPDB) REFERENCES Structures(IDPDB))""")
     return cursor, conn
 
 
-def download(filelist: list, q: Queue, lock: Lock, cursor: sqlite3.Cursor, conn: sqlite3.Connection, dir_name):
+def download(filelist: list, q, lock, cursor: sqlite3.Cursor, conn: sqlite3.Connection, dir_name):
     """
 
     :param filelist:
@@ -209,7 +196,7 @@ def save_pymol(cls: ClusterPdb, newdir: str, basefile: str):
         return
 
 
-def db_save(con: sqlite3.Connection, curr: sqlite3.Cursor, lock: Lock, file: str, htable: str, ntres: int,
+def db_save(con: sqlite3.Connection, curr: sqlite3.Cursor, lock, file: str, htable: str, ntres: int,
             mind: float, maxd: float, meand, metric: str, score: float, eps: float, min_samples: int, n_clusters: int,
             p_noise: float, cl: float, cr: float, r2l: float, r2r: float):
     """
@@ -251,11 +238,13 @@ MIN_SAMPLES, N_CLUSTERS, P_NOISE, CL, CR, R2L, R2R) VALUES ("{:s}", "{:s}", {:d}
         lock.release()
 
 
-def clusterThread(file: str, dir_name: str, cursor: sqlite3.Cursor, conn: sqlite3.Connection, lock: Lock,
+def clusterThread(file: str, dir_name: str, cursor: sqlite3.Cursor, conn: sqlite3.Connection, lock,
                   min_eps: float, max_eps: float, step_eps: float, min_min_samples: int, max_min_samples: int,
-                  n_jobs: int = 1):
+                  htables, metrics, pH, ss, n_jobs: int = 1):
     """
 
+    :param metrics:
+    :param htables:
     :param n_jobs:
     :param file:
     :param dir_name:
@@ -310,12 +299,104 @@ def clusterThread(file: str, dir_name: str, cursor: sqlite3.Cursor, conn: sqlite
                 graph(cls, dir_metric, file)
                 try:
                     colormap(cls, dir_metric, file)
-                    # save_state(cls, dir_metric, file) # Занимает много места на жд TODO: выбор через командную строку
+                    if ss:
+                        save_state(cls, dir_metric, file)
                 except ValueError as err:
                     print(err)
 
 
-def main(namespace):
+def db_main_posix(output, filelist, outputDir,
+                  min_eps, max_eps, step_eps, min_min_samples, max_min_samples,
+                  htables, metrics, pH, ss):
+    """
+
+    :param output:
+    :param filelist:
+    :param outputDir:
+    :param min_eps:
+    :param max_eps:
+    :param step_eps:
+    :param min_min_samples:
+    :param max_min_samples:
+    :param htables:
+    :param metrics:
+    :param pH:
+    :param ss:
+    """
+    from multiprocessing import Queue, Process, Lock
+    q = Queue()
+    lock = Lock()
+    cursor, conn = opendb(output)
+    dTask = Process(target=download, args=(filelist, q, lock, cursor, conn, outputDir))
+    dTask.start()
+    TaskDone = False
+    clusterTasks = []
+    n = 1
+    tmp_dict = {}
+    while not TaskDone:
+        while len(clusterTasks) < n_usecpus:
+            item = q.get()
+            if item is None:
+                TaskDone = True
+                break
+            p = Process(target=clusterThread, args=(item, outputDir, cursor, conn, lock,
+                                                    min_eps, max_eps, step_eps,
+                                                    min_min_samples, max_min_samples,
+                                                    htables, metrics, pH, ss))
+            p.start()
+            tmp_dict[p.pid] = item
+            clusterTasks.append(p)
+        for process in clusterTasks:
+            if not process.is_alive():
+                clusterTasks.remove(process)
+                print("All tasks completed for {:s} ({:d}/{:d})".format(tmp_dict[process.pid], n, len(filelist)))
+                del tmp_dict[process.pid]
+                n += 1
+    for p in clusterTasks:
+        p.join()
+    dTask.join()
+    conn.close()
+
+
+def db_main_win(output, filelist, outputDir,
+                min_eps, max_eps, step_eps, min_min_samples, max_min_samples,
+                htables: tuple, metrics: tuple, pH: float, ss: bool):
+    """
+
+    :param output:
+    :param filelist:
+    :param outputDir:
+    :param min_eps:
+    :param max_eps:
+    :param step_eps:
+    :param min_min_samples:
+    :param max_min_samples:
+    :param htables:
+    :param metrics:
+    :param pH:
+    :param ss:
+    """
+    from queue import Queue
+    from threading import Lock, Thread
+    q = Queue()
+    lock = Lock()
+    cursor, conn = opendb(output)
+    dTask = Thread(target=download, args=(filelist, q, lock, cursor, conn, outputDir))
+    dTask.start()
+    n = 1
+    while True:
+        item = q.get()
+        if item is None:
+            break
+        clusterThread(item, outputDir, cursor, conn, lock, min_eps, max_eps,
+                      step_eps, min_min_samples, max_min_samples, htables, metrics, pH, ss, n_jobs=0)
+        print("All tasks completed for {:s} ({:d}/{:d})".format(item, n, len(filelist)))
+        n += 1
+    dTask.join()
+    conn.close()
+
+
+def db_main(namespace):
     """
 
     :param namespace:
@@ -330,6 +411,43 @@ def main(namespace):
     if not inp:
         print("Input name is empty!")
         sys.exit()
+    htables_all = ('hydropathy',
+                   'nanodroplet',
+                   'menv',
+                   'fuzzyoildrop',
+                   'aliphatic_core',
+                   'hydrophilic',
+                   'positive',
+                   'negative')
+    metrics_all = ('si_score',
+                   'calinski')
+    pt = namespace.ptables.strip().lower()
+    if pt == 'all':
+        htables = htables_all
+    else:
+        htables = tuple(pt.split(','))
+    if set(htables).issubset(set(htables_all)):
+        print("Selected ptables: {:s}\n".format(', '.join(htables)))
+    else:
+        print("Error! Table(s): {:s} is not include in supported tables: {:s} chain(s)!\n".format(
+            ', '.join(set(htables).difference(set(htables_all))), ','.join(htables_all)))
+        sys.exit(-1)
+    sc = (namespace.scores).strip().lower()
+    if sc == 'all':
+        metrics = metrics_all
+    else:
+        metrics = tuple(sc.split(','))
+    if set(metrics).issubset(set(metrics_all)):
+        print("Selected metric(s): {:s}\n".format(', '.join(metrics)))
+    else:
+        print("Error! Table(s): {:s} is not include in supported tables: {:s} chain(s)!\n".format(
+            ', '.join(set(metrics).difference(set(metrics_all))), ','.join(metrics_all)))
+        sys.exit(-1)
+    ss = namespace.save_state
+    pH = namespace.pH
+    if pH < 0 or pH > 14:
+        print("pH value range is 0-14")
+        sys.exit(-1)
     min_eps = namespace.emin
     max_eps = namespace.emax
     step_eps = namespace.estep
@@ -351,33 +469,11 @@ def main(namespace):
     except (OSError, FileNotFoundError):
         print("File {:s} is unavailable!".format(inp))
         sys.exit()
-    q = Queue()
-    lock = Lock()
-    cursor, conn = opendb(output)
-    dTask = Process(target=download, args=(filelist, q, lock, cursor, conn, outputDir))
-    dTask.start()
-    TaskDone = False
-    clusterTasks = []
-    n = 1
-    tmp_dict = {}
-    while not TaskDone:
-        while len(clusterTasks) < n_usecpus:
-            item = q.get()
-            if item is None:
-                TaskDone = True
-                break
-            p = Process(target=clusterThread, args=(item, outputDir, cursor, conn, lock, min_eps, max_eps, step_eps,
-                                                    min_min_samples, max_min_samples))
-            p.start()
-            tmp_dict[p.pid] = item
-            clusterTasks.append(p)
-        for process in clusterTasks:
-            if not process.is_alive():
-                clusterTasks.remove(process)
-                print("All tasks completed for {:s} ({:d}/{:d})".format(tmp_dict[process.pid], n, len(filelist)))
-                del tmp_dict[process.pid]
-                n += 1
-    for p in clusterTasks:
-        p.join()
-    dTask.join()
-    conn.close()
+    if sys.platform == 'win32':
+        db_main_win(output, filelist, outputDir,
+                    min_eps, max_eps, step_eps, min_min_samples, max_min_samples,
+                    htables, metrics, pH, ss)
+    else:
+        db_main_posix(output, filelist, outputDir,
+                      min_eps, max_eps, step_eps, min_min_samples, max_min_samples,
+                      htables, metrics, pH, ss)

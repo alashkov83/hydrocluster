@@ -164,7 +164,7 @@ def open_file(cls: ClusterPdb, log: Log, filename: str):
             log.append('File ID PDB: {0:s} successfully downloaded!\n'.format(filename))
 
 
-def chainsSelect(cls: ClusterPdb, log: Log, namespace) -> list:
+def chainsSelect(cls: ClusterPdb, log: Log, namespace):
     """
 
     :param log:
@@ -281,15 +281,11 @@ def cli(namespace) -> None:
     :param namespace:
     """
     if namespace.output:
-        newdir = namespace.output
-        basefile = namespace.output
+        inpt = namespace.output
     else:
-        if namespace.input.count('.') > 0:  # FIXME: Переделать
-            newdir = namespace.input.split('.')[-2]
-            basefile = os.path.basename(namespace.input).split('.')[-2]
-        else:
-            newdir = namespace.input
-            basefile = namespace.input
+        inpt = os.path.splitext(namespace.input)[0]
+    newdir = os.path.join(os.path.dirname(inpt), os.path.basename(inpt))
+    basefile = os.path.basename(inpt)
     if os.path.exists(newdir):
         shutil.rmtree(newdir)
     try:

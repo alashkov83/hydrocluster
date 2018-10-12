@@ -8,11 +8,17 @@
 # TODO: Написать нормальную документацию.
 # TODO: Оформить релиз и выложить его в PyPi
 # TODO: Возможно следует удалить текстовый вывод на каждой итерации автоподбора параметров
+# TODO: Проанализировать концентрации (м.б. новая статья)
 # TODO: Добавить возможность выбора других решений кластеризации.
+# TODO: Добавить таблицы основанные на группах, а не на а.о.
 
 
 import argparse
 import sys
+
+from .dbcreator.testlist import db_main
+from .ui.cli import cli
+from .ui.tkgui import TkGui
 
 
 class Parser(argparse.ArgumentParser):
@@ -43,7 +49,7 @@ class Parser(argparse.ArgumentParser):
                                                       'aliphatic_core', 'hydrophilic', 'positive', 'negative'],
                           type=str, default='hydropathy', help='Property table for weighting')
         self.add_argument('-pH', '--pH', type=float, default=7.0,
-                          help='pH value for calculatation of net charges (positive or negative) for --ptable ')
+                          help='pH value for calculation of net charges (positive or negative)')
         self.add_argument('-sc', '--score', choices=['si_score', 'calinski', 'dbcv'], type=str, default='calinski',
                           help='Score coefficient')
         self.add_argument('-nf', '--noise_filter', action='store_const', const=True, default=False,
@@ -52,31 +58,31 @@ class Parser(argparse.ArgumentParser):
                           help='No automatic mode. --eps and --min_samples options required')
         self.add_argument('-eps', '--eps', type=float, default=3.0, help='EPS value (A)')
         self.add_argument('-min_samples', '--min_samples', type=int, default=3, help='MIN SAMPLES')
+        self.add_argument('-ss', '--save_state', action='store_const', const=True, default=False,
+                          help='Save states on testlist mode (Required more disk space!)')
+        self.add_argument('-pts', '--ptables', type=str, default='all',
+                          help='Property tables list for testlist, separator - ","')
+        self.add_argument('-scs', '--scores', type=str, default='all',
+                          help='Score coefficients list for testlist, separator - ","')
 
 
 def main():
     """
 
     """
-    if sys.version_info[0] < 3:
-        raise RuntimeError("Must use at least python version 3")
+    if sys.hexversion < 0x30400f0:
+        raise RuntimeError("Must use at least python version 3.4")
+    if sys.implementation.name != 'cpython':
+        raise RuntimeError("Must use CPython implementation")
     parser = Parser()
     namespace = parser.parse_args()
     if namespace.gui == 'tkgui':
-        from .ui.tkgui import TkGui
-
         gui = TkGui()
         gui.mainloop()
     elif namespace.gui == 'cli':
-        from .ui.cli import cli
-
         cli(namespace)
     elif namespace.gui == 'testlist':
-        if sys.platform == 'win32':
-            from .dbcreator.testlist_win import main
-        else:
-            from .dbcreator.testlist import main
-        main(namespace)
+        db_main(namespace)
 
 
 if __name__ == '__main__':

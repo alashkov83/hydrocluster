@@ -25,97 +25,77 @@ User Interface
 The program is called with the command ’hydrocluster’ and following
 parameters:
 ```shell
-hydrocluster [-h][-i INPUT][-emin EMIN][-emax EMAX][-es ESTEP][-smin SMIN][-smax SMAX][-g {tkgui,cli,testlist}]
-[-o OUTPUT][-c CHAINS][-rl RESLIST][-pt{hydropathy,menv,fuzzyoildrop,nanodroplet,aliphatic_core,hydrophilic,positive,negative}]
+hydrocluster [-h][-i INPUT][-emin EMIN][-emax EMAX][-es ESTEP]
+[-smin SMIN][-smax SMAX][-g {tkgui,cli,testlist}][-o OUTPUT][-c CHAINS]
+[-rl RESLIST][-pt{hydropathy,menv,fuzzyoildrop,nanodroplet,aliphatic_core,hydrophilic,positive,negative}]
 [-pH PH][-sc {si_score,calinski,dbcv}][-nf][-na][-eps EPS][-min_samples MIN_SAMPLES]
 ```
 #### Arguments:
 
 **-h, --help**
-
 show help message and exit
 
 **-i INPUT, --input INPUT**
-
 Input file name (pdb, txt, cif, ent) - pdb file name, cif file name,
 idpdb or list of ispdbs
 
 **-emin EMIN, --emin EMIN**
-
 Minimum EPS value (A). Default=3.0
 
 **-emax EMAX, --emax EMAX**
-
 Maximum EPS value (A). Default=15.0
 
 **-es ESTEP, --estep ESTEP**
-
 Step of EPS (A). Default=0.1
 
 **-pts,--ptables**
-
 Property table’s list for testlist.py. Separator: ’,’
 
 **-scs, --scores**
-
 Score coefficients list for testlist. Separator: ’,’
 
 **-smin SMIN, --smin SMIN**
-
 Minimum MIN SAMPLES. Default=3
 
 **-ss --save\_state**
-
 Save states on testlist.py
 
 **-smax SMAX, --smax SMAX**
-
 Minimum MIN SAMPLES. Default=50
 
 **-g {tkgui,cli,testlist}, --gui**
-
 UI modes. Default=’tkgui’ (tkgui - graphic interface, cli - command
 line, testlist - using testlist module for data processing (see -i
 filename.txt and -o filename of data base).
 
 **-o OUTPUT, --output OUTPUT**
-
 Output directory name/file name or db name
 
 **-c CHAINS, --chains CHAINS**
-
 Selected chains. Default=None
 
 **-rl RESLIST, --reslist RESLIST**
-
 Selected amino acid residues. Default=None
 
 **-pt{hydropathy,menv,fuzzyoildrop,nanodroplet,aliphatic\_core,hydrophilic,positive,negative}, --ptable**
-
 Property table for weighting. Default=’hydropathy’
 
 **-pH PH**
-
 pH value for calculatation of net charges (positive or negative). Default=7.0
 
 **-sc {si\_score,calinski,dbcv}, --score {si\_score,calinski,dbcv}**
-
 Score coefficient. Default=’calinski’
 
 **-nf, --noise\_filter**
-
 Activate filter of noise for scoring function (**Not recommended!!!**).
 
 **-na, --noauto**
-
 No automatic mode.
 
 **-eps EPS**
-
 EPS value (A). Default=3.0
 
 **-min\_samples MIN\_SAMPLES**
-
 MIN SAMPLES value. Default=3
 
 **At startup of hydrocluster without any parameters the program opens
@@ -145,12 +125,12 @@ Graphical User Interface
 
 GUI was realized using Tkinter. It consists of a panel for selecting the
 operation mode, a window for graphical representation of clustering
-results Cluster analysis, and a window for displaying log file, shown below.
+results Cluster analysis, and a window for displaying log file.
 
 ![image](screenshots/main_window.png)
 
 At the beginning of working with the graphical interface, it is
-necessary to select the desired hydrophobicity / hydrophilicity table in
+necessary to select the desired hydrophobicity/hydrophilicity table in
 the sub-window of the mode selection window, select the method for
 scoring of clustering in the metrics window and run on Manual (Manual mode -&gt;
 Start) or automatic mode of operation (Auto mode -&gt; Start) in one of
@@ -182,39 +162,24 @@ program (Options-&gt; OpenPyMol).
 
 **File-&gt;**
 
-Open PDB - opens pdb file on disk
-
-Open CIF - opens CIF file on disk
-
+Open PDB - opens pdb file on a disk
+Open CIF - opens CIF file on a disk
 Open IDPDB - opens file from RSCB PDB data base with IDPDB
-
-Load state - load program state, saved when the program starts from
-command line in file\_name.dat
-
+Load state - loads program state, saved in file
 Save PyMOL script - saves script (.py) for further processing with PyMOL
-
-Save state - saves the current state of program in file\_name.dat
-
-Save picture saves the clustering result in file\_name.png
-
-Save LOG saves log file of the current session
-
-Quit quit from the program
+Save state - saves the current state of program in file
+Save picture - saves the clustering result in png format file
+Save LOG - saves log file of the current session
+Quit - quit from the program
 
 **Options-&gt;**
 
 Plot grid - makes coordinate grid in the Cluster analysis window
-
-Plot legend - displays the brief description of the picture.
-
+Plot legend - displays the brief description of the picture
 Display colormap - shows graphs obtained as a result of clustering
-parameters selection. Marked point corresponds
-
-to optimal values of eps and min\_samples
-
-Clear log - clears log file in the appropriate window.
-
-Open PyMol - opens PyMol for further data display.
+parameters selection. Marked point corresponds optimal values of eps and min\_samples
+Clear log - clears log file in the appropriate window
+Open PyMol - opens PyMol for further data display
 
 Theory
 ------
@@ -285,19 +250,12 @@ family).
 References
 ----------
 1. J. Kyte, R. F. Doolittle. J Mol Biol. 1982. 157, 105-132.
-
 2. B. Kalinowska, M. Banach, Z. Wisniowski, L. Konieczny, I. Roterman. J
 Mol Model. 2017. 23 , 205.
-
 3. D. Bandyopadhyay .E. L. Mehler.Proteins 2008.72.646-659
-
 4. Zhu C. Q., Gao Y. R. , Li H. et.al.// Proc. NAS. 2016.113.12946.
-
 5. Ikai, A.J. 1980. J. Biochem. 88, 1895-1898.
-
 6. Rousseeuw P. Comput. Appl. Math. 1987. 20. 53.
-
 7. Calinski T., Harabasz J. // Communications in Statistics. 1974. 3 . 1.
-
 8. Moulavi, Davoud, et al. Proc.2014 SIAM International Conf. on Data
 Mining. 839-847. 2014.

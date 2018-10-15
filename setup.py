@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 # coding=utf-8
+import re
+
 from setuptools import setup
 
 with open("README.md") as fh:
     long_description = fh.read()
+    long_description = re.sub(r'!\[image\]\([a-z0-9/_]+\.png\)\n', '', long_description)
 
 with open('requirements.txt') as f:
     requirements = f.readlines()

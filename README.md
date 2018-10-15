@@ -32,70 +32,70 @@ hydrocluster [-h][-i INPUT][-emin EMIN][-emax EMAX][-es ESTEP]
 ```
 #### Arguments:
 
-**-h, --help**
+**-h, --help**  
 show help message and exit
 
-**-i INPUT, --input INPUT**
+**-i INPUT, --input INPUT**  
 Input file name (pdb, txt, cif, ent) - pdb file name, cif file name,
 idpdb or list of ispdbs
 
-**-emin EMIN, --emin EMIN**
+**-emin EMIN, --emin EMIN**  
 Minimum EPS value (A). Default=3.0
 
-**-emax EMAX, --emax EMAX**
+**-emax EMAX, --emax EMAX**  
 Maximum EPS value (A). Default=15.0
 
-**-es ESTEP, --estep ESTEP**
+**-es ESTEP, --estep ESTEP**  
 Step of EPS (A). Default=0.1
 
-**-pts,--ptables**
+**-pts,--ptables**  
 Property table’s list for testlist.py. Separator: ’,’
 
-**-scs, --scores**
+**-scs, --scores**  
 Score coefficients list for testlist. Separator: ’,’
 
-**-smin SMIN, --smin SMIN**
+**-smin SMIN, --smin SMIN**  
 Minimum MIN SAMPLES. Default=3
 
-**-ss --save\_state**
+**-ss --save\_state**  
 Save states on testlist.py
 
-**-smax SMAX, --smax SMAX**
+**-smax SMAX, --smax SMAX**  
 Minimum MIN SAMPLES. Default=50
 
-**-g {tkgui,cli,testlist}, --gui**
+**-g {tkgui,cli,testlist}, --gui**  
 UI modes. Default=’tkgui’ (tkgui - graphic interface, cli - command
 line, testlist - using testlist module for data processing (see -i
 filename.txt and -o filename of data base).
 
-**-o OUTPUT, --output OUTPUT**
+**-o OUTPUT, --output OUTPUT**  
 Output directory name/file name or db name
 
-**-c CHAINS, --chains CHAINS**
+**-c CHAINS, --chains CHAINS**  
 Selected chains. Default=None
 
-**-rl RESLIST, --reslist RESLIST**
+**-rl RESLIST, --reslist RESLIST**  
 Selected amino acid residues. Default=None
 
-**-pt{hydropathy,menv,fuzzyoildrop,nanodroplet,aliphatic\_core,hydrophilic,positive,negative}, --ptable**
+**-pt{hydropathy,menv,fuzzyoildrop,nanodroplet,aliphatic\_core,hydrophilic,positive,negative}, --ptable**  
 Property table for weighting. Default=’hydropathy’
 
-**-pH PH**
+**-pH PH**  
 pH value for calculatation of net charges (positive or negative). Default=7.0
 
-**-sc {si\_score,calinski,dbcv}, --score {si\_score,calinski,dbcv}**
+**-sc {si\_score,calinski,dbcv}, --score {si\_score,calinski,dbcv}**  
 Score coefficient. Default=’calinski’
 
-**-nf, --noise\_filter**
+**-nf, --noise\_filter**  
 Activate filter of noise for scoring function (**Not recommended!!!**).
 
-**-na, --noauto**
+**-na, --noauto**  
 No automatic mode.
 
-**-eps EPS**
+**-eps EPS**  
 EPS value (A). Default=3.0
 
-**-min\_samples MIN\_SAMPLES**
+**-min\_samples MIN\_SAMPLES**  
 MIN SAMPLES value. Default=3
 
 **At startup of hydrocluster without any parameters the program opens
@@ -162,23 +162,23 @@ program (Options-&gt; OpenPyMol).
 
 **File-&gt;**
 
-Open PDB - opens pdb file on a disk
-Open CIF - opens CIF file on a disk
-Open IDPDB - opens file from RSCB PDB data base with IDPDB
-Load state - loads program state, saved in file
-Save PyMOL script - saves script (.py) for further processing with PyMOL
-Save state - saves the current state of program in file
-Save picture - saves the clustering result in png format file
-Save LOG - saves log file of the current session
+Open PDB - opens pdb file on a disk  
+Open CIF - opens CIF file on a disk  
+Open IDPDB - opens file from RSCB PDB data base with IDPDB  
+Load state - loads program state, saved in file  
+Save PyMOL script - saves script (.py) for further processing with PyMOL  
+Save state - saves the current state of program in file  
+Save picture - saves the clustering result in png format file  
+Save LOG - saves log file of the current session  
 Quit - quit from the program
 
 **Options-&gt;**
 
-Plot grid - makes coordinate grid in the Cluster analysis window
-Plot legend - displays the brief description of the picture
+Plot grid - makes coordinate grid in the Cluster analysis window  
+Plot legend - displays the brief description of the picture  
 Display colormap - shows graphs obtained as a result of clustering
-parameters selection. Marked point corresponds optimal values of eps and min\_samples
-Clear log - clears log file in the appropriate window
+parameters selection. Marked point corresponds optimal values of eps and min\_samples  
+Clear log - clears log file in the appropriate window  
 Open PyMol - opens PyMol for further data display
 
 Theory

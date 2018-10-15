@@ -52,7 +52,7 @@ def _core_dist(point, neighbors):
 
     distance_vector = cdist(point.reshape(1, -1), neighbors)
     distance_vector = distance_vector[distance_vector != 0]
-    if len(distance_vector) != 0:  # TODO: check this code
+    if len(distance_vector) != 0:
         numerator = ((1 / distance_vector) ** n_features).sum()
         core_dist = ((numerator / n_neighbors) ** (-1 / n_features))
     else:

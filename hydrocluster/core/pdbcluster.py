@@ -116,10 +116,8 @@ def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, sparse_n, weight_array, eps:
         except ValueError:
             score = 0
     elif metric == 'dbcv':
-        # from hdbscan import validity_index as DBCV # TODO: Поэкспериментировать - работает быстрее, но странно
-        # score = DBCV(filterR, filterLabel, d=3)
         try:
-            score = DBCV(filterXYZ, filterLabel)  # TODO: Провести оценку с уже реализованными функциями.
+            score = DBCV(filterXYZ, filterLabel)
             if np.isnan(score):
                 raise ValueError
         except ValueError:
@@ -550,9 +548,9 @@ class ClusterPdb:
             hydrfob = fuzzyoildrop
         elif htable == 'nanodroplet':
             hydrfob = nanodroplet
-        elif htable == 'aliphatic_core':  # TODO: Понять биологический смысл кластеризации по этой таблице
+        elif htable == 'aliphatic_core':
             hydrfob = aliphatic_core
-        elif htable == 'hydrophilic':  # TODO: Понять биологический смысл кластеризации по этой таблице
+        elif htable == 'hydrophilic':
             hydrfob = hydropathy_h2o
         elif htable == 'positive' or htable == 'negative':
             hydrfob = calc_abs_charge(htable, pH)

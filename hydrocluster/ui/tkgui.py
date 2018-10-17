@@ -45,21 +45,21 @@ class TkGui(tk.Tk):
         but3.grid(row=1, column=0, pady=5)
         fra11 = tk.Frame(lab1)
         fra11.grid(row=2, column=0, pady=5, padx=5)
-        l11 = tk.Label(fra11, text="No of residues:", anchor=tk.NW)
+        l11 = tk.Label(fra11, text="No of residues:", anchor=tk.W)
         l11.grid(row=0, column=0, pady=5, padx=5)
-        self.l11 = tk.Label(fra11, text="{0:>5d}".format(0), anchor=tk.NW)
+        self.l11 = tk.Label(fra11, text="{0:>5d}".format(0), anchor=tk.W)
         self.l11.grid(row=0, column=1, pady=5, padx=5)
-        l12 = tk.Label(fra11, text="Min distance (\u212B): ", anchor=tk.NW)
+        l12 = tk.Label(fra11, text="Min distance (\u212B): ", anchor=tk.W)
         l12.grid(row=1, column=0, pady=5, padx=5)
-        self.l12 = tk.Label(fra11, text="{0:>5.3f}".format(0), anchor=tk.NW)
+        self.l12 = tk.Label(fra11, text="{0:>5.3f}".format(0), anchor=tk.W)
         self.l12.grid(row=1, column=1, pady=5, padx=5)
-        l13 = tk.Label(fra11, text="Max distance (\u212B): ", anchor=tk.NW)
+        l13 = tk.Label(fra11, text="Max distance (\u212B): ", anchor=tk.W)
         l13.grid(row=2, column=0, pady=5, padx=5)
-        self.l13 = tk.Label(fra11, text="{0:>5.3f}".format(0), anchor=tk.NW)
+        self.l13 = tk.Label(fra11, text="{0:>5.3f}".format(0), anchor=tk.W)
         self.l13.grid(row=2, column=1, pady=5, padx=5)
-        l14 = tk.Label(fra11, text="Mean distance (\u212B): ", anchor=tk.NW)
+        l14 = tk.Label(fra11, text="Mean distance (\u212B): ", anchor=tk.W)
         l14.grid(row=3, column=0, pady=5, padx=5)
-        self.l14 = tk.Label(fra11, text="{0:>5.3f}".format(0), anchor=tk.NW)
+        self.l14 = tk.Label(fra11, text="{0:>5.3f}".format(0), anchor=tk.W)
         self.l14.grid(row=3, column=1, pady=5, padx=5)
         lab21 = tk.LabelFrame(fra1, text='Metric', labelanchor='n', borderwidth=5)
         lab21.pack(expand=1, fill=tk.X, pady=5, padx=5)
@@ -70,9 +70,8 @@ class TkGui(tk.Tk):
         lab4 = tk.LabelFrame(fra1, text='Option', labelanchor='n', borderwidth=5)
         lab4.pack(expand=1, fill=tk.X, pady=5, padx=5)
         self.checkNoise = tk.BooleanVar()
-        self.nfCheckBox = tk.Checkbutton(lab4, text="Noise filter\n(Not recommended!)",
-                                         variable=self.checkNoise,
-                                         anchor=tk.NW)
+        self.nfCheckBox = tk.Checkbutton(lab4, text="Noise filter(See README)", variable=self.checkNoise,
+                                         anchor=tk.W)
         self.nfCheckBox.pack(expand=1, fill=tk.X, pady=5, padx=5)
         lab2 = tk.LabelFrame(fra1, text='Auto mode', labelanchor='n', borderwidth=5)
         lab2.pack(expand=1, fill=tk.X, pady=5, padx=5)
@@ -126,10 +125,8 @@ class TkGui(tk.Tk):
         self.ent_max_min_samples.grid(row=4, column=1, pady=5, padx=5)
         but2 = tk.Button(lab2, text='Start', command=lambda: self.run(auto=True))
         but2.grid(row=3, column=0, pady=5)
-        lab23 = tk.LabelFrame(lab2, text='Progress: ', labelanchor='n', borderwidth=5)
-        lab23.grid(row=4, column=0, pady=5, padx=5)
-        self.pb = ttk.Progressbar(lab23, orient='horizontal', mode='determinate', length=200)
-        self.pb.pack()
+        self.pb = ttk.Progressbar(lab2, orient='horizontal', mode='determinate', length=200)
+        self.pb.grid(row=4, column=0, pady=5, padx=5)
         self.fra3 = tk.Frame(self, width=800, height=710)
         self.fra3.grid_propagate(False)
         self.fra3.grid(row=0, column=1)
@@ -208,6 +205,7 @@ class TkGui(tk.Tk):
         m.add_cascade(label='Options', menu=om)
         om.add_command(label='Plot grid', command=self.grid_set)
         om.add_command(label='Plot legend', command=self.legend_set)
+        om.add_command(label='Select clustering solution', command=self.select_sol)
         om.add_command(label='Autotune colormap', command=self.colormap)
         om.add_command(label='Clear LOG', command=self.clean_txt)
         om.add_command(label='Open PyMol', command=self.open_pymol)
@@ -218,7 +216,7 @@ class TkGui(tk.Tk):
         if askyesno('Quit', 'Are your sure?'):
             self.destroy()
 
-    def run(self, auto: bool = False, load_state: bool = False) -> None:
+    def run(self, auto: bool = False, load_state: bool = False, eps = None, min_samples = None) -> None:
         """The main algorithm of the program."""
         if self.run_flag:
             showerror('Error!', 'The calculation is still running!')
@@ -331,8 +329,10 @@ class TkGui(tk.Tk):
             self.sca2.set(min_samples)
         elif not auto and not load_state:
             self.cls.noise_filter = noise_filter
-            eps = self.sca1.get()
-            min_samples = self.sca2.get()
+            if eps is None:
+                eps = self.sca1.get()
+            if min_samples is None:
+                min_samples = self.sca2.get()
             self.pb['maximum'] = 1
             try:
                 self.cls.cluster(eps, min_samples, metric)
@@ -780,3 +780,36 @@ class TkGui(tk.Tk):
             self.cls.open_pymol()
         except FileNotFoundError:
             showerror("Erros!", "PyMol not found!")
+
+    def select_sol(self):
+        if self.run_flag:
+            showerror('Error!', 'The calculation is still running!')
+            return
+        sol_list = self.cls.get_nsol(5)
+        if not sol_list:
+            return
+        win = tk.Toplevel(self)
+        x = self.winfo_x() + self.winfo_width() // 2
+        y = self.winfo_y() + self.winfo_height() // 2
+        win.wm_geometry("+{:d}+{:d}".format(x, y))
+        win.title("Clustering solutions")
+        self.resizable(False, False)
+        win.transient(self)
+        win.grab_set()
+        win.focus_force()
+        fra1 = tk.Frame(win)
+        fra1.grid(row=0, column=0)
+        for sol in sol_list:
+            CheckBox = tk.Button(fra1, text="{:d}: score: {:.3f}, nclustes: {:d}, eps: {:.2f} \u212B, "
+                                            "min_samples: {:d}".format(sol[0], sol[1], sol[2], sol[3], sol[4]),
+                                 command=lambda x=sol[3], y=sol[4]: self.set_sol(win, x, y),
+                                 anchor=tk.W)
+            CheckBox.flash()
+            CheckBox.pack(expand=1, fill=tk.X, pady=5, padx=5)
+
+    def set_sol(self, win, eps, min_samples):
+        if win:
+            win.destroy()
+        self.run(eps=eps, min_samples=min_samples)
+        self.sca1.set(self.cls.eps)
+        self.sca2.set(self.cls.min_samples)

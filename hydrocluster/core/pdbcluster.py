@@ -264,7 +264,7 @@ class ClusterPdb:
         self.s_array = []
         self.htable = 'hydropathy'
         self.parse_results = (0, 0.0, 0.0, 0.0)
-        self.auto_params = (0.0, 0.0, 0.0, 0, 0, 'si_score')
+        self.auto_params = (0.0, 0.0, 0.0, 0, 0, 'calinski')
         self.weight_array = []
         self.aa_list = []
         self.states = []
@@ -427,6 +427,17 @@ class ClusterPdb:
         else:
             cr, r2r = self.figs['ransac'][1], self.figs['ransac'][3]
         return cl, cr, r2l, r2r
+
+    def get_nsol(self, nsol: int):
+        if self.states and len(self.states) >= nsol:
+            sols = []
+            for n in range(nsol):
+                state = self.states[n]
+                sols.append((n, state[3], state[2], state[4], state[5]))
+        else:
+            sols = None
+        return sols
+
 
     def noise_percent(self):
         """
@@ -685,6 +696,9 @@ class ClusterPdb:
         ax11.set_ylabel('MIN SAMPLES')
         ax11.set_xlabel(r'$V,\ \AA^3$')
         ax11.scatter(V, N, c='k')
+        vs = [Vcoeff * state[3] ** 3 for state in self.get_nsol(5)]
+        ns = [state[4] for state in self.get_nsol(5)]
+        ax11.scatter(vs, ns, c='g', label='Suboptimal')
         ax11.scatter(Vcoeff * self.eps ** 3, self.min_samples, c='r', label='Current')
         texLINEAR = 'Linear:\n' + r'$C_h\ =\ ' + '{:.4f}'.format(C) + r'\ \AA^{-3}$' + "\n" + r'$N_0\ =\ ' + \
                     '{:.1f}$'.format(B) + '\n' + r'$R^2\ =\ ' + '{:.4f}'.format(R2) + r'$'

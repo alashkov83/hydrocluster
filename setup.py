@@ -23,9 +23,8 @@ setup(
     author_email='alashkov83@gmail.com',
     maintainer='Alexander Lashkov',
     classifiers=[
-        'Development Status :: 5 - Production/Stable',
+        'Development Status :: 1 - Planning',
         'Environment :: Console',
-        'Environment :: MacOS',
         'Environment :: Win32 (MS Windows)',
         'Environment :: X11 Applications',
         'Intended Audience :: Science/Research',

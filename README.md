@@ -15,7 +15,7 @@ Installation
 ```shell
 pip install --upgrade hydrocluster
 ```
-(or pip3 in distributive with default python 2 version
+(or pip3 in distributive with default python 2 version)
 
 User Interface
 --------------
@@ -139,7 +139,7 @@ eps and min\_samples are selected by enumeration within the given
 boundaries and with the given step. Upon completion of the work in the
 automatic mode, when you click Options -&gt; Dispplay colormap, you can
 get a graphical interpretation of the process of selecting the optimal
-values namely dependencies eps (min\_sample) and eps (min\_samples<sup>3</sup>).
+values namely dependencies min\_samples (eps) and min\_samples (eps<sup>3</sup>).
 The point corresponding to the optimal parameters is marked in
 color.
 
@@ -175,7 +175,8 @@ Quit - quit from the program
 **Options-&gt;**
 
 Plot grid - makes coordinate grid in the Cluster analysis window  
-Plot legend - displays the brief description of the picture  
+Plot legend - displays the brief description of the picture
+Select clustering solution - display and choice for other solutions cluster analysis  
 Display colormap - shows graphs obtained as a result of clustering
 parameters selection. Marked point corresponds optimal values of eps and min\_samples  
 Clear log - clears log file in the appropriate window  

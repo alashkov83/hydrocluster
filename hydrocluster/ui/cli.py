@@ -67,7 +67,8 @@ def run(cls: ClusterPdb, log: Log, namespace) -> None:
     else:
         log.append('Autoscan done... \n')
         bar1.finish()
-        log.append(('\nNumber of clusters = {0:d}\n{4:s} = {1:.3f}\n'
+        print_sols(cls, log)
+        log.append(('\nBest solution:\nNumber of clusters = {0:d}\n{4:s} = {1:.3f}\n'
                     'EPS = {2:.3f} \u212B\nMIN_SAMPLES = {3:d}\n'
                     'Percent of noise = {5:.2f} %{6:s}\n').format(
             cls.n_clusters, cls.score, eps, min_samples,
@@ -273,6 +274,14 @@ def colormap(cls: ClusterPdb, log: Log, newdir: str, basefile: str):
         canvas.print_png(sa)
     except AttributeError:
         log.append('Error! Failed to plot!!\n')
+
+def print_sols(cls: ClusterPdb, log):
+    sols = cls.get_nsol(5)
+    log.append("\nClustering solutions:\n")
+    for sol in sols:
+        log.append("{:d}: score: {:.3f}, nclustes: {:d}, eps: {:.2f} \u212B, "
+                   "min_samples: {:d}\n".format(sol[0], sol[1], sol[2], sol[3], sol[4]))
+
 
 
 def cli(namespace) -> None:

@@ -11,12 +11,12 @@ from tkinter.simpledialog import askstring, askfloat
 from urllib.error import HTTPError
 
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-
+from .. import __version__, __license__, __skversion__
 try:
     from ..core.pdbcluster import ClusterPdb
 except ImportError:
     showerror('Error!', 'Scikit-learn not installed!')
-    sys.exit()
+    sys.exit(-1)
 
 
 class TkGui(tk.Tk):
@@ -36,7 +36,7 @@ class TkGui(tk.Tk):
         lab1.pack(expand=1, fill=tk.X, pady=5, padx=5)
         lab11 = tk.LabelFrame(lab1, text='Property table', labelanchor='n', borderwidth=5)
         lab11.grid(row=0, column=0, pady=5, padx=5)
-        listbox_items = ['hydropathy', 'menv', 'fuzzyoildrop', 'nanodroplet',
+        listbox_items = ['hydropathy', 'menv', 'fuzzyoildrop', 'rekkergroup', 'nanodroplet',
                          'aliphatic_core', 'hydrophilic', 'positive', 'negative']
         self.combox_p = ttk.Combobox(lab11, height=5, width=15, values=listbox_items)
         self.combox_p.pack()
@@ -45,22 +45,22 @@ class TkGui(tk.Tk):
         but3.grid(row=1, column=0, pady=5)
         fra11 = tk.Frame(lab1)
         fra11.grid(row=2, column=0, pady=5, padx=5)
-        l11 = tk.Label(fra11, text="No of residues:", anchor=tk.W)
-        l11.grid(row=0, column=0, pady=5, padx=5)
-        self.l11 = tk.Label(fra11, text="{0:>5d}".format(0), anchor=tk.W)
-        self.l11.grid(row=0, column=1, pady=5, padx=5)
+        l11 = tk.Label(fra11, text="No. of res.(groups):", anchor=tk.W)
+        l11.grid(row=0, column=0, pady=5, padx=5, sticky="W")
+        self.l11 = tk.Label(fra11, text="{0:<5d}".format(0), anchor=tk.W)
+        self.l11.grid(row=0, column=1, pady=5, padx=5, sticky="W")
         l12 = tk.Label(fra11, text="Min distance (\u212B): ", anchor=tk.W)
-        l12.grid(row=1, column=0, pady=5, padx=5)
+        l12.grid(row=1, column=0, pady=5, padx=5, sticky="W")
         self.l12 = tk.Label(fra11, text="{0:>5.3f}".format(0), anchor=tk.W)
-        self.l12.grid(row=1, column=1, pady=5, padx=5)
+        self.l12.grid(row=1, column=1, pady=5, padx=5, sticky="W")
         l13 = tk.Label(fra11, text="Max distance (\u212B): ", anchor=tk.W)
-        l13.grid(row=2, column=0, pady=5, padx=5)
+        l13.grid(row=2, column=0, pady=5, padx=5, sticky="W")
         self.l13 = tk.Label(fra11, text="{0:>5.3f}".format(0), anchor=tk.W)
-        self.l13.grid(row=2, column=1, pady=5, padx=5)
+        self.l13.grid(row=2, column=1, pady=5, padx=5, sticky="W")
         l14 = tk.Label(fra11, text="Mean distance (\u212B): ", anchor=tk.W)
-        l14.grid(row=3, column=0, pady=5, padx=5)
+        l14.grid(row=3, column=0, pady=5, padx=5, sticky="W")
         self.l14 = tk.Label(fra11, text="{0:>5.3f}".format(0), anchor=tk.W)
-        self.l14.grid(row=3, column=1, pady=5, padx=5)
+        self.l14.grid(row=3, column=1, pady=5, padx=5, sticky="W")
         lab21 = tk.LabelFrame(fra1, text='Metric', labelanchor='n', borderwidth=5)
         lab21.pack(expand=1, fill=tk.X, pady=5, padx=5)
         listbox_items = ['calinski', 'si_score', 'dbcv']
@@ -70,8 +70,7 @@ class TkGui(tk.Tk):
         lab4 = tk.LabelFrame(fra1, text='Option', labelanchor='n', borderwidth=5)
         lab4.pack(expand=1, fill=tk.X, pady=5, padx=5)
         self.checkNoise = tk.BooleanVar()
-        self.nfCheckBox = tk.Checkbutton(lab4, text="Noise filter(See README)", variable=self.checkNoise,
-                                         anchor=tk.W)
+        self.nfCheckBox = tk.Checkbutton(lab4, text="Noise filter(See Readme)", variable=self.checkNoise, anchor=tk.W)
         self.nfCheckBox.pack(expand=1, fill=tk.X, pady=5, padx=5)
         lab2 = tk.LabelFrame(fra1, text='Auto mode', labelanchor='n', borderwidth=5)
         lab2.pack(expand=1, fill=tk.X, pady=5, padx=5)
@@ -79,13 +78,13 @@ class TkGui(tk.Tk):
         lab3.pack(expand=1, fill=tk.X, pady=5, padx=5)
         lab31 = tk.LabelFrame(lab3, text='EPS (\u212B)', labelanchor='n', borderwidth=5)
         lab31.grid(row=0, column=0, pady=5, padx=5)
-        self.sca1 = tk.Scale(lab31, length=200, from_=1.0, to=15.0, showvalue=1,
+        self.sca1 = tk.Scale(lab31, length=210, from_=1.0, to=15.0, showvalue=1,
                              orient=tk.HORIZONTAL, resolution=0.1)
         self.sca1.set(3.0)
         self.sca1.pack()
         lab32 = tk.LabelFrame(lab3, text='MIN_SAMPLES', labelanchor='n', borderwidth=5)
         lab32.grid(row=1, column=0, pady=5, padx=5)
-        self.sca2 = tk.Scale(lab32, length=200, from_=1, to=50, showvalue=1,
+        self.sca2 = tk.Scale(lab32, length=210, from_=1, to=50, showvalue=1,
                              orient=tk.HORIZONTAL)
         self.sca2.set(3)
         self.sca2.pack()
@@ -93,39 +92,39 @@ class TkGui(tk.Tk):
         but1.grid(row=2, column=0, pady=5)
         lab22 = tk.Frame(lab2)
         lab22.grid(row=1, column=0)
-        l1 = tk.Label(lab22, text="Min EPS (\u212B):", anchor=tk.NW)
-        l1.grid(row=0, column=0, pady=5, padx=5)
+        l1 = tk.Label(lab22, text="Min EPS (\u212B):", anchor=tk.W)
+        l1.grid(row=0, column=0, pady=5, padx=5, sticky="W")
         self.ent_min_eps = tk.Entry(lab22, width=4, bd=3)
         self.ent_min_eps.delete(0, tk.END)
         self.ent_min_eps.insert(0, '3.0')
-        self.ent_min_eps.grid(row=0, column=1, pady=5, padx=5)
-        l2 = tk.Label(lab22, text="Max EPS (\u212B):", anchor=tk.NW)
-        l2.grid(row=1, column=0, pady=5, padx=5)
+        self.ent_min_eps.grid(row=0, column=1, pady=5, padx=5, sticky="W")
+        l2 = tk.Label(lab22, text="Max EPS (\u212B):", anchor=tk.W)
+        l2.grid(row=1, column=0, pady=5, padx=5, sticky="W")
         self.ent_max_eps = tk.Entry(lab22, width=4, bd=3)
         self.ent_max_eps.delete(0, tk.END)
         self.ent_max_eps.insert(0, '15.0')
-        self.ent_max_eps.grid(row=1, column=1, pady=5, padx=5)
-        l3 = tk.Label(lab22, text="Step EPS (\u212B):", anchor=tk.NW)
-        l3.grid(row=2, column=0, pady=5, padx=5)
+        self.ent_max_eps.grid(row=1, column=1, pady=5, padx=5, sticky="W")
+        l3 = tk.Label(lab22, text="Step EPS (\u212B):", anchor=tk.W)
+        l3.grid(row=2, column=0, pady=5, padx=5, sticky="W")
         self.ent_step_eps = tk.Entry(lab22, width=4, bd=3)
         self.ent_step_eps.delete(0, tk.END)
         self.ent_step_eps.insert(0, '0.1')
-        self.ent_step_eps.grid(row=2, column=1, pady=5, padx=5)
-        l4 = tk.Label(lab22, text="Min MIN_SAMPLES:", anchor=tk.NW)
-        l4.grid(row=3, column=0, pady=5, padx=5)
+        self.ent_step_eps.grid(row=2, column=1, pady=5, padx=5, sticky="W")
+        l4 = tk.Label(lab22, text="Min MIN_SAMPLES:", anchor=tk.W)
+        l4.grid(row=3, column=0, pady=5, padx=5, sticky="W")
         self.ent_min_min_samples = tk.Entry(lab22, width=4, bd=3)
         self.ent_min_min_samples.delete(0, tk.END)
         self.ent_min_min_samples.insert(0, '3')
-        self.ent_min_min_samples.grid(row=3, column=1, pady=5, padx=5)
-        l5 = tk.Label(lab22, text="Max MIN_SAMPLES:", anchor=tk.NW)
-        l5.grid(row=4, column=0, pady=5, padx=5)
+        self.ent_min_min_samples.grid(row=3, column=1, pady=5, padx=5, sticky="W")
+        l5 = tk.Label(lab22, text="Max MIN_SAMPLES:", anchor=tk.W)
+        l5.grid(row=4, column=0, pady=5, padx=5, sticky="W")
         self.ent_max_min_samples = tk.Entry(lab22, width=4, bd=3)
         self.ent_max_min_samples.delete(0, tk.END)
         self.ent_max_min_samples.insert(0, '50')
-        self.ent_max_min_samples.grid(row=4, column=1, pady=5, padx=5)
+        self.ent_max_min_samples.grid(row=4, column=1, pady=5, padx=5, sticky="W")
         but2 = tk.Button(lab2, text='Start', command=lambda: self.run(auto=True))
         but2.grid(row=3, column=0, pady=5)
-        self.pb = ttk.Progressbar(lab2, orient='horizontal', mode='determinate', length=200)
+        self.pb = ttk.Progressbar(lab2, orient='horizontal', mode='determinate', length=220)
         self.pb.grid(row=4, column=0, pady=5, padx=5)
         self.fra3 = tk.Frame(self, width=800, height=710)
         self.fra3.grid_propagate(False)
@@ -178,8 +177,24 @@ class TkGui(tk.Tk):
     def about():
         """
 
+        :return:
         """
-        showinfo('About', 'Cluster analysis of hydrophobic or charged regions of macromolecules')
+        showinfo('About', 'Cluster analysis of hydrophobic or charged regions of macromolecules\n\n'
+                          'Version: {:s}\n'
+                          'License: {:s}\n\n'
+                          'Python version: {:s}\n'
+                          'Platform: {:s}\n'
+                          'Scikit-learn version: {:s}'.format(__version__, __license__, sys.version,
+                                                              sys.platform, __skversion__))
+
+    @staticmethod
+    def readme():
+        """
+
+        :return:
+        """
+        import webbrowser
+        webbrowser.open_new("https://github.com/alashkov83/hydrocluster/blob/master/README.md")
 
     def menu(self) -> None:
         """The method of initialize menu."""
@@ -209,14 +224,17 @@ class TkGui(tk.Tk):
         om.add_command(label='Autotune colormap', command=self.colormap)
         om.add_command(label='Clear LOG', command=self.clean_txt)
         om.add_command(label='Open PyMol', command=self.open_pymol)
-        m.add_command(label='About', command=self.about)
+        hm = tk.Menu(m)
+        m.add_cascade(label='Help', menu=hm)
+        hm.add_command(label='Readme', command=self.readme)
+        hm.add_command(label='About', command=self.about)
 
     def close_win(self) -> None:
         """Self-destruct with the ask."""
         if askyesno('Quit', 'Are your sure?'):
             self.destroy()
 
-    def run(self, auto: bool = False, load_state: bool = False, eps = None, min_samples = None) -> None:
+    def run(self, auto: bool = False, load_state: bool = False, eps=None, min_samples=None) -> None:
         """The main algorithm of the program."""
         if self.run_flag:
             showerror('Error!', 'The calculation is still running!')
@@ -357,8 +375,10 @@ class TkGui(tk.Tk):
                 self.tx.configure(state='normal')
                 self.tx.insert(tk.END, '\n{:s} cluster No. {:d} contains: {:s}'.format(
                     ("Core" if k[0] else "Uncore"), k[1],
-                    ", ".join(['{2:s}:{1:s}{0:d}'.format(*aac) for aac in aa_list])))
-            self.tx.insert(tk.END, '\n')
+                    ", ".join(['{2:s}:{1:s}{0:d}{3:s}'.format(aac[0], aac[1], aac[2],
+                                                              ((':' + '-'.join(aac[3])) if (len(aac) > 3 and aac[3]) else ''))
+                               for aac in aa_list])))
+                self.tx.insert(tk.END, '\n')
         self.tx.configure(state='disabled')
         self.graph()
         self.run_flag = False
@@ -544,8 +564,8 @@ class TkGui(tk.Tk):
                 else 'negative' if htable == 'negative' else 'positive'))
             return
         else:
-            showinfo('Info', 'File successfully parsed!\nPTable: {:s}\n'.format(htable) +
-                     "No. of residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
+            showinfo('Info', 'File successfully parsed!\nProperty table: {:s}\n'.format(htable) +
+                     "No. of residues(groups: {:d}\nMinimum distance = {:.3f} \u212B\n"
                      "Maximum distance = {:.3f} \u212B\nMean distance = {:.3f} \u212B\n".format(*parse_results))
             self.l11.configure(text="{0:>5d}".format(parse_results[0]))
             self.l12.configure(text="{0:>5.3f}".format(parse_results[1]))
@@ -560,8 +580,8 @@ class TkGui(tk.Tk):
         self.fig = None
         self.clean_txt()
         self.tx.configure(state='normal')
-        self.tx.insert(tk.END, 'PTable: {:s}\n'.format(htable) +
-                       "No. of residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
+        self.tx.insert(tk.END, 'Property table: {:s}\n'.format(htable) +
+                       "No. of residues(groups): {:d}\nMinimum distance = {:.3f} \u212B\n"
                        "Maximum distance = {:.3f} \u212B\nMean distance = {:.3f} \u212B\n\n".format(*parse_results))
         self.tx.see(tk.END)
 
@@ -782,6 +802,10 @@ class TkGui(tk.Tk):
             showerror("Erros!", "PyMol not found!")
 
     def select_sol(self):
+        """
+
+        :return:
+        """
         if self.run_flag:
             showerror('Error!', 'The calculation is still running!')
             return

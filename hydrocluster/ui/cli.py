@@ -209,7 +209,7 @@ def parse_pdb(cls: ClusterPdb, log: Log, htable: str, pH: float, chains: list = 
             'hydrophobic' if htable in ('hydropathy', 'nanodroplet', 'menv', 'fuzzyoildrop')
             else 'negative' if htable == 'negative' else 'positive'))
     else:
-        log.append("No. of residues: {:d}\nMinimum distance = {:.3f} \u212B\n"
+        log.append("No. of residues(groups): {:d}\nMinimum distance = {:.3f} \u212B\n"
                    "Maximum distance = {:.3f} \u212B\nMean distance = {:.3f} \u212B\n".format(*parse_results))
 
 
@@ -253,8 +253,8 @@ def resi(cls: ClusterPdb, log: Log):
         return
     for k, aa_list in dict_aa.items():
         log.append('\n{:s} cluster No. {:d} contains: {:s}'.format(
-            ("Core" if k[0] else "Non-core"), k[1],
-            ", ".join(['{2:s}:{1:s}{0:d}'.format(*aac) for aac in aa_list])))
+            ("Core" if k[0] else "Non-core"), k[1], ", ".join(['{2:s}:{1:s}{0:d}{3:s}'.format(aac[0], aac[1], aac[2],
+            ((':' + '-'.join(aac[3])) if (len(aac) > 3 and aac[3]) else '')) for aac in aa_list])))
     log.append('\n\n')
 
 
@@ -275,13 +275,18 @@ def colormap(cls: ClusterPdb, log: Log, newdir: str, basefile: str):
     except AttributeError:
         log.append('Error! Failed to plot!!\n')
 
+
 def print_sols(cls: ClusterPdb, log):
+    """
+
+    :param cls:
+    :param log:
+    """
     sols = cls.get_nsol(5)
     log.append("\nClustering solutions:\n")
     for sol in sols:
         log.append("{:d}: score: {:.3f}, nclustes: {:d}, eps: {:.2f} \u212B, "
                    "min_samples: {:d}\n".format(sol[0], sol[1], sol[2], sol[3], sol[4]))
-
 
 
 def cli(namespace) -> None:

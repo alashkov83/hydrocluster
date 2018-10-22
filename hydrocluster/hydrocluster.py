@@ -5,9 +5,6 @@
 @author: lashkov
 """
 
-# TODO: Возможно следует удалить текстовый вывод на каждой итерации автоподбора параметров
-# TODO: Проанализировать концентрации
-# TODO: Добавить таблицы основанные на группах, а не на а.о.
 # TODO: Добавить другие алгоритмы кластеризации (OPTICS)
 
 
@@ -43,8 +40,9 @@ class Parser(argparse.ArgumentParser):
         self.add_argument('-o', '--output', type=str, default='', help='Output directory name')
         self.add_argument('-c', '--chains', type=str, default=None, help='Selected chains')
         self.add_argument('-rl', '--reslist', type=str, default=None, help='Selected amino acid residues')
-        self.add_argument('-pt', '--ptable', choices=['hydropathy', 'menv', 'fuzzyoildrop', 'nanodroplet',
-                                                      'aliphatic_core', 'hydrophilic', 'positive', 'negative'],
+        self.add_argument('-pt', '--ptable', choices=['hydropathy', 'menv', 'fuzzyoildrop', 'rekkergroup',
+                                                      'nanodroplet', 'aliphatic_core', 'hydrophilic',
+                                                      'positive', 'negative'],
                           type=str, default='hydropathy', help='Property table for weighting')
         self.add_argument('-pH', '--pH', type=float, default=7.0,
                           help='pH value for calculation of net charges (positive or negative)')

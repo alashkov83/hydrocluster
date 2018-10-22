@@ -119,7 +119,7 @@ def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, sparse_n, weight_array, eps:
         # from hdbscan import validity_index as DBCV # TODO: Поэкспериментировать - работает быстрее, но странно
         # score = DBCV(filterR, filterLabel, d=3)
         try:
-            score = DBCV(filterXYZ, filterLabel)  # TODO: Провести оценку с уже реализованными функциями.
+            score = DBCV(filterXYZ, filterLabel)
             if np.isnan(score):
                 raise ValueError
         except ValueError:
@@ -241,6 +241,36 @@ def cmass(str_nparray: np.ndarray) -> list:
     c_mass_y = float(my.sum()) / mass_sum
     c_mass_z = float(mz.sum()) / mass_sum
     return [c_mass_x, c_mass_y, c_mass_z]
+
+
+def create_group(group_table, res_name, xyzm_array, atom_list):
+    """
+
+    :param group_table:
+    :param res_name:
+    :param xyzm_array:
+    :param atom_list:
+    :return:
+    """
+    if res_name in group_table:
+        real_groups = []
+        weights = []
+        groups_xyz_array = []
+        for group in group_table[res_name]:
+            real_atoms = []
+            xyzm_group = []
+            for atoms in group[:-1]:
+                for alt_atom in atoms:
+                    for index_atom, real_atom in enumerate(atom_list):
+                        if real_atom == alt_atom:
+                            real_atoms.append(real_atom)
+                            xyzm_group = np.hstack((xyzm_group, xyzm_array[index_atom]))
+            if real_atoms:
+                xyzm_group.shape = (-1, 4)
+                groups_xyz_array = np.concatenate((groups_xyz_array, cmass(xyzm_group)))
+                weights.append(group[-1])
+                real_groups.append(tuple(real_atoms))
+        return groups_xyz_array, weights, real_groups
 
 
 class ClusterPdb:
@@ -438,7 +468,6 @@ class ClusterPdb:
             sols = None
         return sols
 
-
     def noise_percent(self):
         """
 
@@ -553,6 +582,10 @@ class ClusterPdb:
         # Reversed hydropathy table
         hydropathy_h2o = {'GLY': 1.0, 'THR': 1.75, 'TRP': 2.25, 'SER': 2., 'TYR': 3.25, 'PRO': 4., 'HIS': 8.,
                           'GLU': 8.75, 'GLN': 8.75, 'ASP': 8.75, 'ASN': 8.75, 'LYS': 9.75, 'ARG': 11.25}
+        table_group_flag = False
+        rekker = {'THR', 'TRP', 'SER', 'TYR', 'PRO', 'HIS',
+                  'GLU', 'GLN', 'ASP', 'ASN', 'LYS', 'ARG', 'ALA',
+                  'VAL', 'LEU', 'ILE', 'PHE', 'MET', 'CYS'}
         if htable == 'hydropathy':
             hydrfob = hydropathy
         elif htable == 'menv':
@@ -561,16 +594,88 @@ class ClusterPdb:
             hydrfob = fuzzyoildrop
         elif htable == 'nanodroplet':
             hydrfob = nanodroplet
-        elif htable == 'aliphatic_core':  # TODO: Понять биологический смысл кластеризации по этой таблице
+        elif htable == 'aliphatic_core':
             hydrfob = aliphatic_core
-        elif htable == 'hydrophilic':  # TODO: Понять биологический смысл кластеризации по этой таблице
+        elif htable == 'hydrophilic':
             hydrfob = hydropathy_h2o
         elif htable == 'positive' or htable == 'negative':
             hydrfob = calc_abs_charge(htable, pH)
+        elif htable == 'rekkergroup':
+            # Raimund Mannhold, Roelof F. Rekker
+            # 'The hydrophobic fragmental constant approach for calculating log P in octanol/water and aliphatic
+            # hydrocarbon/water systems' Perspectives in Drug Discovery and Design, 18: 1–18, 2000.
+            hydrfob = rekker
+            table_group_flag = True
+            group_table = {'PHE': ((('CA',), 0.315),  # TODO: Может быть удалить CA?
+                                   (('CB',), 0.519),
+                                   (('CG',), ('CD1',), ('CD2',), ('CE1',), ('CE2',), ('CZ',), 1.903)),
+                           'ALA': ((('CA',), 0.315),
+                                   (('CB',), 0.519)),
+                           'ARG': ((('CA',), 0.315),
+                                   (('CB',), 0.519),
+                                   (('CG',), 0.519),
+                                   (('CD',), 0.519),
+                                   (('CZ',), 0.110)),
+                           'ASP': ((('CA',), 0.315),
+                                   (('CB',), 0.519)),
+                           'ASN': ((('CA',), 0.315),
+                                   (('CB',), 0.519)),
+                           'CYS': ((('CA',), 0.315),
+                                   (('CB',), 0.519)),
+                           'GLU': ((('CA',), 0.315),
+                                   (('CB',), 0.519),
+                                   (('CG',), 0.519)),
+                           'GLN': ((('CA',), 0.315),
+                                   (('CB',), 0.519),
+                                   (('CG',), 0.519)),
+                           'HIS': ((('CA',), 0.315),
+                                   (('CB',), 0.519),
+                                   (('CG',), 0.519)),
+                           'ILE': ((('CA',), 0.315),
+                                   (('CB',), 0.519),
+                                   (('CG1',), 0.724),  # TODO: Проверить swap СG1, CG2
+                                   (('CG2',), 0.519),
+                                   (('CD1',), 0.724)),
+                           'LEU': ((('CA',), 0.315),
+                                   (('CB',), 0.519),
+                                   (('CG',), 0.315),
+                                   (('CD1',), 0.724),
+                                   (('CD2',), 0.724)),
+                           'LYS': ((('CA',), 0.315),
+                                   (('CB',), 0.519),
+                                   (('CG',), 0.519),
+                                   (('CE',), 0.519),
+                                   (('CD',), 0.519)),
+                           'MET': ((('CA',), 0.315),
+                                   (('CB',), 0.519),
+                                   (('CG',), 0.519),
+                                   (('CE',), 0.519)),
+                           'PRO': ((('CA',), 0.315),
+                                   (('CB',), 0.519),
+                                   (('CG',), 0.519),
+                                   (('CD',), 0.519)),
+                           'SER': ((('CA',), 0.315),
+                                   (('CB',), 0.519)),
+                           'THR': ((('CA',), 0.315),
+                                   (('CB',), 0.110),
+                                   (('CG2',), 0.724)),
+                           'TRP': ((('CA',), 0.315),
+                                   (('CB',), 0.519),
+                                   (('CG',), ('CD1',), ('CD2',), ('CE2',),
+                                    ('CE3',), ('CZ2',), ('CZ3',), ('CH2',), 1.902)),
+                           'TYR': ((('CA',), 0.315),
+                                   (('CB',), 0.519),
+                                   (('CG',), ('CD1',), ('CD2',), ('CE1',), ('CE2',), ('CZ',), 1.903)),
+                           'VAL': ((('CA',), 0.315),
+                                   (('CB',), 0.519),
+                                   (('CG1',), 0.724),
+                                   (('CG2',), 0.724))
+                           }
         xyzm_array = []
         current_resn = None
         current_chainn = None
         current_resname = None
+        atom_list = []
         mass = {
             ' H': 1.0,
             ' C': 12.0,
@@ -596,21 +701,33 @@ class ClusterPdb:
                 current_chainn = s[21]
                 current_resname = s[17:20]
                 xyzm = [float(s[30:38]), float(s[38:46]), float(s[46:54]), mass[s[76:78]]]
+                atom_list.append(s[12:16].strip().upper())
                 xyzm_array = np.hstack((xyzm_array, xyzm))
             elif s[0:6] == 'ATOM  ' and (s[17:20] in hydrfob):
-                self.aa_list.append((current_resn, current_chainn, current_resname))
-                self.weight_array.append(hydrfob[current_resname])
                 try:
                     xyzm_array.shape = (-1, 4)
                 except AttributeError:
                     raise ValueError
-                xyz_array = np.concatenate((xyz_array, cmass(xyzm_array)))
+                if table_group_flag:
+                    if create_group(group_table, current_resname, xyzm_array, atom_list):
+                        groups_xyz_array, weights, real_groups = create_group(group_table, current_resname, xyzm_array,
+                                                                              atom_list)
+                        for group in real_groups:
+                            self.aa_list.append((current_resn, current_chainn, current_resname, group))
+                        self.weight_array.extend(weights)
+                        xyz_array = np.concatenate((xyz_array, groups_xyz_array))
+                else:
+                    self.aa_list.append((current_resn, current_chainn, current_resname, ()))
+                    self.weight_array.append(hydrfob[current_resname])
+                    xyz_array = np.concatenate((xyz_array, cmass(xyzm_array)))
                 xyzm_array = []
+                atom_list.clear()
                 current_resn = int(s[22:26])
                 current_chainn = s[21]
                 current_resname = s[17:20]
                 xyz = [float(s[30:38]), float(s[38:46]), float(s[46:54]), mass[s[76:78]]]
                 xyzm_array = np.hstack((xyzm_array, xyz))
+                atom_list.append(s[12:16].strip().upper())
         try:
             xyz_array.shape = (-1, 3)
         except AttributeError:
@@ -775,7 +892,10 @@ class ClusterPdb:
             if aa_list:
                 pymol.select('{:s}_cluster_{:d}'.format(("Core" if k[0] else "Uncore"), k[1]),
                              '{:s}'.format(
-                                 "+".join(['(chain {1:s} and resi {0:d})'.format(*aac) for aac in aa_list])))
+                                 "+".join(['(chain {1:s} and resi {0:d}){2:s}'.format(
+                                     aac[0], aac[1],
+                                     ' and name {:s}'.format('+'.join(aac[3])) if (len(aac) > 3 and aac[3]) else '')
+                                     for aac in aa_list])))
                 pymol.color(color, '{:s}_cluster_{:d}'.format(("Core" if k[0] else "Uncore"), k[1]))
                 pymol.show_as('spheres', '{:s}_cluster_{:d}'.format(("Core" if k[0] else "Uncore"), k[1]))
         pymol.deselect()
@@ -797,7 +917,9 @@ class ClusterPdb:
             if aa_list:
                 s += "cmd.select('{:s}_cluster_{:d}', '{:s}')\n".format(
                     ("Core" if k[0] else "Uncore"), k[1], "+".join(
-                        ['(chain {1:s} and resi {0:d})'.format(*aac) for aac in aa_list]))
+                        ['(chain {1:s} and resi {0:d}{2:s})'.format(aac[0], aac[1],
+                         ' and name {:s}'.format('+'.join(aac[3])) if (len(aac) > 3 and aac[3]) else '')
+                         for aac in aa_list]))
                 s += "cmd.color('{:s}', '{:s}_cluster_{:d}')\n".format(
                     color, ("Core" if k[0] else "Uncore"), k[1])
                 s += "cmd.show_as('spheres', '{:s}_cluster_{:d}')\n".format(("Core" if k[0] else "Uncore"), k[1])

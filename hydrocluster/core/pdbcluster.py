@@ -558,9 +558,9 @@ class ClusterPdb:
         self.clean()
         self.htable = htable
         xyz_array = []
-        # www.pnas.org/cgi/doi/10.1073/pnas.1616138113 # 1.0 - -7.55 kj/mol A; residues with delta mu < 0
-        nanodroplet = {'ALA': 1.269, 'VAL': 1.094, 'PRO': 1.0, 'LEU': 1.147, 'ILE': 1.289, 'PHE': 1.223, 'MET': 1.013,
-                       'TRP': 1.142, 'CYS': 0.746, 'GLY': 0.605, 'THR': 0.538, 'SER': 0.472}
+        # www.pnas.org/cgi/doi/10.1073/pnas.1616138113 # 1.0 - -9.58 kj/mol (ALA) A; residues with delta mu < 0
+        nanodroplet = {'ALA': 1.0, 'VAL': 0.862, 'PRO': 0.788, 'LEU': 0.904, 'ILE': 1.016, 'PHE': 0.963, 'MET': 0.799,
+                       'TRP': 0.900, 'CYS': 0.588, 'GLY': 0.477, 'THR': 0.424, 'SER': 0.372}
         # Quantitative expression of protein heterogeneity:
         # Response of amino acid side chains to their local environment.
         # Bandyopadhyay D, Mehler EL.
@@ -606,7 +606,7 @@ class ClusterPdb:
             # hydrocarbon/water systems' Perspectives in Drug Discovery and Design, 18: 1–18, 2000.
             hydrfob = rekker
             table_group_flag = True
-            group_table = {'PHE': ((('CA',), 0.315),  # TODO: Может быть удалить CA?
+            group_table = {'PHE': ((('CA',), 0.315),
                                    (('CB',), 0.519),
                                    (('CG',), ('CD1',), ('CD2',), ('CE1',), ('CE2',), ('CZ',), 1.903)),
                            'ALA': ((('CA',), 0.315),
@@ -633,7 +633,7 @@ class ClusterPdb:
                                    (('CG',), 0.519)),
                            'ILE': ((('CA',), 0.315),
                                    (('CB',), 0.519),
-                                   (('CG1',), 0.724),  # TODO: Проверить swap СG1, CG2
+                                   (('CG1',), 0.724),
                                    (('CG2',), 0.519),
                                    (('CD1',), 0.724)),
                            'LEU': ((('CA',), 0.315),

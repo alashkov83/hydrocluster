@@ -69,6 +69,7 @@ def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, sparse_n, weight_array, eps:
     :param metric:
     :param: noise_filter:
     """
+    # TODO: Разделить процедуру кластеризации и процедуру оценки
     core_sample_indices, labels = dbscan(sparse_n, sample_weight=weight_array,
                                          eps=eps, min_samples=min_samples, n_jobs=-1, metric='precomputed')
     # The DBSCAN algorithm considers clusters as areas of high density separated by areas of low density.
@@ -233,13 +234,13 @@ def regr_cube_alt(x: np.ndarray, y: np.ndarray, z: np.ndarray, z_correct):
 
 def cmass(str_nparray: np.ndarray) -> list:
     """Calculate the position of the center of mass."""
-    mass_sum = float(str_nparray[:, 3].sum())
-    mx = (str_nparray[:, 3]) * (str_nparray[:, 0])
-    my = (str_nparray[:, 3]) * (str_nparray[:, 1])
-    mz = (str_nparray[:, 3]) * (str_nparray[:, 2])
-    c_mass_x = float(mx.sum()) / mass_sum
-    c_mass_y = float(my.sum()) / mass_sum
-    c_mass_z = float(mz.sum()) / mass_sum
+    mass_sum = str_nparray[:, 3].sum()
+    mx = str_nparray[:, 3] * str_nparray[:, 0]
+    my = str_nparray[:, 3] * str_nparray[:, 1]
+    mz = str_nparray[:, 3] * str_nparray[:, 2]
+    c_mass_x = mx.sum()/mass_sum
+    c_mass_y = my.sum()/mass_sum
+    c_mass_z = mz.sum()/mass_sum
     return [c_mass_x, c_mass_y, c_mass_z]
 
 
@@ -367,6 +368,7 @@ class ClusterPdb:
         :param metric:
         :return:
         """
+        # TODO: может сперва находить результаты в прошлом self.states?
         self.metric = metric
         hyperParams = []
         for eps in np.arange(min_eps, max_eps + step_eps, step_eps):
@@ -583,9 +585,6 @@ class ClusterPdb:
         hydropathy_h2o = {'GLY': 1.0, 'THR': 1.75, 'TRP': 2.25, 'SER': 2., 'TYR': 3.25, 'PRO': 4., 'HIS': 8.,
                           'GLU': 8.75, 'GLN': 8.75, 'ASP': 8.75, 'ASN': 8.75, 'LYS': 9.75, 'ARG': 11.25}
         table_group_flag = False
-        rekker = {'THR', 'TRP', 'SER', 'TYR', 'PRO', 'HIS',
-                  'GLU', 'GLN', 'ASP', 'ASN', 'LYS', 'ARG', 'ALA',
-                  'VAL', 'LEU', 'ILE', 'PHE', 'MET', 'CYS'}
         if htable == 'hydropathy':
             hydrfob = hydropathy
         elif htable == 'menv':
@@ -604,12 +603,8 @@ class ClusterPdb:
             # Raimund Mannhold, Roelof F. Rekker
             # 'The hydrophobic fragmental constant approach for calculating log P in octanol/water and aliphatic
             # hydrocarbon/water systems' Perspectives in Drug Discovery and Design, 18: 1–18, 2000.
-            hydrfob = rekker
             table_group_flag = True
-            group_table = {'PHE': ((('CA',), 0.315),
-                                   (('CB',), 0.519),
-                                   (('CG',), ('CD1',), ('CD2',), ('CE1',), ('CE2',), ('CZ',), 1.903)),
-                           'ALA': ((('CA',), 0.315),
+            group_table = {'ALA': ((('CA',), 0.315),
                                    (('CB',), 0.519)),
                            'ARG': ((('CA',), 0.315),
                                    (('CB',), 0.519),
@@ -659,6 +654,9 @@ class ClusterPdb:
                            'THR': ((('CA',), 0.315),
                                    (('CB',), 0.110),
                                    (('CG2',), 0.724)),
+                           'PHE': ((('CA',), 0.315),
+                                   (('CB',), 0.519),
+                                   (('CG',), ('CD1',), ('CD2',), ('CE1',), ('CE2',), ('CZ',), 1.903)),
                            'TRP': ((('CA',), 0.315),
                                    (('CB',), 0.519),
                                    (('CG',), ('CD1',), ('CD2',), ('CE2',),
@@ -671,6 +669,7 @@ class ClusterPdb:
                                    (('CG1',), 0.724),
                                    (('CG2',), 0.724))
                            }
+            hydrfob = set(group_table.keys())
         xyzm_array = []
         current_resn = None
         current_chainn = None

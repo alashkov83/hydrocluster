@@ -414,6 +414,7 @@ def db_main(namespace):
     htables_all = ('hydropathy',
                    'nanodroplet',
                    'menv',
+                   'rekkergroup',
                    'fuzzyoildrop',
                    'aliphatic_core',
                    'hydrophilic',

@@ -19,7 +19,7 @@ class Parser(argparse.ArgumentParser):
     """
 
     def __init__(self):
-        super().__init__(prog='hyperanalisis.py')
+        super().__init__(prog='hyperanalis.py')
         self.parser_setup()
 
     def parser_setup(self):

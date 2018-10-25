@@ -175,8 +175,8 @@ Quit - quit from the program
 **Options-&gt;**
 
 Plot grid - makes coordinate grid in the Cluster analysis window  
-Plot legend - displays the brief description of the picture
-Select clustering solution - display and choice for other solutions cluster analysis  
+Plot legend - displays the brief description of the picture  
+Select clustering solution - display and choice for other solutions cluster analysis
 Display colormap - shows graphs obtained as a result of clustering
 parameters selection. Marked point corresponds optimal values of eps and min\_samples  
 Clear log - clears log file in the appropriate window  

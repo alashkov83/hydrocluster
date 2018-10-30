@@ -37,7 +37,7 @@ class TkGui(tk.Tk):
         lab11 = tk.LabelFrame(lab1, text='Property table', labelanchor='n', borderwidth=5)
         lab11.grid(row=0, column=0, pady=5, padx=5)
         listbox_items = ['hydropathy', 'menv', 'fuzzyoildrop', 'rekkergroup', 'nanodroplet',
-                         'aliphatic_core', 'hydrophilic', 'positive', 'negative']
+                         'aliphatic_core', 'hydrophilic', 'positive', 'negative', 'pgroup', 'ngroup']
         self.combox_p = ttk.Combobox(lab11, height=5, width=15, values=listbox_items)
         self.combox_p.pack()
         self.combox_p.set('hydropathy')
@@ -553,7 +553,7 @@ class TkGui(tk.Tk):
             win.destroy()
         htable = self.combox_p.get()
         try:
-            if htable == 'positive' or htable == 'negative':
+            if htable in ('positive', 'negative', 'pgroup', 'ngroup'):
                 pH = askfloat('Your pH', 'pH value:', initialvalue=7.0, minvalue=0.0, maxvalue=14.0)
                 parse_results = self.cls.parser(htable=htable, pH=pH, selectChains=chains, res=residues)
             else:
@@ -561,7 +561,7 @@ class TkGui(tk.Tk):
         except ValueError:
             showerror('Error!', 'Invalid file format\nor file does not {:s} contain residues\n'.format(
                 'hydrophobic' if htable in ('hydropathy', 'menv', 'nanodroplet', 'fuzzyoildrop')
-                else 'negative' if htable == 'negative' else 'positive'))
+                else 'negative' if htable == 'negative' else 'positive'))  # TODO: Добавить другие типы таблиц
             return
         else:
             showinfo('Info', 'File successfully parsed!\nProperty table: {:s}\n'.format(htable) +

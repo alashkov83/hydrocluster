@@ -198,7 +198,7 @@ def parse_pdb(cls: ClusterPdb, log: Log, htable: str, pH: float, chains: list = 
     :param chains:
     :return:
     """
-    if htable == 'positive' or htable == 'negative':
+    if htable in ('positive', 'negative', 'pgroup', 'ngroup'):
         if pH < 0 or pH > 14:
             print("pH value range is 0-14")
             sys.exit(-1)
@@ -207,7 +207,7 @@ def parse_pdb(cls: ClusterPdb, log: Log, htable: str, pH: float, chains: list = 
     except ValueError:
         log.append('\nError! Invalid file format\nor file does not contain {:s} residues\n'.format(
             'hydrophobic' if htable in ('hydropathy', 'nanodroplet', 'menv', 'fuzzyoildrop')
-            else 'negative' if htable == 'negative' else 'positive'))
+        else 'negative' if htable in ('negative', 'ngroup') else 'positive'))  # TODO: Добавить другие типы таблиц
     else:
         log.append("No. of residues(groups): {:d}\nMinimum distance = {:.3f} \u212B\n"
                    "Maximum distance = {:.3f} \u212B\nMean distance = {:.3f} \u212B\n".format(*parse_results))

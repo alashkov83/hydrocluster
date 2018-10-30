@@ -153,16 +153,33 @@ def calc_abs_charge(res_type: str, pH: float) -> dict:
     :param pH:
     :return:
     """
-    pKa_dict = {'ARG': 12.5, 'ASP': 3.9, 'GLU': 4.35, 'HIS': 6.5, 'LIS': 10.35, 'TYR': 9.9, 'CYS': 8.3}
+    pKa_dict = {'ARG': 12.48, 'ASP': 3.86, 'GLU': 4.35, 'HIS': 6.04, 'LYS': 10.35, 'TYR': 9.04, 'CYS': 8.3}
     # DEXTER S MOORE Amino Acid and Peptide Net Charges: A Simple Calculational Procedure
     # BIOCHEMICAL EDUCATION 13(1) 1985
     shrink_value = 0.1
     if res_type == 'positive':
-        return {res: 1 / (1 + 10 ** (pH - pKa_dict[res])) for res in ['HIS', 'LIS', 'ARG']
+        return {res: 1 / (1 + 10 ** (pH - pKa_dict[res])) for res in ['HIS', 'LYS', 'ARG']
                 if (1 / (1 + 10 ** (pH - pKa_dict[res]))) > shrink_value}
     elif res_type == 'negative':
         return {res: 1 / (1 + 10 ** (pKa_dict[res] - pH)) for res in ['ASP', 'GLU', 'TYR', 'CYS']
                 if (1 / (1 + 10 ** (pKa_dict[res] - pH))) > shrink_value}
+
+
+def calc_group_charge(table_type: str, pH: float) -> dict:
+    group_dict = {'ARG': (('NE',), ('CZ',), ('NH1',), ('NH2',)),
+                  'ASP': (('CG',), ('OD1',), ('OD2',)),
+                  'CYS': (('SG',),),
+                  'GLU': (('CD',), ('OE1',), ('OE2',)),
+                  'HIS': (('CG',), ('CD2',), ('CE1',), ('ND1',), ('NE2',)),
+                  'LYS': (('NZ',),),
+                  'TYR': (('OH',),),
+                  }
+    dict_aa = {}
+    if table_type=='ngroup':
+        dict_aa = calc_abs_charge('negative', pH)
+    elif table_type=='pgroup':
+        dict_aa = calc_abs_charge('positive', pH)
+    return {key: ((group_dict[key] + (value, )),) for (key, value) in dict_aa.items()}
 
 
 def lineaRegressor(X: np.ndarray, Y: np.ndarray) -> tuple:
@@ -599,6 +616,10 @@ class ClusterPdb:
             hydrfob = hydropathy_h2o
         elif htable == 'positive' or htable == 'negative':
             hydrfob = calc_abs_charge(htable, pH)
+        elif htable == 'ngroup' or htable == 'pgroup':
+            table_group_flag = True
+            group_table = calc_group_charge(htable, pH)
+            hydrfob = set(group_table.keys())
         elif htable == 'rekkergroup':
             # Raimund Mannhold, Roelof F. Rekker
             # 'The hydrophobic fragmental constant approach for calculating log P in octanol/water and aliphatic
@@ -624,8 +645,7 @@ class ClusterPdb:
                                    (('CB',), 0.519),
                                    (('CG',), 0.519)),
                            'HIS': ((('CA',), 0.315),
-                                   (('CB',), 0.519),
-                                   (('CG',), 0.519)),
+                                   (('CB',), 0.519),),
                            'ILE': ((('CA',), 0.315),
                                    (('CB',), 0.519),
                                    (('CG1',), 0.724),
@@ -660,7 +680,7 @@ class ClusterPdb:
                            'TRP': ((('CA',), 0.315),
                                    (('CB',), 0.519),
                                    (('CG',), ('CD1',), ('CD2',), ('CE2',),
-                                    ('CE3',), ('CZ2',), ('CZ3',), ('CH2',), 1.902)),
+                                    ('CE3',), ('CZ2',), ('CZ3',), ('CH2',), ('NE1',), 1.902)),
                            'TYR': ((('CA',), 0.315),
                                    (('CB',), 0.519),
                                    (('CG',), ('CD1',), ('CD2',), ('CE1',), ('CE2',), ('CZ',), 1.903)),

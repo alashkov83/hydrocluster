@@ -42,7 +42,7 @@ class Parser(argparse.ArgumentParser):
         self.add_argument('-rl', '--reslist', type=str, default=None, help='Selected amino acid residues')
         self.add_argument('-pt', '--ptable', choices=['hydropathy', 'menv', 'fuzzyoildrop', 'rekkergroup',
                                                       'nanodroplet', 'aliphatic_core', 'hydrophilic',
-                                                      'positive', 'negative'],
+                                                      'positive', 'negative', 'pgroup', 'ngroup'],
                           type=str, default='hydropathy', help='Property table for weighting')
         self.add_argument('-pH', '--pH', type=float, default=7.0,
                           help='pH value for calculation of net charges (positive or negative)')

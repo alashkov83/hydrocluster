@@ -20,6 +20,7 @@ import numpy as np
 import psutil
 from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import axes3d
+from scipy.spatial.distance import cdist
 
 try:
     from sklearn.cluster import dbscan
@@ -30,7 +31,7 @@ try:
 except ImportError:
     raise ImportError
 
-from .dbcv import DBCV
+from .s_dbw import S_Dbw
 
 warnings.filterwarnings("ignore")
 
@@ -55,8 +56,48 @@ def filterXYZandRData(Label, XYZ, Dist):
     return filterLabel, filterXYZ, filterR
 
 
+def comb_noise_lab(labels):
+    labels = labels.copy()
+    max_label = np.max(labels)
+    j = max_label + 1
+    for i in range(len(labels)):
+        if labels[i] == -1:
+            labels[i] = j
+    return labels
+
+
+def bind_noise_lab(X, labels):
+    labels = labels.copy()
+    if -1 not in set(labels):
+        return labels
+    if len(set(labels)) == 1 and -1 in set(labels):
+        return labels
+    label_id = []
+    label_new = []
+    for i in range(len(labels)):
+        if labels[i] == -1:
+            point = np.array([X[i]])
+            dist = cdist(X[labels != -1], point)
+            lid = np.where(np.all(X == X[labels != -1][np.argmin(dist), :], axis=1))[0][0]
+            label_id.append(i)
+            label_new.append(labels[lid])
+    labels[np.array(label_id)] = np.array(label_new)
+    return labels
+
+
+def sep_noise_lab(labels):
+    labels = labels.copy()
+    max_label = np.max(labels)
+    j = max_label + 1
+    for i in range(len(labels)):
+        if labels[i] == -1:
+            labels[i] = j
+            j += 1
+    return labels
+
+
 def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, sparse_n, weight_array, eps: float, min_samples: int,
-                  metric: str = 'calinski', noise_filter: bool = False) -> tuple:
+                  metric: str = 'calinski', noise_filter: str = '') -> tuple:
     """
 
     :param sparse_n:
@@ -90,8 +131,17 @@ def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, sparse_n, weight_array, eps:
     core_samples_mask = np.zeros_like(labels, dtype=bool)
     core_samples_mask[core_sample_indices] = True
     n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
-    if noise_filter:
+    if noise_filter == 'filter':
         filterLabel, filterXYZ, filterR = filterXYZandRData(labels, X, pdist)
+    elif noise_filter == 'sep':
+        filterLabel = sep_noise_lab(labels)
+        filterXYZ, filterR = X, pdist
+    elif noise_filter == 'bind':
+        filterLabel = bind_noise_lab(X, labels)
+        filterXYZ, filterR = X, pdist
+    elif noise_filter == 'comb':
+        filterLabel =comb_noise_lab(labels)
+        filterXYZ, filterR = X, pdist
     else:
         filterLabel, filterXYZ, filterR = labels, X, pdist
     if metric == 'si_score':
@@ -116,15 +166,19 @@ def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, sparse_n, weight_array, eps:
             # T.Calinski and J.Harabasz, 1974. “A dendrite method for cluster analysis”.Communications in Statistics
         except ValueError:
             score = 0
-    elif metric == 'dbcv':
-        # from hdbscan import validity_index as DBCV # TODO: Поэкспериментировать - работает быстрее, но странно
-        # score = DBCV(filterR, filterLabel, d=3)
+    elif metric == 'calinski':
         try:
-            score = DBCV(filterXYZ, filterLabel)
-            if np.isnan(score):
-                raise ValueError
+            score = calinski_harabaz_score(filterXYZ, filterLabel)
+            # The score is defined as ratio between the within-cluster dispersion and the between-cluster dispersion.
+            # For more info see:
+            # T.Calinski and J.Harabasz, 1974. “A dendrite method for cluster analysis”.Communications in Statistics
         except ValueError:
-            score = -1
+            score = 0
+    elif metric == 's_dbw':
+        try:
+            score = S_Dbw(filterXYZ, filterLabel)
+        except ValueError:
+            score = np.inf
     return labels, n_clusters, core_samples_mask, score
 
 
@@ -209,7 +263,7 @@ def ransacRegressor(X: np.ndarray, Y: np.ndarray) -> tuple:
             modelRAMSAC.score(X[modelRAMSAC.inlier_mask_], Y[modelRAMSAC.inlier_mask_]))
 
 
-def regr_cube(x: np.ndarray, y: np.ndarray, z: np.ndarray, z_correct):
+def regr_cube(x: np.ndarray, y: np.ndarray, z: np.ndarray, z_correct, rev: bool = False):
     """
 
     :param z_correct:
@@ -224,12 +278,15 @@ def regr_cube(x: np.ndarray, y: np.ndarray, z: np.ndarray, z_correct):
     x = x[~np.all(z_uncorrect, axis=1)]
     z = z[~np.all(z_uncorrect, axis=1), :]
     X = np.array((Vcoeff * x ** 3), ndmin=2).T
-    k = np.nanargmax(z, axis=1)
+    if rev:
+        k = np.nanargmax(z, axis=1)
+    else:
+        k = np.nanargmax(z, axis=1)
     Y = np.array(y[k], ndmin=2).T
     return X, Y
 
 
-def regr_cube_alt(x: np.ndarray, y: np.ndarray, z: np.ndarray, z_correct):
+def regr_cube_alt(x: np.ndarray, y: np.ndarray, z: np.ndarray, z_correct, rev: bool= False):
     """
 
     :param z_correct:
@@ -244,7 +301,10 @@ def regr_cube_alt(x: np.ndarray, y: np.ndarray, z: np.ndarray, z_correct):
     Y = np.array(y[~np.all(z_uncorrect, axis=0)], ndmin=2).T
     z = z[:, ~np.all(z_uncorrect, axis=0)]
     X = np.array((Vcoeff * x ** 3), ndmin=2).T
-    k = np.nanargmax(z, axis=0)
+    if rev:
+        k = np.nanargmin(z, axis=0)
+    else:
+        k = np.nanargmax(z, axis=0)
     X = np.array(X[k], ndmin=2)
     return X, Y
 
@@ -297,12 +357,15 @@ class ClusterPdb:
     """
 
     def __init__(self) -> None:
-        self.metrics_name = {'calinski': 'Calinski-Harabaz score', 'si_score': 'Silhouette score', 'dbcv': 'DBCV score'}
+        self.metrics_name = {'calinski': 'Calinski-Harabaz score',
+                             'si_score': 'Silhouette score',
+                             's_dbw': 'S_Dbw'
+                             }
         self.X = None
         self.pdist = None
         self.sparse_n = None
         self.labels = None
-        self.noise_filter = False
+        self.noise_filter = ''
         self.core_samples_mask = []
         self.n_clusters = 0
         self.score = 0
@@ -329,7 +392,7 @@ class ClusterPdb:
         self.sparse_n = None
         self.labels = None
         self.htable = 'hydropathy'
-        self.noise_filter = False
+        self.noise_filter = ''
         self.parse_results = (0, 0.0, 0.0, 0.0)
         self.auto_params = (0.0, 0.0, 0.0, 0, 0, 'calinski')
         self.core_samples_mask = []
@@ -373,7 +436,7 @@ class ClusterPdb:
         self.queue.put(None)
 
     def init_cycles(self, min_eps: float, max_eps: float, step_eps: float,
-                    min_min_samples: int, max_min_samples: int, n_jobs=0, metric: str = 'si_score') -> int:
+                    min_min_samples: int, max_min_samples: int, n_jobs=0, metric: str = 'calinski') -> int:
         """
 
         :param n_jobs:
@@ -426,7 +489,10 @@ class ClusterPdb:
 
         :return:
         """
-        self.states.sort(key=lambda l: l[3], reverse=True)
+        if self.auto_params[5] == 's_dbw':
+            self.states.sort(key=lambda l: l[3])
+        else:
+            self.states.sort(key=lambda l: l[3], reverse=True)
         state = self.states[0]
         self.labels = state[0]
         self.core_samples_mask = state[1]
@@ -440,7 +506,7 @@ class ClusterPdb:
         y = np.array(sorted(list({data[1] for data in colormap_data})), ndmin=1)
         z = np.array([data[2] for data in colormap_data])
         z.shape = (y.size, x.size)
-        if self.metric == 'si_score' or self.metric == 'dbcv':
+        if self.metric == 'si_score':
             try:
                 z_min = min([x for x in z.flat if x > -1.0])
             except ValueError:
@@ -450,8 +516,14 @@ class ClusterPdb:
         self.figs['colormap'] = (y, x, z.copy().T, z_min)
         z_correct = np.array([(True if (len(set(data[3]))) > 1 else False) for data in colormap_data], dtype=bool)
         z_correct.shape = (y.size, x.size)
-        V, N, = regr_cube(y, x, z, z_correct)
-        V_alt, N_alt = regr_cube_alt(y, x, z, z_correct)
+        if self.auto_params[5] == 's_dbw':
+            V, N, = regr_cube(y, x, z, z_correct, rev=True)
+        else:
+            V, N, = regr_cube(y, x, z, z_correct)
+        if self.auto_params[5] == 's_dbw':
+            V_alt, N_alt = regr_cube_alt(y, x, z, z_correct, rev=True)
+        else:
+            V_alt, N_alt = regr_cube_alt(y, x, z, z_correct)
         Nfit, C, B, R2 = lineaRegressor(V, N)
         Nfit_alt, C_alt, B_alt, R2_alt = lineaRegressor(V_alt, N_alt)
         if R2_alt > R2:
@@ -558,6 +630,41 @@ class ClusterPdb:
                 f.flush()
                 f.seek(0, 0)
                 self.s_array = f.readlines()
+
+    def get_protein_info(self):
+        try:
+            from Bio.PDB import PDBParser, PDBList
+            from Bio.PDB.Polypeptide import PPBuilder
+            from Bio.SeqUtils.ProtParam import ProteinAnalysis
+        except ImportError:
+            raise ImportError('Biopython is not installed!')
+        parser = PDBParser()
+        with io.StringIO() as f:
+            f.writelines(self.s_array)
+            f.flush()
+            f.seek(0, 0)
+            structure = parser.get_structure('X', f)
+        name = parser.header.get('name', '')
+        head = parser.header.get('head', '')
+        method = parser.header.get('structure_method', '')
+        res = parser.header.get('resolution', '')
+        ncomp = 0
+        eclist = []
+        for values in parser.header['compound'].values():
+            ncomp += 1
+            eclist.append(values.get('ec', '') or values.get('ec_number', ''))
+        ec = ", ".join([ec for ec in eclist if ec])
+        nres = 0
+        mmass = 0
+        nchain = 0
+        ppb = PPBuilder()
+        for pp in ppb.build_peptides(structure):
+            seq = pp.get_sequence()
+            nres += len(seq)
+            seqan = ProteinAnalysis(str(seq))
+            mmass += int(seqan.molecular_weight())
+            nchain += 1
+        return name, head, method, res, ncomp, nchain, ec, nres, mmass
 
     def preparser(self) -> list:
         """
@@ -986,7 +1093,13 @@ class ClusterPdb:
         self.pdist = global_state['pdist']
         self.labels = global_state['labels']
         self.sparse_n = global_state['sparse_n']
-        self.noise_filter = global_state['noise_filter']
+        noise_filter = global_state['noise_filter']
+        if noise_filter is True:  # For 0.1 version saves compatibility
+            self.noise_filter = 'filter'
+        elif noise_filter is False:
+            self.noise_filter = ''
+        else:
+            self.noise_filter = noise_filter
         self.core_samples_mask = global_state['core_samples_mask']
         self.n_clusters = global_state['n_clusters']
         self.s_array = global_state['s_array']

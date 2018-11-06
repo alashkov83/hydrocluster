@@ -19,6 +19,25 @@ except ImportError:
     sys.exit(-1)
 
 
+class DialogOK(tk.Toplevel):
+    def __init__(self, master, title, message):
+        super().__init__(master=master)
+        self.title(title)
+        tk.Label(self, text=message, anchor=tk.W, justify=tk.LEFT).pack(pady=10, padx=10)
+        x = master.winfo_x() + master.winfo_width() // 2
+        y = master.winfo_y() + master.winfo_height() // 2
+        self.wm_geometry("+{:d}+{:d}".format(x, y))
+        self.resizable(False, False)
+        self.transient(master)
+        self.grab_set()
+        self.focus_force()
+        b = tk.Button(self, text="OK", command=self.ok)
+        b.pack(pady=5, padx=5)
+
+    def ok(self):
+        self.destroy()
+
+
 class TkGui(tk.Tk):
     """
 
@@ -38,7 +57,7 @@ class TkGui(tk.Tk):
         lab11.grid(row=0, column=0, pady=5, padx=5)
         listbox_items = ['hydropathy', 'menv', 'fuzzyoildrop', 'rekkergroup', 'nanodroplet',
                          'aliphatic_core', 'hydrophilic', 'positive', 'negative', 'pgroup', 'ngroup']
-        self.combox_p = ttk.Combobox(lab11, height=5, width=15, values=listbox_items)
+        self.combox_p = ttk.Combobox(lab11, height=5, width=15, values=listbox_items, state='readonly')
         self.combox_p.pack()
         self.combox_p.set('hydropathy')
         but3 = tk.Button(lab1, text='Start', command=self.parse_pdb)
@@ -63,15 +82,19 @@ class TkGui(tk.Tk):
         self.l14.grid(row=3, column=1, pady=5, padx=5, sticky="W")
         lab21 = tk.LabelFrame(fra1, text='Metric', labelanchor='n', borderwidth=5)
         lab21.pack(expand=1, fill=tk.X, pady=5, padx=5)
-        listbox_items = ['calinski', 'si_score', 'dbcv']
-        self.combox = ttk.Combobox(lab21, height=5, width=15, values=listbox_items)
+        listbox_items = ['calinski',
+                         'si_score',
+                         's_dbw',
+                         ]
+        self.combox = ttk.Combobox(lab21, height=5, width=15, values=listbox_items, state='readonly')
         self.combox.pack()
         self.combox.set('calinski')
-        lab4 = tk.LabelFrame(fra1, text='Option', labelanchor='n', borderwidth=5)
+        lab4 = tk.LabelFrame(fra1, text="Noise filter(See Readme)", labelanchor='n', borderwidth=5)
         lab4.pack(expand=1, fill=tk.X, pady=5, padx=5)
-        self.checkNoise = tk.BooleanVar()
-        self.nfCheckBox = tk.Checkbutton(lab4, text="Noise filter(See Readme)", variable=self.checkNoise, anchor=tk.W)
-        self.nfCheckBox.pack(expand=1, fill=tk.X, pady=5, padx=5)
+        listbox_items = ['', 'filter', 'sep', 'comb', 'bind']
+        self.combox_n = ttk.Combobox(lab4, height=5, width=15, values=listbox_items, state='readonly')
+        self.combox_n.pack()
+        self.combox_n.set('')
         lab2 = tk.LabelFrame(fra1, text='Auto mode', labelanchor='n', borderwidth=5)
         lab2.pack(expand=1, fill=tk.X, pady=5, padx=5)
         lab3 = tk.LabelFrame(fra1, text='Manual mode', labelanchor='n', borderwidth=5)
@@ -224,6 +247,7 @@ class TkGui(tk.Tk):
         om.add_command(label='Autotune colormap', command=self.colormap)
         om.add_command(label='Clear LOG', command=self.clean_txt)
         om.add_command(label='Open PyMol', command=self.open_pymol)
+        om.add_command(label='About Protein', command=self.about_protein)
         hm = tk.Menu(m)
         m.add_cascade(label='Help', menu=hm)
         hm.add_command(label='Readme', command=self.readme)
@@ -244,12 +268,12 @@ class TkGui(tk.Tk):
         self.run_flag = True
         self.pb['value'] = 0
         self.pb.update()
-        noise_filter = self.checkNoise.get()
+        noise_filter = self.combox_n.get()
         metric = self.combox.get()
-        if metric == 'dbcv':
-            if not askyesno('Warning!', "Very slow function!\nA you sure?"):
-                self.run_flag = False
-                return
+        # if metric == 's_dbw':
+        #     if not askyesno('Warning!', "Very slow function!\nA you sure?"):
+        #         self.run_flag = False
+        #         return
         if auto and not load_state:
             try:
                 min_eps = float(self.ent_min_eps.get())
@@ -584,7 +608,6 @@ class TkGui(tk.Tk):
                        "No. of residues(groups): {:d}\nMinimum distance = {:.3f} \u212B\n"
                        "Maximum distance = {:.3f} \u212B\nMean distance = {:.3f} \u212B\n\n".format(*parse_results))
         self.tx.see(tk.END)
-
         self.tx.configure(state='disabled')
         self.sca1.set(parse_results[1])
         self.ent_min_eps.delete(0, tk.END)
@@ -640,10 +663,7 @@ class TkGui(tk.Tk):
                 self.clean_txt()
                 self.sca1.set(eps)
                 self.sca2.set(min_samples)
-                if self.cls.noise_filter:
-                    self.nfCheckBox.select()
-                else:
-                    self.nfCheckBox.deselect()
+                self.combox_n.set(self.cls.noise_filter)
                 self.combox.set(metric)
                 self.run(auto=True, load_state=True)
 
@@ -837,3 +857,18 @@ class TkGui(tk.Tk):
         self.run(eps=eps, min_samples=min_samples)
         self.sca1.set(self.cls.eps)
         self.sca2.set(self.cls.min_samples)
+
+    def about_protein(self):
+        if not self.cls.s_array:
+            showerror('Error!', 'The structure is not avaible!')
+            return
+        name, head, method, res, ncomp, nchain, ec, nres, mmass = self.cls.get_protein_info
+        DialogOK(self, "About protein", """Name: {:s}
+HINFO: {:s}
+Method: {:s}
+Resolution: {:.2f} \u212B
+Number of compounds: {:d}
+Number of peptide chains: {:d}
+EC: {:s}
+Total number of residues: {:d}
+Total molecular weight: {:d} Da""".format(name, head, method, res, ncomp, nchain, ec, nres, mmass))

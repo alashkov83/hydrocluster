@@ -213,6 +213,19 @@ def parse_pdb(cls: ClusterPdb, log: Log, htable: str, pH: float, chains: list = 
                    "Maximum distance = {:.3f} \u212B\nMean distance = {:.3f} \u212B\n".format(*parse_results))
 
 
+def print_pdb_info(cls: ClusterPdb, log: Log):
+    name, head, method, res, ncomp, nchain, ec, nres, mmass = cls.get_protein_info
+    log.append("""Name: {:s}
+HINFO: {:s}
+Method: {:s}
+Resolution: {:.2f} \u212B
+Number of compounds: {:d}
+Number of peptide chains: {:d}
+EC: {:s}
+Total number of residues: {:d}
+Total molecular weight: {:d} Da""".format(name, head, method, res, ncomp, nchain, ec, nres, mmass))
+
+
 def save_state(cls: ClusterPdb, newdir: str, basefile: str):
     """
 
@@ -310,6 +323,7 @@ def cli(namespace) -> None:
     log = Log(os.path.join(newdir, '{:s}'.format(basefile + '.log')))
     cls = ClusterPdb()
     open_file(cls, log, namespace.input)
+    print_pdb_info(cls, log)
     parse_pdb(cls, log, namespace.ptable, namespace.pH, chainsSelect(cls, log, namespace), namespace.reslist)
     cls.noise_filter = namespace.noise_filter
     if namespace.noauto:

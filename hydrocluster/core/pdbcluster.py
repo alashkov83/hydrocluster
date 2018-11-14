@@ -56,16 +56,6 @@ def filterXYZandRData(Label, XYZ, Dist):
     return filterLabel, filterXYZ, filterR
 
 
-def comb_noise_lab(labels):
-    labels = labels.copy()
-    max_label = np.max(labels)
-    j = max_label + 1
-    for i in range(len(labels)):
-        if labels[i] == -1:
-            labels[i] = j
-    return labels
-
-
 def bind_noise_lab(X, labels):
     labels = labels.copy()
     if -1 not in set(labels):
@@ -139,9 +129,6 @@ def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, sparse_n, weight_array, eps:
     elif noise_filter == 'bind':
         filterLabel = bind_noise_lab(X, labels)
         filterXYZ, filterR = X, pdist
-    elif noise_filter == 'comb':
-        filterLabel =comb_noise_lab(labels)
-        filterXYZ, filterR = X, pdist
     else:
         filterLabel, filterXYZ, filterR = labels, X, pdist
     if metric == 'si_score':
@@ -175,6 +162,9 @@ def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, sparse_n, weight_array, eps:
         except ValueError:
             score = 0
     elif metric == 's_dbw':
+        # M. Halkidi and M. Vazirgiannis, “Clustering validity assess-
+        # ment: Finding the optimal partitioning of a data set,” in
+        # ICDM, Washington, DC, USA, 2001, pp. 187–194.
         try:
             score = S_Dbw(filterXYZ, filterLabel)
         except ValueError:
@@ -229,11 +219,11 @@ def calc_group_charge(table_type: str, pH: float) -> dict:
                   'TYR': (('OH',),),
                   }
     dict_aa = {}
-    if table_type=='ngroup':
+    if table_type == 'ngroup':
         dict_aa = calc_abs_charge('negative', pH)
-    elif table_type=='pgroup':
+    elif table_type == 'pgroup':
         dict_aa = calc_abs_charge('positive', pH)
-    return {key: ((group_dict[key] + (value, )),) for (key, value) in dict_aa.items()}
+    return {key: ((group_dict[key] + (value,)),) for (key, value) in dict_aa.items()}
 
 
 def lineaRegressor(X: np.ndarray, Y: np.ndarray) -> tuple:
@@ -286,9 +276,10 @@ def regr_cube(x: np.ndarray, y: np.ndarray, z: np.ndarray, z_correct, rev: bool 
     return X, Y
 
 
-def regr_cube_alt(x: np.ndarray, y: np.ndarray, z: np.ndarray, z_correct, rev: bool= False):
+def regr_cube_alt(x: np.ndarray, y: np.ndarray, z: np.ndarray, z_correct, rev: bool = False):
     """
 
+    :param rev:
     :param z_correct:
     :param x:
     :param y:
@@ -311,14 +302,8 @@ def regr_cube_alt(x: np.ndarray, y: np.ndarray, z: np.ndarray, z_correct, rev: b
 
 def cmass(str_nparray: np.ndarray) -> list:
     """Calculate the position of the center of mass."""
-    mass_sum = str_nparray[:, 3].sum()
-    mx = str_nparray[:, 3] * str_nparray[:, 0]
-    my = str_nparray[:, 3] * str_nparray[:, 1]
-    mz = str_nparray[:, 3] * str_nparray[:, 2]
-    c_mass_x = mx.sum()/mass_sum
-    c_mass_y = my.sum()/mass_sum
-    c_mass_z = mz.sum()/mass_sum
-    return [c_mass_x, c_mass_y, c_mass_z]
+    center = np.average(str_nparray[:, 0:3], axis=0, weights=str_nparray[:, 3])
+    return center
 
 
 def create_group(group_table, res_name, xyzm_array, atom_list):
@@ -349,6 +334,36 @@ def create_group(group_table, res_name, xyzm_array, atom_list):
                 weights.append(group[-1])
                 real_groups.append(tuple(real_atoms))
         return groups_xyz_array, weights, real_groups
+
+
+def draw_scan_param(x, y, htable, metric, xparametr, const_str):
+    """
+
+    """
+
+    fig = Figure(figsize=(12, 6))
+    ax1 = fig.add_subplot(111)
+    ax1.set_title(metric + ' vs ' + xparametr + '\nhtable: ' + htable + ", " + const_str)
+    ax1.set_xlabel(xparametr)
+    ax1.set_ylabel(metric)
+    ax1.grid(True)
+    if xparametr == 'EPS (\u212B)':
+        ax1.plot(x, y)
+    elif xparametr == 'MIN_SAMPLES':
+        ax1.bar(x, y)
+    return fig
+
+
+def calculate_scan(states, param, xparm):
+    epsilon = 0.00000001
+    if xparm == 'eps':
+        x = [state[5] for state in states if (state[4]-epsilon < param < state[4])+epsilon]
+        y = [state[3] for state in states if (state[4]-epsilon < param < state[4])+epsilon]
+    elif xparm == 'min_samples':
+        x = [state[4] for state in states if state[5] == param]
+        y = [state[3] for state in states if state[5] == param]
+    x, y = list(zip(*sorted((zip(x, y)), key=lambda tup: tup[0])))
+    return x, y
 
 
 class ClusterPdb:
@@ -512,8 +527,9 @@ class ClusterPdb:
             except ValueError:
                 z_min = -1.0
         else:
-            z_min = 0
-        self.figs['colormap'] = (y, x, z.copy().T, z_min)
+            z_min = _min = min(z.flat)
+        z_max = max([x for x in z.flat if x < np.inf])
+        self.figs['colormap'] = (y, x, z.copy().T, z_min, z_max)
         z_correct = np.array([(True if (len(set(data[3]))) > 1 else False) for data in colormap_data], dtype=bool)
         z_correct.shape = (y.size, x.size)
         if self.auto_params[5] == 's_dbw':
@@ -923,7 +939,7 @@ class ClusterPdb:
         if not self.states:
             raise ValueError
         if self.figs is not None:
-            es, ms, z, z_min = self.figs['colormap']
+            es, ms, z, z_min, z_max = self.figs['colormap']
         else:
             raise ValueError
         fig = Figure(figsize=(12, 6))
@@ -932,7 +948,11 @@ class ClusterPdb:
         ax1.set_xlabel('EPS, \u212B')
         ax1.set_ylabel('MIN SAMPLES')
         ax1.grid(grid_state)
-        pc1 = ax1.pcolor(es, ms, z, cmap='gnuplot', vmin=z_min)
+        if self.auto_params[5] == 's_dbw':
+            ax1.patch.set_facecolor("black")
+            pc1 = ax1.pcolor(es, ms, z, cmap='gnuplot_r', vmin=z_min, vmax=z_max)
+        else:
+            pc1 = ax1.pcolor(es, ms, z, cmap='gnuplot', vmin=z_min, vmax=z_max)
         fig.colorbar(pc1, ax=ax1, extend='max', extendfrac=0.1)
         V, N, Nfit, C, B, R2 = self.figs['linear']
         ax11 = fig.add_subplot(122)
@@ -953,6 +973,42 @@ class ClusterPdb:
             ax11.plot(V, NRfit, c='g', label=texRANSAC)
         ax11.legend(loc='best', fontsize=6)
         fig.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
+        return fig
+
+    def colormap3d(self, grid_state=True):
+        if not self.states:
+            raise ValueError
+        if self.figs is not None:
+            es, ms, z, z_min, z_max = self.figs['colormap']
+        else:
+            raise ValueError
+        es, ms = np.meshgrid(es, ms)
+        fig = Figure(figsize=(8, 6))
+        ax = axes3d.Axes3D(fig)
+        surf = ax.plot_surface(es, ms, z, antialiased=True, cmap='coolwarm', vmin=z_min, vmax=z_max)
+        ax.set_title(self.metrics_name[self.metric])
+        ax.set_xlabel('EPS, \u212B')
+        ax.set_ylabel('MIN SAMPLES')
+        ax.set_zlabel(self.metrics_name[self.metric])
+        ax.grid(grid_state)
+        fig.colorbar(surf, shrink=0.5, aspect=5)
+        return ax, fig
+
+    def fig_scan_param(self, mode: str, value):
+        if not self.states:
+            raise ValueError
+        states = self.states
+        metric = self.metrics_name[self.auto_params[5]]
+        htable = self.htable
+        if mode == 'min_samples':
+            x, y = calculate_scan(states, value, 'eps')
+            xparametr = 'MIN_SAMPLES'
+            const_str = 'EPS: {:.2f} \u212B'.format(value)
+        else:
+            x, y = calculate_scan(states, value, 'min_samples')
+            xparametr = 'EPS (\u212B)'
+            const_str = 'MIN_SAMPLES: {:d}'.format(value)
+        fig = draw_scan_param(x, y, htable, metric, xparametr, const_str)
         return fig
 
     def get_dict_aa(self):
@@ -1044,7 +1100,8 @@ class ClusterPdb:
                 s += "cmd.select('{:s}_cluster_{:d}', '{:s}')\n".format(
                     ("Core" if k[0] else "Uncore"), k[1], "+".join(
                         ['(chain {1:s} and resi {0:d}{2:s})'.format(aac[0], aac[1],
-                         ' and name {:s}'.format('+'.join(aac[3])) if (len(aac) > 3 and aac[3]) else '')
+                                                                    ' and name {:s}'.format('+'.join(aac[3])) if (
+                                                                                len(aac) > 3 and aac[3]) else '')
                          for aac in aa_list]))
                 s += "cmd.color('{:s}', '{:s}_cluster_{:d}')\n".format(
                     color, ("Core" if k[0] else "Uncore"), k[1])

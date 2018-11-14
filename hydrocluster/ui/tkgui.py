@@ -19,6 +19,58 @@ except ImportError:
     sys.exit(-1)
 
 
+class FigureTk(tk.Toplevel):
+    def __init__(self, master, title, fig, ax=None, modal=True):
+        super().__init__(master=master)
+        self.title(title)
+        self.fig = fig
+        x = master.winfo_x()
+        y = master.winfo_y()
+        self.menu()
+        fra1 = ttk.Frame(self)
+        fra1.grid(row=0, column=0)
+        canvas = FigureCanvasTkAgg(fig, master=fra1)
+        if ax:
+            ax.mouse_init()
+        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+        self.wm_geometry("+{:d}+{:d}".format(x, y))
+        self.resizable(False, False)
+        if modal:
+            self.transient(master)
+            self.grab_set()
+        self.focus_force()
+
+    def save_graph(self):
+        """
+        """
+        opt = {'parent': self,
+               'filetypes': [('All supported formats', ('.eps', '.jpeg', '.jpg', '.pdf', '.pgf', '.png', '.ps',
+                                                        '.raw', '.rgba', '.svg', '.svgz', '.tif', '.tiff')), ],
+               'initialfile': 'myfile.png',
+               'title': 'Save plot'}
+        sa = asksaveasfilename(**opt)
+        if sa:
+            try:
+                self.fig.savefig(sa, dpi=600)
+            except FileNotFoundError:
+                return
+            except AttributeError:
+                showerror('Error!', 'Failed to plot!')
+            except ValueError:
+                showerror('Unsupported file format!',
+                          'Supported formats: eps, jpeg, jpg, pdf, pgf, png, ps, raw, rgba, svg, svgz, tif, tiff.')
+
+            self.destroy()
+
+    def menu(self):
+        m = tk.Menu(self)
+        self.config(menu=m)
+        fm = tk.Menu(m)
+        m.add_cascade(label='File', menu=fm)
+        fm.add_command(label='Save picture', command=self.save_graph)
+        fm.add_command(label='Quit', command=self.destroy)
+
+
 class DialogOK(tk.Toplevel):
     def __init__(self, master, title, message):
         super().__init__(master=master)
@@ -241,10 +293,15 @@ class TkGui(tk.Tk):
         om = tk.Menu(m)
         # item is located on the main menu (m)
         m.add_cascade(label='Options', menu=om)
-        om.add_command(label='Plot grid', command=self.grid_set)
-        om.add_command(label='Plot legend', command=self.legend_set)
+        omg = tk.Menu(m)
+        # item is located on the main menu (m)
+        om.add_cascade(label='Plot settings', menu=omg)
+        omg.add_command(label='Plot grid', command=self.grid_set)
+        omg.add_command(label='Plot legend', command=self.legend_set)
         om.add_command(label='Select clustering solution', command=self.select_sol)
         om.add_command(label='Autotune colormap', command=self.colormap)
+        om.add_command(label='Autotune 3D-map', command=self.colormap3d)
+        om.add_command(label='Scoring scan by parameter', command=self.scan_param)
         om.add_command(label='Clear LOG', command=self.clean_txt)
         om.add_command(label='Open PyMol', command=self.open_pymol)
         om.add_command(label='About Protein', command=self.about_protein)
@@ -270,10 +327,10 @@ class TkGui(tk.Tk):
         self.pb.update()
         noise_filter = self.combox_n.get()
         metric = self.combox.get()
-        # if metric == 's_dbw':
-        #     if not askyesno('Warning!', "Very slow function!\nA you sure?"):
-        #         self.run_flag = False
-        #         return
+        if metric == 's_dbw':
+            if not askyesno('Warning!', "Very slow function!\nA you sure?"):
+                self.run_flag = False
+                return
         if auto and not load_state:
             try:
                 min_eps = float(self.ent_min_eps.get())
@@ -717,21 +774,17 @@ class TkGui(tk.Tk):
             except FileNotFoundError:
                 pass
 
-    def save_graph(self, fig=None):
+    def save_graph(self):
         """
 
         :return:
         """
-        if fig is None:
-            if self.run_flag:
-                showerror('Error!', 'The calculation is still running!')
-                return
-            if self.fig is None:
-                showerror('Error!', 'Failed to plot!')
-                return
-            fig = self.fig
-        else:
-            fig = fig
+        if self.run_flag:
+            showerror('Error!', 'The calculation is still running!')
+            return
+        if self.fig is None:
+            showerror('Error!', 'Failed to plot!')
+            return
         opt = {'parent': self,
                'filetypes': [('All supported formats', ('.eps', '.jpeg', '.jpg', '.pdf', '.pgf', '.png', '.ps',
                                                         '.raw', '.rgba', '.svg', '.svgz', '.tif', '.tiff')), ],
@@ -740,7 +793,7 @@ class TkGui(tk.Tk):
         sa = asksaveasfilename(**opt)
         if sa:
             try:
-                fig.savefig(sa, dpi=600)
+                self.fig.savefig(sa, dpi=600)
             except FileNotFoundError:
                 return
             except AttributeError:
@@ -793,20 +846,66 @@ class TkGui(tk.Tk):
         except ValueError:
             showinfo('Information', 'Data unavailable')
             return
-        win_cls = tk.Toplevel(self)
-        win_cls.title("ColorMaps")
-        win_cls.minsize(width=600, height=600)
-        win_cls.resizable(False, False)
-        m = tk.Menu(win_cls)
-        win_cls.config(menu=m)
-        fm = tk.Menu(m)
-        m.add_cascade(label='File', menu=fm)
-        fm.add_command(label='Save picture', command=lambda: self.save_graph(fig=fig))
-        fm.add_command(label='Quit', command=lambda: win_cls.destroy())
-        fra4 = ttk.Frame(win_cls)
-        fra4.grid(row=0, column=0)
-        canvas = FigureCanvasTkAgg(fig, master=fra4)
-        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+        FigureTk(self, 'Colormap', fig)
+
+    def colormap3d(self):
+        """
+
+        :return:
+        """
+        if self.run_flag:
+            showerror('Error!', 'The calculation is still running!')
+            return
+        try:
+            grid = self.grid
+            ax, fig = self.cls.colormap3d(grid)
+        except ValueError:
+            showinfo('Information', 'Data unavailable')
+            return
+        FigureTk(self, '3DColormap', fig, ax)
+
+    def scan_param(self):
+        if self.run_flag:
+            showerror('Error!', 'The calculation is still running!')
+            return
+        if not self.cls.states:
+            showerror('Error!', 'States is not available!')
+            return
+        min_eps, max_eps, step_eps, min_min_samples, max_min_samples, _ = self.cls.auto_params
+        win = tk.Toplevel(self)
+        x = self.winfo_x() + self.winfo_width() // 2
+        y = self.winfo_y() + self.winfo_height() // 2
+        win.wm_geometry("+{:d}+{:d}".format(x, y))
+        win.title("Clustering solutions")
+        win.resizable(False, False)
+        win.focus_force()
+        fra1 = tk.Frame(win)
+        fra1.grid(row=0, column=0)
+        lab31 = tk.LabelFrame(fra1, text='EPS (\u212B)', labelanchor='n', borderwidth=5)
+        lab31.grid(row=0, column=0, pady=5, padx=5)
+        sca1 = tk.Scale(lab31, length=400, from_=min_eps, to=max_eps, showvalue=1,
+                        orient=tk.HORIZONTAL, resolution=step_eps)
+        sca1.pack(fill=tk.X)
+        lab32 = tk.LabelFrame(fra1, text='MIN_SAMPLES', labelanchor='n', borderwidth=5)
+        lab32.grid(row=1, column=0, pady=5, padx=5)
+        sca2 = tk.Scale(lab32, length=400, from_=min_min_samples, to=max_min_samples, showvalue=1, orient=tk.HORIZONTAL)
+        sca2.pack(fill=tk.X)
+        sca1.set(self.cls.eps)
+        sca2.set(self.cls.min_samples)
+        fra2 = tk.Frame(win)
+        fra2.grid(row=1, column=0)
+        b_eps = tk.Button(fra2, text="Scan EPS",
+                          command=lambda: FigureTk(self, "Scan EPS",
+                                                   self.cls.fig_scan_param('eps', int(sca2.get())), modal=False))
+        b_eps.grid(row=0, column=0, pady=5, padx=5)
+        b_ms = tk.Button(fra2, text="Scan MIN_SAMPLES",
+                         command=lambda: FigureTk(self, "Scan MIN_SAMPLES",
+                                                  self.cls.fig_scan_param('min_samples',
+                                                                          float(sca1.get())), modal=False))
+        b_ms.grid(row=0, column=1, pady=5, padx=5)
+        b_c = tk.Button(fra2, text="Cancel", command=lambda: win.destroy())
+        b_c.grid(row=0, column=2, pady=5, padx=5)
+
 
     def open_pymol(self):
         """

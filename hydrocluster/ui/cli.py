@@ -214,7 +214,7 @@ def parse_pdb(cls: ClusterPdb, log: Log, htable: str, pH: float, chains: list = 
 
 
 def print_pdb_info(cls: ClusterPdb, log: Log):
-    name, head, method, res, ncomp, nchain, ec, nres, mmass = cls.get_protein_info
+    name, head, method, res, ncomp, nchain, ec, nres, mmass = cls.get_protein_info()
     log.append("""Name: {:s}
 HINFO: {:s}
 Method: {:s}

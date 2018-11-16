@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """Created by lashkov on 04.05.18"""
 
+import os.path
 import sys
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -100,6 +101,10 @@ class TkGui(tk.Tk):
         self.title('HydroCluster')
         self.resizable(False, False)
         self.protocol('WM_DELETE_WINDOW', self.close_win)
+        self.grid = tk.BooleanVar()
+        self.legend = tk.BooleanVar()
+        self.grid.set(False)
+        self.legend.set(False)
         self.menu()
         fra1 = tk.Frame(self)
         fra1.grid(row=0, rowspan=2, column=0)
@@ -217,8 +222,6 @@ class TkGui(tk.Tk):
         self.fig = None
         self.canvas = None
         self.toolbar = None
-        self.grid = False
-        self.legend = False
         self.cls = ClusterPdb()
         self.eval('tk::PlaceWindow {:s} center'.format(self.winfo_pathname(self.winfo_id())))  # Center on screen
         self.tk.eval('::msgcat::mclocale en')  # Set the English language for standard tkinter dialog
@@ -280,31 +283,42 @@ class TkGui(tk.Tk):
         # item is located on the main menu (m)
         m.add_cascade(label='File', menu=fm)
         # a list of commands of a menu item
-        fm.add_command(label='Open PDB', command=self.open_pdb)
-        fm.add_command(label='Open CIF', command=self.open_cif)
+        fm.add_command(label='Open File', command=self.open_file)
         fm.add_command(label='Open ID PDB', command=self.open_url)
-        fm.add_command(label='Load state', command=self.open_state)
+        fm.add_command(label='Load State', command=self.open_state)
+        fm.add_separator()
         fm.add_command(label='Save PyMOL script', command=self.save_pymol_script)
-        fm.add_command(label='Save state', command=self.save_state)
-        fm.add_command(label='Save picture', command=self.save_graph)
+        fm.add_command(label='Save State', command=self.save_state)
+        fm.add_command(label='Save Picture', command=self.save_graph)
         fm.add_command(label='Save LOG', command=self.save_log)
+        fm.add_separator()
         fm.add_command(label='Quit', command=self.close_win)
         # creates a menu item with the placement on the main menu (m)
         om = tk.Menu(m)
         # item is located on the main menu (m)
         m.add_cascade(label='Options', menu=om)
+        oms = tk.Menu(m)
+        om.add_cascade(label='Select clustering solution', menu=oms)
+        oms.add_command(label='By local max (min)', command=lambda: self.select_sol(True))
+        oms.add_command(label='By max (min) values', command=self.select_sol)
+        oma = tk.Menu(m)
+        # item is located on the main menu (m)
+        om.add_cascade(label='Solution analysis', menu=oma)
+        oma.add_command(label='Autotune colormap', command=self.colormap)
+        oma.add_command(label='Autotune 3D-map', command=self.colormap3d)
+        oma.add_command(label='Scan by parameter', command=self.scan_param)
+        om.add_separator()
+        om.add_command(label='Open PyMol', command=self.open_pymol)
+        om.add_command(label='About Protein', command=self.about_protein)
+        om.add_separator()
         omg = tk.Menu(m)
         # item is located on the main menu (m)
         om.add_cascade(label='Plot settings', menu=omg)
-        omg.add_command(label='Plot grid', command=self.grid_set)
-        omg.add_command(label='Plot legend', command=self.legend_set)
-        om.add_command(label='Select clustering solution', command=self.select_sol)
-        om.add_command(label='Autotune colormap', command=self.colormap)
-        om.add_command(label='Autotune 3D-map', command=self.colormap3d)
-        om.add_command(label='Scoring scan by parameter', command=self.scan_param)
+        omg.add_checkbutton(label='Plot grid', onvalue=True, offvalue=False,
+                            variable=self.grid, command=self.plot_set)
+        omg.add_checkbutton(label='Plot legend', onvalue=True, offvalue=False,
+                            variable=self.legend, command=self.plot_set)
         om.add_command(label='Clear LOG', command=self.clean_txt)
-        om.add_command(label='Open PyMol', command=self.open_pymol)
-        om.add_command(label='About Protein', command=self.about_protein)
         hm = tk.Menu(m)
         m.add_cascade(label='Help', menu=hm)
         hm.add_command(label='Readme', command=self.readme)
@@ -474,7 +488,7 @@ class TkGui(tk.Tk):
             self.fig = None
         except AttributeError:
             pass
-        grid, legend = self.grid, self.legend
+        grid, legend = self.grid.get(), self.legend.get()
         try:
             self.fig, ax = self.cls.graph(grid, legend)
         except AttributeError:
@@ -483,7 +497,7 @@ class TkGui(tk.Tk):
         ax.mouse_init()
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
-    def open_pdb(self):
+    def open_file(self):
         """
 
         :return:
@@ -491,15 +505,27 @@ class TkGui(tk.Tk):
         if self.run_flag:
             showerror('Error!', 'The calculation is still running!')
             return
-        opt = {'filetypes': [('Files PDB', ('.pdb', '.PDB', '.ent')), ('All files', '.*')]}
-        pdb = askopenfilename(**opt)
-        if pdb:
+        opt = {'filetypes': [('Files PDB', ('.pdb', '.PDB', '.ent')), ('Files mmCIF', ('.cif', '.CIF'))]}
+        fname = askopenfilename(**opt)
+        if fname:
             try:
-                self.cls.open_pdb(pdb)
+                if os.path.splitext(fname)[1].lower() in ('.pdb', '.ent'):
+                    self.cls.open_pdb(fname)
+                elif os.path.splitext(fname)[1].lower() in ('.cif', ):
+                    self.cls.open_cif(fname)
+                else:
+                    showerror('Error', 'Incorrect file extension: {0:s}!'.format(os.path.splitext(fname)[1]))
+                    return
+            except ImportError:
+                showerror('Import error', 'BioPython is not available!\nPlease install biopython and mmtf!')
+                return
+            except (ValueError, TypeError):
+                showerror('Error', 'Incorrect CIF file: {0:s}!'.format(os.path.basename(fname)))
+                return
             except FileNotFoundError:
                 return
             else:
-                showinfo('Info', 'File was read!')
+                showinfo('Infor', 'File {0:s} successfully read!'.format(os.path.basename(fname)))
                 self.parse_pdb()
         else:
             return
@@ -524,31 +550,6 @@ class TkGui(tk.Tk):
                                       ' or refers to an incorrect file!').format(url, str(e)))
             else:
                 showinfo('Info', 'File ID PDB: {0:s} downloaded'.format(url))
-                self.parse_pdb()
-
-    def open_cif(self):
-        """
-
-        :return:
-        """
-        if self.run_flag:
-            showerror('Error!', 'The calculation is still running!')
-            return
-        opt = {'filetypes': [('Files mmCIF', ('.cif', '.CIF')), ('Все файлы', '.*')]}
-        cif_f = askopenfilename(**opt)
-        if cif_f:
-            try:
-                self.cls.open_cif(cif_f)
-            except ImportError:
-                showerror('Import error', 'BioPython is not available!\nPlease install biopython and mmtf!')
-                return
-            except FileNotFoundError:
-                return
-            except ValueError:
-                showerror('Error', 'Incorrect CIF file: {0:s}!'.format(cif_f))
-                return
-            else:
-                showinfo('Infor', 'File {0:s} successfully read!'.format(cif_f))
                 self.parse_pdb()
 
     def parse_pdb(self):
@@ -802,27 +803,11 @@ class TkGui(tk.Tk):
                 showerror('Unsupported file format!',
                           'Supported formats: eps, jpeg, jpg, pdf, pgf, png, ps, raw, rgba, svg, svgz, tif, tiff.')
 
-    def grid_set(self):
+    def plot_set(self):
         """
 
         :return:
         """
-        self.grid = bool(askyesno('Plot grid', 'Display?'))
-        if self.run_flag:
-            return
-        try:
-            self.canvas.get_tk_widget().destroy()
-            self.toolbar.destroy()
-        except AttributeError:
-            pass
-        self.graph()
-
-    def legend_set(self):
-        """
-
-        :return:
-        """
-        self.legend = bool(askyesno('Plot legend', 'Display?'))
         if self.run_flag:
             return
         try:
@@ -841,7 +826,7 @@ class TkGui(tk.Tk):
             showerror('Error!', 'The calculation is still running!')
             return
         try:
-            grid = self.grid
+            grid = self.grid.get()
             fig = self.cls.colormap(grid)
         except ValueError:
             showinfo('Information', 'Data unavailable')
@@ -857,7 +842,7 @@ class TkGui(tk.Tk):
             showerror('Error!', 'The calculation is still running!')
             return
         try:
-            grid = self.grid
+            grid = self.grid.get()
             ax, fig = self.cls.colormap3d(grid)
         except ValueError:
             showinfo('Information', 'Data unavailable')
@@ -906,7 +891,6 @@ class TkGui(tk.Tk):
         b_c = tk.Button(fra2, text="Cancel", command=lambda: win.destroy())
         b_c.grid(row=0, column=2, pady=5, padx=5)
 
-
     def open_pymol(self):
         """
 
@@ -920,7 +904,7 @@ class TkGui(tk.Tk):
         except FileNotFoundError:
             showerror("Erros!", "PyMol not found!")
 
-    def select_sol(self):
+    def select_sol(self, ext=False):
         """
 
         :return:
@@ -928,7 +912,10 @@ class TkGui(tk.Tk):
         if self.run_flag:
             showerror('Error!', 'The calculation is still running!')
             return
-        sol_list = self.cls.get_nsol(5)
+        if ext:
+            sol_list = self.cls.get_nsol_ext(5)
+        else:
+            sol_list = self.cls.get_nsol(5)
         if not sol_list:
             return
         win = tk.Toplevel(self)

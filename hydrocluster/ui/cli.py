@@ -68,6 +68,7 @@ def run(cls: ClusterPdb, log: Log, namespace) -> None:
         log.append('Autoscan done... \n')
         bar1.finish()
         print_sols(cls, log)
+        print_sols_ext(cls, log)
         log.append(('\nBest solution:\nNumber of clusters = {0:d}\n{4:s} = {1:.3f}\n'
                     'EPS = {2:.3f} \u212B\nMIN_SAMPLES = {3:d}\n'
                     'Percent of noise = {5:.2f} %{6:s}\n').format(
@@ -301,6 +302,17 @@ def print_sols(cls: ClusterPdb, log):
         log.append("{:d}: score: {:.3f}, nclustes: {:d}, eps: {:.2f} \u212B, "
                    "min_samples: {:d}\n".format(sol[0], sol[1], sol[2], sol[3], sol[4]))
 
+def print_sols_ext(cls: ClusterPdb, log):
+    """
+
+    :param cls:
+    :param log:
+    """
+    sols = cls.get_nsol_ext(5)
+    log.append("\nClustering solutions (local max(min)) :\n")
+    for sol in sols:
+        log.append("{:d}: score: {:.3f}, nclustes: {:d}, eps: {:.2f} \u212B, "
+                   "min_samples: {:d}\n".format(sol[0], sol[1], sol[2], sol[3], sol[4]))
 
 def cli(namespace) -> None:
     """

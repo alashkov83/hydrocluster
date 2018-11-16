@@ -21,6 +21,8 @@ import psutil
 from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import axes3d
 from scipy.spatial.distance import cdist
+import scipy.ndimage.filters as filters
+
 
 try:
     from sklearn.cluster import dbscan
@@ -41,6 +43,33 @@ n_usecpus = psutil.cpu_count()
 if n_usecpus > 2:
     n_usecpus -= 1
 
+def detect_local_exterma(arr: np.ndarray, x: np.ndarray, y: np.ndarray, ext: str='max', bg=0, n: int=5):
+    epsilon = 0.00000001
+    arr = arr.copy()
+    shape = arr.shape
+    rand_matrix = np.random.uniform(-epsilon, epsilon, size=shape)
+    rand_matrix[arr == bg] = 0
+    arr_noise = arr + rand_matrix
+    i = 1
+    j = 1
+    while j < n:
+        neighborhood = np.ones((shape[0]//i, shape[1]//i))
+        if ext == 'min':
+            local_ext_val = filters.minimum_filter(arr_noise, footprint=neighborhood)
+        else:
+            local_ext_val = filters.maximum_filter(arr_noise, footprint=neighborhood)
+        local_ext = (local_ext_val == arr_noise) & (local_ext_val != bg)
+        j = len(np.nonzero(local_ext)[0])
+        i += 1
+    xind, yind = np.nonzero(local_ext)[0], np.nonzero(local_ext)[1]
+    xext, yext = x[xind], y[yind]
+    val_ext = arr[xind, yind]
+    sols = list(zip(val_ext, xext, yext, xind, yind))
+    if ext == 'min':
+        sols.sort(key=lambda a: a[0])
+    else:
+        sols.sort(key=lambda a: a[0], reverse=True)
+    return sols
 
 def filterXYZandRData(Label, XYZ, Dist):
     """
@@ -336,13 +365,13 @@ def create_group(group_table, res_name, xyzm_array, atom_list):
         return groups_xyz_array, weights, real_groups
 
 
-def draw_scan_param(x, y, htable, metric, xparametr, const_str):
+def draw_scan_param(x, y, y1, y2, y3, y4, htable, metric, xparametr, const_str):
     """
 
     """
 
-    fig = Figure(figsize=(12, 6))
-    ax1 = fig.add_subplot(111)
+    fig = Figure(figsize=(8, 8))
+    ax1 = fig.add_subplot(311)
     ax1.set_title(metric + ' vs ' + xparametr + '\nhtable: ' + htable + ", " + const_str)
     ax1.set_xlabel(xparametr)
     ax1.set_ylabel(metric)
@@ -351,19 +380,65 @@ def draw_scan_param(x, y, htable, metric, xparametr, const_str):
         ax1.plot(x, y)
     elif xparametr == 'MIN_SAMPLES':
         ax1.bar(x, y)
+    ax2 = fig.add_subplot(312)
+    ax2.set_title('No. of clusters vs ' + xparametr)
+    ax2.set_xlabel(xparametr)
+    ax2.set_ylabel('No. of clusters')
+    ax2.grid(True)
+    if xparametr == 'EPS (\u212B)':
+        ax2.plot(x, y1)
+    elif xparametr == 'MIN_SAMPLES':
+        ax2.bar(x, y1)
+    ax3 = fig.add_subplot(313)
+    ax3.set_title('%  points in clusters vs ' + xparametr)
+    ax3.set_xlabel(xparametr)
+    ax3.set_ylabel('%  points in clusters')
+    ax3.grid(True)
+    if xparametr == 'EPS (\u212B)':
+        ax3.plot(x, y2, color='b', label='all')
+        ax3.plot(x, y3, color='r', label='core')
+        ax3.plot(x, y4, color='g', label='uncore')
+    elif xparametr == 'MIN_SAMPLES':
+        ax3.bar(x, y2, color='b', label='all')
+        ax3.bar(x, y3, color='r', label='core')
+        ax3.bar(x, y4, color='g', label='uncore')
+    ax3.grid(True)
+    ax3.legend(loc='best')
+    fig.tight_layout(pad=0.4, h_pad=0.5)
     return fig
+
+
+def notnoise_percent(labels):
+    labflat = labels.copy().flatten()
+    n = len(labflat)
+    not_noise_n = len([x for x in labflat if x != -1])
+    return not_noise_n * 100 / n
+
+def notnoise_percent_core(labels, core_mask):
+    labflat = labels.copy().flatten()
+    coreflat = core_mask.copy().flatten()
+    n = len(labflat)
+    not_noise_core = len([x for x in zip(labflat, coreflat) if x[0] != -1 and x[1]])
+    return not_noise_core * 100 / n
 
 
 def calculate_scan(states, param, xparm):
     epsilon = 0.00000001
     if xparm == 'eps':
-        x = [state[5] for state in states if (state[4]-epsilon < param < state[4])+epsilon]
-        y = [state[3] for state in states if (state[4]-epsilon < param < state[4])+epsilon]
+        x = [state[5] for state in states if abs(state[4]-param) <= epsilon]
+        y = [state[3] for state in states if abs(state[4]-param) <= epsilon]
+        y1 = [state[2] for state in states if abs(state[4]-param) <= epsilon]
+        y2 = [notnoise_percent(state[0]) for state in states if abs(state[4]-param) <= epsilon]
+        y3 = [notnoise_percent_core(state[0], state[1]) for state in states if abs(state[4]-param) <= epsilon]
     elif xparm == 'min_samples':
         x = [state[4] for state in states if state[5] == param]
         y = [state[3] for state in states if state[5] == param]
-    x, y = list(zip(*sorted((zip(x, y)), key=lambda tup: tup[0])))
-    return x, y
+        y1 = [state[2] for state in states if state[5] == param]
+        y2 = [notnoise_percent(state[0]) for state in states if state[5] == param]
+        y3 = [notnoise_percent_core(state[0], state[1]) for state in states if state[5] == param]
+    y4 = list(map(lambda a: a[0]-a[1], zip(y2, y3)))
+    x, y, y1, y2, y3, y4 = list(zip(*sorted((zip(x, y, y1, y2, y3, y4)), key=lambda tup: tup[0])))
+    return x, y, y1, y2, y3, y4
 
 
 class ClusterPdb:
@@ -571,6 +646,35 @@ class ClusterPdb:
             for n in range(nsol):
                 state = self.states[n]
                 sols.append((n, state[3], state[2], state[4], state[5]))
+        else:
+            sols = None
+        return sols
+
+    def get_nsol_ext(self, nsol: int):
+        if self.figs:
+            y, x, z =self.figs['colormap'][0], self.figs['colormap'][1], self.figs['colormap'][2]
+            if self.auto_params[5] == 'si_score':
+                ext = 'max'
+                bg = -1
+            elif self.auto_params[5] == 's_dbw':
+                ext = 'min'
+                bg = np.inf
+            else:
+                ext = 'max'
+                bg = 0
+            z_min = z.min()
+            z_max = z.max()
+            z_cut = 2*(z_max + z_min)/3
+            ext_sols = detect_local_exterma(z, x, y, ext=ext, bg=bg, n=nsol)
+            sols = []
+            n_cls = [(state[5], state[4], state[2]) for state in self.states]
+            for n, (val, min_samples, eps, xind, yind) in enumerate(ext_sols):
+                if self.auto_params[5] != 's_dbw' and val > z_cut:
+                    ncl = 0
+                    for st in  n_cls:
+                        if st[0] == min_samples and st[1] == eps:
+                            ncl = st[2]
+                    sols.append((n, val, ncl, eps, min_samples))
         else:
             sols = None
         return sols
@@ -891,7 +995,7 @@ class ClusterPdb:
         try:
             unique_labels = sorted(set(self.labels))
             xyz_all = self.X
-        except AttributeError:
+        except TypeError:
             raise AttributeError
         ax = axes3d.Axes3D(fig)
         colors = [cm.get_cmap('rainbow')(each) for each in np.linspace(0, 1, len(unique_labels))]
@@ -961,7 +1065,7 @@ class ClusterPdb:
         ax11.scatter(V, N, c='k')
         vs = [Vcoeff * state[3] ** 3 for state in self.get_nsol(5)]
         ns = [state[4] for state in self.get_nsol(5)]
-        ax11.scatter(vs, ns, c='g', label='Suboptimal')
+        ax11.scatter(vs, ns, c='g', label='Suboptimal values')
         ax11.scatter(Vcoeff * self.eps ** 3, self.min_samples, c='r', label='Current')
         texLINEAR = 'Linear:\n' + r'$C_h\ =\ ' + '{:.4f}'.format(C) + r'\ \AA^{-3}$' + "\n" + r'$N_0\ =\ ' + \
                     '{:.1f}$'.format(B) + '\n' + r'$R^2\ =\ ' + '{:.4f}'.format(R2) + r'$'
@@ -1001,14 +1105,14 @@ class ClusterPdb:
         metric = self.metrics_name[self.auto_params[5]]
         htable = self.htable
         if mode == 'min_samples':
-            x, y = calculate_scan(states, value, 'eps')
+            x, y, y1, y2, y3, y4 = calculate_scan(states, value, 'eps')
             xparametr = 'MIN_SAMPLES'
             const_str = 'EPS: {:.2f} \u212B'.format(value)
         else:
-            x, y = calculate_scan(states, value, 'min_samples')
+            x, y, y1, y2, y3, y4 = calculate_scan(states, value, 'min_samples')
             xparametr = 'EPS (\u212B)'
             const_str = 'MIN_SAMPLES: {:d}'.format(value)
-        fig = draw_scan_param(x, y, htable, metric, xparametr, const_str)
+        fig = draw_scan_param(x, y, y1, y2, y3, y4, htable, metric, xparametr, const_str)
         return fig
 
     def get_dict_aa(self):

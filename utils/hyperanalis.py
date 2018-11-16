@@ -89,8 +89,8 @@ def colormap(x, y, htable, metric, xparametr, sa: str, const_str):
 
 def calculate_xy(states, param, xparm):
     if xparm == 'eps':
-        x = [state[5] for state in states if (state[4]-epsilon < param < state[4])+epsilon]
-        y = [state[3] for state in states if (state[4]-epsilon < param < state[4])+epsilon]
+        x = [state[5] for state in states if abs(state[4]-param) <= epsilon]
+        y = [state[3] for state in states if abs(state[4]-param) <= epsilon]
     elif xparm == 'min_samples':
         x = [state[4] for state in states if state[5] == param]
         y = [state[3] for state in states if state[5] == param]

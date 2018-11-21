@@ -137,7 +137,7 @@ Start) or automatic mode of operation (Auto mode -&gt; Start) in one of
 the underlying windows. In the automatic mode, the optimal parameters
 eps and min\_samples are selected by enumeration within the given
 boundaries and with the given step. Upon completion of the work in the
-automatic mode, when you click Options -&gt; Dispplay colormap, you can
+automatic mode, when you click Options -&gt; Solution analysis -&gt; Autotune colormap, you can
 get a graphical interpretation of the process of selecting the optimal
 values namely dependencies min\_samples (eps) and min\_samples (eps<sup>3</sup>).
 The point corresponding to the optimal parameters is marked in
@@ -162,25 +162,28 @@ program (Options-&gt; OpenPyMol).
 
 **File-&gt;**
 
-Open PDB - opens pdb file on a disk  
-Open CIF - opens CIF file on a disk  
-Open IDPDB - opens file from RSCB PDB data base with IDPDB  
-Load state - loads program state, saved in file  
+Open File - opens PDB or mmCIF file on a disk  
+Open ID PDB - opens file from RSCB PDB data bank with ID PDB  
+Load State - loads program state, saved in file  
 Save PyMOL script - saves script (.py) for further processing with PyMOL  
-Save state - saves the current state of program in file  
-Save picture - saves the clustering result in png format file  
+Save State - saves the current state of program in file  
+Save Picture - saves the clustering result in png format file  
 Save LOG - saves log file of the current session  
 Quit - quit from the program
 
-**Options-&gt;**
-
-Plot grid - makes coordinate grid in the Cluster analysis window  
-Plot legend - displays the brief description of the picture  
-Select clustering solution - display and choice for other solutions cluster analysis  
-Display colormap - shows graphs obtained as a result of clustering
+**Options-&gt;**  
+Select clustering solution -> By local max (min) - display and choice for other solutions cluster analysis by local extrema of scoring  
+Select clustering solution -> By max (min) values - display and choice for other solutions cluster analysis by value of scoring  
+Solution analysis -> Autotune colormap - shows graphs obtained as a result of clustering
 parameters selection. Marked point corresponds optimal values of eps and min\_samples  
+Solution analysis -> Autotune 3D-map - shows 3D-graph obtained as a result of clustering
+parameters selection  
+Solution analysis -> Scan by parameter - Scan some values of clustering solutions by one of the parameter (eps or min\_samples) when second parameter are fixed  
+Open PyMol - opens PyMol for further data display  
+About Protein - Display information about protein  
+Plot settings -> Plot grid - makes coordinate grid in the Cluster analysis window  
+Plot settings -> Plot legend - displays the brief description of the picture    
 Clear log - clears log file in the appropriate window  
-Open PyMol - opens PyMol for further data display
 
 Theory
 ------
@@ -194,8 +197,8 @@ with them should be taken into account, for example, when evaluating
 molecular docking solutions. Hydrocluster programm is based on
 ensity-Based Spatial Clustering of Applications with Noise (DBSCAN).
 Atomic coordinates, their type and description of amino acid residues
-(a. r.) are loaded from a file of the PDB, CIF formats, or directly from
-the Protein Data Bank. For each a.r. from the table of relative
+(a. r.) and chemical groups are loaded from a file of the PDB, mmCIF formats, or directly from
+the Protein Data Bank. For each a.r. (or chemical group) from the table of relative
 hydrophobicity center of mass of non-H atoms is calculated. As weights
 in the cluster analysis, various tables of a.r. hydrophobicity known in
 the literature are used. \[1-4]. Separately, for clustering
@@ -206,10 +209,10 @@ Henderson-Hasselbach equation, is implemented \[5]. As
 hyperparameters DBSCAN uses the epsilon neighborhood radius (eps) and
 the minimum number of neighbors (min\_samples). Eps is defined as the
 maximum distance (in Angstrom) between the centers of mass of
-hydrophobic a.r. which are adjacent in one cluster. The
+hydrophobic a.r. (or chemical group) which are adjacent in one cluster. The
 min\_samples/eps\^{3} ratio is proportional to the maximum distribution
-density of the centers of mass of the hydrophobic a.r.. Silhouette score
-\[6] and Calinski and Harabaz score \[7] and DBCV
+density of the centers of mass of the hydrophobic a.r. (or chemical group). Silhouette score
+\[6] and Calinski and Harabasz score \[7] and DBCV
 \[8] are used as the quality criteria for cluster analysis. For
 clusters of complex shape, it is better to use the silhouette
 coefficient. At the same time, Calinski and Harabaz score, which uses
@@ -220,8 +223,9 @@ organization of proteins. A feature of the DBSCAN algorithm is the
 strong dependence of clustering results on the parameters - eps and
 min\_samples. Hydrocluster implemented the selection of these parameters
 by simply iterating over their values at user-defined boundaries,
-followed by sorting the results according to the criterion of maximizing
+followed by sorting the results according to the criterion of maximizing (minimizing)
 the value of the corresponding estimated coefficient.
+
 
 Requirements
 ------------

@@ -195,25 +195,25 @@ amphiphilic nature, the hydrophobic clusters themselves are included in
 the functionally important regions of the molecules. The interaction
 with them should be taken into account, for example, when evaluating
 molecular docking solutions. Hydrocluster programm is based on
-ensity-Based Spatial Clustering of Applications with Noise (DBSCAN).
+ensity-Based Spatial Clustering of Applications with Noise (DBSCAN) \[1].
 Atomic coordinates, their type and description of amino acid residues
-(a. r.) and chemical groups are loaded from a file of the PDB, mmCIF formats, or directly from
+(a. r.) and chemical groups \[2] are loaded from a file of the PDB, mmCIF formats, or directly from
 the Protein Data Bank. For each a.r. (or chemical group) from the table of relative
 hydrophobicity center of mass of non-H atoms is calculated. As weights
-in the cluster analysis, various tables of a.r. hydrophobicity known in
-the literature are used. \[1-4]. Separately, for clustering
+in the cluster analysis, various tables of a.r. \[3-7] (group \[2]) hydrophobicity known in
+the literature are used (see Table1 or Table2). Separately, for clustering
 electrically charged amino acid residues, the function of calculating
 weighting coefficients as modules of partial charges of side groups
 according to the formulas, which are derived from the
-Henderson-Hasselbach equation, is implemented \[5]. As
+Henderson-Hasselbach equation, is implemented \[8]. As
 hyperparameters DBSCAN uses the epsilon neighborhood radius (eps) and
 the minimum number of neighbors (min\_samples). Eps is defined as the
 maximum distance (in Angstrom) between the centers of mass of
-hydrophobic a.r. (or chemical group) which are adjacent in one cluster. The
+hydrophobic a.r. (or chemical groups) which are adjacent in one cluster. The
 min\_samples/eps\^{3} ratio is proportional to the maximum distribution
-density of the centers of mass of the hydrophobic a.r. (or chemical group). Silhouette score
-\[6] and Calinski and Harabasz score \[7] and DBCV
-\[8] are used as the quality criteria for cluster analysis. For
+density of the centers of mass of the hydrophobic a.r. (or chemical groups). 
+Internal clustering validation measures (descibed in Table 3) 
+are used as the quality criteria for cluster analysis. For
 clusters of complex shape, it is better to use the silhouette
 coefficient. At the same time, Calinski and Harabaz score, which uses
 the distance between the element and the center of the cluster,
@@ -226,6 +226,43 @@ by simply iterating over their values at user-defined boundaries,
 followed by sorting the results according to the criterion of maximizing (minimizing)
 the value of the corresponding estimated coefficient.
 
+Table 1. Normalised (by Alanine) hydrophobic weights of amino acid residues
+---------------------------------------------------------------------------
+
+| a.r. | Hydropathy \[3] | Fuzzyoildrop \[4] | MENV \[5] | Nanodroplet \[6] | Aliphatic \[7] |
+|------|-----------------|-------------------|-----------|------------------|----------------|
+| ALA  | 1.0             | 1.0               | 1.0       | 1.0              | 1.0            |
+| VAL  | 2.333           | 1.418             | 2.52      | 0.867            | 2.9            |
+| LEU  | 2.111           | 1.369             | 2.64      | 0.904            | 3.9            |
+| ILE  | 2.5             | 1.544             | 2.94      | 1.016            | 3.9            |
+| PHE  | 1.556           | 1.583             | 2.58      | 0.963            | -              |
+| TRP  | -               | 1.497             | 2.03      | 0.900            | -              |
+| MET  | 1.056           | 1.448             | 1.64      | 0.799            | -              |
+| CYS  | 1.389           | 1.748             | 3.48      | 0.588            | -              |
+| THR  | -               | 0.538             | 1.82      | 0.424            | -              |
+| SER  | -               | -                 | -         | 0.372            | -              |
+| GLY  | -               | -                 | -         | 0.477            | -              |
+
+Table 2. Hydrophobic weights of chemical (Rekker's) groups \[2]
+-------------------------------------------------------------
+
+| Chemical radical | Hydrophobic weight |
+|------------------|--------------------|
+| C6H5 (phenyl)    | 1.903              |
+| CH               | 0.315              |
+| CH2              | 0.519              |
+| CH3              | 0.724              |
+| Indolyl          | 1.903              |
+
+Table 3. Internal clustering validation measures
+------------------------------------------------
+
+| Scoring function        | Range of values | Optimal value | Realisation  | Paper     |
+|-------------------------|-----------------|---------------|--------------|-----------|
+| Calinski-Harabasz score | 0 ->            | maximum       | scikit-learn | \[9]      |
+| Silhouette score        | -1 ... 1        | maximum       | scikit-learn | \[10]     |
+| S_Dbw                   | 0 ->            | minimum       | internal     | \[11, 12] |
+|                         |                 |               |              |           |
 
 Requirements
 ------------
@@ -254,13 +291,15 @@ family).
 
 References
 ----------
-1. J. Kyte, R. F. Doolittle. J Mol Biol. 1982. 157, 105-132.
-2. B. Kalinowska, M. Banach, Z. Wisniowski, L. Konieczny, I. Roterman. J
-Mol Model. 2017. 23 , 205.
-3. D. Bandyopadhyay .E. L. Mehler.Proteins 2008.72.646-659
-4. Zhu C. Q., Gao Y. R. , Li H. et.al.// Proc. NAS. 2016.113.12946.
-5. Ikai, A.J. 1980. J. Biochem. 88, 1895-1898.
-6. Rousseeuw P. Comput. Appl. Math. 1987. 20. 53.
-7. Calinski T., Harabasz J. // Communications in Statistics. 1974. 3 . 1.
-8. Moulavi, Davoud, et al. Proc.2014 SIAM International Conf. on Data
-Mining. 839-847. 2014.
+1. Ester, M., H. P. Kriegel, J. Sander, and X. Xu, In: Proceedings of the 2nd International Conference on Knowledge Discovery and Data Mining, Portland, OR, AAAI Press,226-231. 1996
+2. R. Mannhold, R. F. Rekker Perspectives in Drug Discovery and Design, 18: 1–18, 2000.
+3. J. Kyte, R. F. Doolittle. J Mol Biol. 1982. 157, 105-132.
+4. Brylinski M, Konieczny L, Roterman I. Int J Bioinform Res Appl. 2007;3(2):234-60.
+5. D. Bandyopadhyay .E. L. Mehler.Proteins 2008.72.646-659
+6. Zhu C. Q., Gao Y. R. , Li H. et.al.// Proc. NAS. 2016.113.12946.
+7. Ikai, A.J. 1980. J. Biochem. 88, 1895-1898.
+8. Dexter S. Moore BIOCHEMICAL EDUCATION 13(1) 1985.
+9. Calinski T., Harabasz J. // Communications in Statistics. 1974. 3 . 1.
+10. Rousseeuw P. Comput. Appl. Math. 1987. 20. 53.
+11. M. Halkidi and M. Vazirgiannis, in ICDM, Washington, DC, USA, 2001, pp. 187–194.
+12. Tong, J. & Tan, H. J. Electron.(China) (2009) 26: 258. https://doi.org/10.1007/s11767-007-0151-8

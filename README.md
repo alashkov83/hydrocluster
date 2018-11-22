@@ -40,13 +40,13 @@ Input file name (pdb, txt, cif, ent) - pdb file name, cif file name,
 idpdb or list of ispdbs
 
 **-emin EMIN, --emin EMIN**  
-Minimum EPS value (A). Default=3.0
+Minimum EPS value (Å). Default=3.0
 
 **-emax EMAX, --emax EMAX**  
-Maximum EPS value (A). Default=15.0
+Maximum EPS value (Å). Default=15.0
 
 **-es ESTEP, --estep ESTEP**  
-Step of EPS (A). Default=0.1
+Step of EPS (Å). Default=0.1
 
 **-pts,--ptables**  
 Property table’s list for testlist.py. Separator: ’,’
@@ -93,7 +93,7 @@ Activate filter of noise for scoring function (**Not recommended!!!**).
 No automatic mode.
 
 **-eps EPS**  
-EPS value (A). Default=3.0
+EPS value (Å). Default=3.0
 
 **-min\_samples MIN\_SAMPLES**  
 MIN SAMPLES value. Default=3
@@ -139,7 +139,7 @@ eps and min\_samples are selected by enumeration within the given
 boundaries and with the given step. Upon completion of the work in the
 automatic mode, when you click Options -&gt; Solution analysis -&gt; Autotune colormap, you can
 get a graphical interpretation of the process of selecting the optimal
-values namely dependencies min\_samples (eps) and min\_samples (eps<sup>3</sup>).
+values namely dependencies min\_samples (eps) and min\_samples (eps³).
 The point corresponding to the optimal parameters is marked in
 color.
 
@@ -172,18 +172,23 @@ Save LOG - saves log file of the current session
 Quit - quit from the program
 
 **Options-&gt;**  
-Select clustering solution -> By local max (min) - display and choice for other solutions cluster analysis by local extrema of scoring  
-Select clustering solution -> By max (min) values - display and choice for other solutions cluster analysis by value of scoring  
+Select clustering solution -> By local max (min) - shows other solutions of cluster analysis by local extrema of scoring for make choice its  
+Select clustering solution -> By max (min) values - shows other solutions of cluster analysis by values of scoring for make choice its  
 Solution analysis -> Autotune colormap - shows graphs obtained as a result of clustering
 parameters selection. Marked point corresponds optimal values of eps and min\_samples  
 Solution analysis -> Autotune 3D-map - shows 3D-graph obtained as a result of clustering
 parameters selection  
-Solution analysis -> Scan by parameter - Scan some values of clustering solutions by one of the parameter (eps or min\_samples) when second parameter are fixed  
+Solution analysis -> Scan by parameter - scans some values of clustering solutions by one of the parameter (eps or min\_samples) when second parameter are fixed  
 Open PyMol - opens PyMol for further data display  
-About Protein - Display information about protein  
+About Protein - displays information about protein  
 Plot settings -> Plot grid - makes coordinate grid in the Cluster analysis window  
 Plot settings -> Plot legend - displays the brief description of the picture    
-Clear log - clears log file in the appropriate window  
+Clear log - clears log information in the appropriate window  
+
+**Help-&gt;**  
+About - displays information about program, its license and version, and version of scikit-learn installed on the computer  
+Readme - opens system web-browser and shows this paper 
+
 
 Theory
 ------
@@ -208,14 +213,14 @@ according to the formulas, which are derived from the
 Henderson-Hasselbach equation, is implemented \[8]. As
 hyperparameters DBSCAN uses the epsilon neighborhood radius (eps) and
 the minimum number of neighbors (min\_samples). Eps is defined as the
-maximum distance (in Angstrom) between the centers of mass of
+maximum distance (in Angstrom (Å)) between the centers of mass of
 hydrophobic a.r. (or chemical groups) which are adjacent in one cluster. The
-min\_samples/eps\^{3} ratio is proportional to the maximum distribution
+min\_samples/eps³ ratio is proportional to the maximum distribution
 density of the centers of mass of the hydrophobic a.r. (or chemical groups). 
 Internal clustering validation measures (descibed in Table 3) 
 are used as the quality criteria for cluster analysis. For
 clusters of complex shape, it is better to use the silhouette
-coefficient. At the same time, Calinski and Harabaz score, which uses
+coefficient. At the same time, Calinski and Harabasz score, which uses
 the distance between the element and the center of the cluster,
 correctly estimates the areas of clusters with the highest density. This
 areas are of interest from the point of view of the structural
@@ -248,10 +253,10 @@ Table 2. Hydrophobic weights of chemical (Rekker's) groups \[2]
 
 | Chemical radical | Hydrophobic weight |
 |------------------|--------------------|
-| C6H5 (phenyl)    | 1.903              |
+| C₆H₅ (phenyl)    | 1.903              |
 | CH               | 0.315              |
-| CH2              | 0.519              |
-| CH3              | 0.724              |
+| CH₂              | 0.519              |
+| CH₃              | 0.724              |
 | Indolyl          | 1.903              |
 
 Table 3. Internal clustering validation measures

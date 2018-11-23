@@ -36,8 +36,8 @@ hydrocluster [-h][-i INPUT][-emin EMIN][-emax EMAX][-es ESTEP]
 show help message and exit
 
 **-i INPUT, --input INPUT**  
-Input file name (pdb, txt, cif, ent) - pdb file name, cif file name,
-idpdb or list of ispdbs
+Input file name (pdb,cif, ent, .hjson) - pdb file name, cif file name,
+individual id pdb or hjson configuration file name for testlist
 
 **-emin EMIN, --emin EMIN**  
 Minimum EPS value (Å). Default=3.0

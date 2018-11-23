@@ -48,20 +48,11 @@ Maximum EPS value (Å). Default=15.0
 **-es ESTEP, --estep ESTEP**  
 Step of EPS (Å). Default=0.1
 
-**-pts,--ptables**  
-Property table’s list for testlist.py. Separator: ’,’
-
-**-scs, --scores**  
-Score coefficients list for testlist. Separator: ’,’
-
 **-smin SMIN, --smin SMIN**  
 Minimum MIN SAMPLES. Default=3
 
-**-ss --save\_state**  
-Save states on testlist.py
-
 **-smax SMAX, --smax SMAX**  
-Minimum MIN SAMPLES. Default=50
+Maximum MIN SAMPLES. Default=50
 
 **-g {tkgui,cli,testlist}, --gui**  
 UI modes. Default=’tkgui’ (tkgui - graphic interface, cli - command
@@ -81,7 +72,7 @@ Selected amino acid residues. Default=None
 Property table for weighting. Default=’hydropathy’
 
 **-pH PH**  
-pH value for calculatation of net charges (positive or negative). Default=7.0
+pH value for calculatation of partial charges (positive or negative). Default=7.0
 
 **-sc {si\_score,calinski,dbcv}, --score {si\_score,calinski,dbcv}**  
 Score coefficient. Default=’calinski’
@@ -103,14 +94,6 @@ with graphics interface.**
 
 ### Examples:
 ```shell
-hydrocluster -i subpdb.txt -g testlist -o subpdb
-```
-
-Processing of file\_name.txt by testlist.py, file\_name.db file and
-file\_name\_data folder consisting of tree structure with data files on
-return
-
-```shell
 hydrocluster -i 1atg.pdb -g cli -o 1atg
 ```
 Processing of file\_name.pdb by command line interface and file\_name
@@ -119,6 +102,12 @@ folder on return
 File\_name folder consists of file\_name.py file for processing by
 pymol, binary file (.dat) with saved session state, file\_name.log file
 with saved log-data and two png files with pictures.
+
+```shell
+hydrocluster -g testlist -i defaultt.hjson
+```
+
+Reading of configuration file default.json and processing it by testlis. An example of a configuration file (with parameter comments) can be found at https://github.com/alashkov83/hydrocluster/blob/master/PDB_LISTS/default.hjson. Project\_name.db file and project\_name\_data folder consisting of tree structure with data files will be returned.
 
 Graphical User Interface
 ------------------------

@@ -1,0 +1,33 @@
+{
+  "Input file name": glob_mini.txt
+  # File containing list of ID PDBs (each ID at new line)
+  "Project name": glob_mini
+  # Basename of db-file and name of project root folder containing results
+  "Property tables list":  # Property tables containing weight coefficients for a.r. (or chemical groups)  (see doc.)
+  [
+    hydropathy
+    nanodroplet
+    menv
+    rekkergroup
+    fuzzyoildrop
+    aliphatic_core
+    hydrophilic
+    positive
+    negative
+    ngroup
+    pgroup
+  ]
+  pH: 7.0  # pH value for calculation of partial charges
+  "Minimum eps value (A)": 3.0
+  "Maximum eps value (A)": 15.0
+  "Step of eps value (A)": 0.1
+  "Minimum min_samples": 3
+  "Maximum min_samples": 50
+  "Scoring coefficients list":  # Internal clustering validation measures (see doc.)
+  [
+    si_score
+    calinski
+    s_dbw
+  ]
+  "Save states": false  # save the state of each calculation in file (need more disk space)
+}

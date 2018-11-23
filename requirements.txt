@@ -1,3 +1,4 @@
+hjson
 psutil
 scipy
 progressbar2

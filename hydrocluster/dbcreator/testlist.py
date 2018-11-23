@@ -7,6 +7,7 @@ import sqlite3
 import sys
 import warnings
 
+import hjson
 from Bio.PDB import PDBParser, PDBList
 from Bio.PDB.Polypeptide import PPBuilder
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
@@ -19,6 +20,107 @@ except ImportError:
     sys.exit()
 
 warnings.filterwarnings("ignore")
+
+
+def read_config(input_fn: str):
+    """
+    :param input_fn:
+    :return:
+    """
+    valid_keys = ('Input file name', 'Project name', 'Property tables list', 'pH', 'Minimum eps value (A)',
+                  'Maximum eps value (A)', 'Step of eps value (A)', 'Minimum min_samples', 'Maximum min_samples',
+                  'Scoring coefficients list', 'Save states')
+    ptables = ('hydropathy', 'nanodroplet', 'menv', 'rekkergroup', 'fuzzyoildrop', 'aliphatic_core', 'hydrophilic',
+               'positive', 'negative', 'ngroup', 'pgroup')
+    scores = ('si_score', 'calinski', 's_dbw')
+    if not input_fn:
+        raise ValueError("Input file name is not defined!")
+    if not os.path.exists(input_fn):
+        raise ValueError("Input file was not found!")
+    with open(input_fn) as f:
+        try:
+            options_dict = hjson.load(f)
+        except hjson.HjsonDecodeError:
+            raise ValueError('Invalid hjson file!')
+    if set(options_dict.keys()).issubset(set(valid_keys)):
+        print("Parameters in config file:")
+        for key in options_dict:
+            print("Parameter: {:s}, value: {:s}".format(key, str(options_dict[key])))
+    else:
+        raise ValueError("Error! Parameter(s): {:s} is not include in supported parameters: {:s}!\n".format(
+            ', '.join(set(options_dict.keys()).difference(set(valid_keys))),
+            ','.join(valid_keys)))
+    if 'Input file name' not in options_dict:
+        raise ValueError('Filename of ID PDBs list is not defined!')
+    if not os.path.exists(options_dict['Input file name']):
+        raise ValueError('File {:s} contains ID PDBs list is unavailable!')
+    if 'Project name' not in options_dict or not options_dict['Project name']:
+        pname = os.path.splitext(os.path.basename(options_dict['Input file name']))[0]
+        print('Project name is not defined! Set to {:s}'.format(pname))
+        options_dict['Project name'] = pname
+    if 'Property tables list' not in options_dict or not options_dict['Property tables list']:
+        print('Property tables are not defined! Set to all possible tables')
+        options_dict['Property tables list'] = ptables
+    if set(options_dict['Property tables list']).issubset(set(ptables)):
+        print("Selected ptables: {:s}\n".format(', '.join(ptables)))
+    else:
+        raise ValueError("Error! Table(s): {:s} is not include in supported tables: {:s}!\n".format(
+            ', '.join(set(options_dict['Property tables list']).difference(set(ptables))),
+            ','.join(ptables)))
+    if 'pH' not in options_dict:
+        print('pH is not defined! Set to 7.0')
+        options_dict['pH'] = 7.0
+    if (type(options_dict['pH']) != int and type(options_dict['pH']) != float) or not (0 < options_dict['pH'] < 14):
+        raise ValueError('Invalid pH value')
+    else:
+        options_dict['pH'] = float(options_dict['pH'])
+    if 'Minimum eps value (A)' not in options_dict:
+        print('Minimum eps value is not defined! Set to 3.0 \u212B')
+        options_dict['Minimum eps value (A)'] = 3.0
+    if (type(options_dict['Minimum eps value (A)']) != int and type(options_dict['Minimum eps value (A)']) != float) \
+            or options_dict['Minimum eps value (A)'] <= 0:
+        raise ValueError('Invalid minimum eps value')
+    else:
+        options_dict['Minimum eps value (A)'] = float(options_dict['Minimum eps value (A)'])
+    if 'Maximum eps value (A)' not in options_dict:
+        print('Maximum eps value is not defined! Set to 15.0 \u212B')
+        options_dict['Maximum eps value (A)'] = 15.0
+    if (type(options_dict['Maximum eps value (A)']) != int and type(options_dict['Maximum eps value (A)']) != float) \
+            or options_dict['Maximum eps value (A)'] <= 0:
+        raise ValueError('Invalid maximum eps value')
+    else:
+        options_dict['Maximum eps value (A)'] = float(options_dict['Maximum eps value (A)'])
+    if 'Step of eps value (A)' not in options_dict:
+        print('Step of eps value is not defined! Set to 0.1 \u212B')
+        options_dict['Step of eps value (A)'] = 0.1
+    if (type(options_dict['Step of eps value (A)']) != int and type(options_dict['Step of eps value (A)']) != float) \
+            or options_dict['Step of eps value (A)'] <= 0:
+        raise ValueError('Invalid step of eps value')
+    else:
+        options_dict['Step of eps value (A)'] = float(options_dict['Step of eps value (A)'])
+    if 'Minimum min_samples' not in options_dict:
+        print('Minimum min_samples is not defined! Set to 3')
+        options_dict['Minimum min_samples'] = 3
+    if type(options_dict['Minimum min_samples']) != int or options_dict['Minimum min_samples'] < 2:
+        raise ValueError('Invalid minimum min_samples eps value')
+    if 'Maximum min_samples' not in options_dict:
+        print('Maximum min_samples is not defined! Set to 50')
+        options_dict['Maximum min_samples'] = 50
+    if type(options_dict['Maximum min_samples']) != int or options_dict['Maximum min_samples'] < 2:
+        raise ValueError('Invalid maximum min_samples eps value')
+    if 'Scoring coefficients list' not in options_dict or not options_dict['Scoring coefficients list']:
+        print('Scoring coefficients are not defined! Set to all scoring coefficients')
+        options_dict['Scoring coefficients list'] = scores
+    if set(options_dict['Scoring coefficients list']).issubset(set(scores)):
+        print("Selected scoring coefficients: {:s}\n".format(', '.join(scores)))
+    else:
+        raise ValueError("Error! Scoring(s): {:s} is not include in supported scorings: {:s}\n".format(
+            ', '.join(set(options_dict['Scoring coefficients list']).difference(set(scores))),
+            ','.join(scores)))
+    if 'Save states' not in options_dict:
+        print('Save states option is not defined! Set to False')
+        options_dict['Save states'] = False
+    return options_dict
 
 
 def opendb(fiename: str) -> tuple:
@@ -401,59 +503,24 @@ def db_main(namespace):
 
     :param namespace:
     """
-    output = namespace.output
-    inp = namespace.input
-    if not output:
-        print("Output name is empty!")
-        sys.exit()
-    else:
-        outputDir = '{:s}_data'.format(output)
-    if not inp:
-        print("Input name is empty!")
-        sys.exit()
-    htables_all = ('hydropathy',
-                   'nanodroplet',
-                   'menv',
-                   'rekkergroup',
-                   'fuzzyoildrop',
-                   'aliphatic_core',
-                   'hydrophilic',
-                   'positive',
-                   'negative')
-    metrics_all = ('si_score',
-                   'calinski')
-    pt = namespace.ptables.strip().lower()
-    if pt == 'all':
-        htables = htables_all
-    else:
-        htables = tuple(pt.split(','))
-    if set(htables).issubset(set(htables_all)):
-        print("Selected ptables: {:s}\n".format(', '.join(htables)))
-    else:
-        print("Error! Table(s): {:s} is not include in supported tables: {:s} chain(s)!\n".format(
-            ', '.join(set(htables).difference(set(htables_all))), ','.join(htables_all)))
+    inp_fn = namespace.input
+    try:
+        options_dict = read_config(inp_fn)
+    except ValueError as e:
+        print(str(e))
         sys.exit(-1)
-    sc = (namespace.scores).strip().lower()
-    if sc == 'all':
-        metrics = metrics_all
-    else:
-        metrics = tuple(sc.split(','))
-    if set(metrics).issubset(set(metrics_all)):
-        print("Selected metric(s): {:s}\n".format(', '.join(metrics)))
-    else:
-        print("Error! Table(s): {:s} is not include in supported tables: {:s} chain(s)!\n".format(
-            ', '.join(set(metrics).difference(set(metrics_all))), ','.join(metrics_all)))
-        sys.exit(-1)
-    ss = namespace.save_state
-    pH = namespace.pH
-    if pH < 0 or pH > 14:
-        print("pH value range is 0-14")
-        sys.exit(-1)
-    min_eps = namespace.emin
-    max_eps = namespace.emax
-    step_eps = namespace.estep
-    min_min_samples = namespace.smin
-    max_min_samples = namespace.smax
+    inp = options_dict['Input file name']
+    output = options_dict['Project name']
+    outputDir = '{:s}_data'.format(output)
+    htables = options_dict['Property tables list']
+    metrics = options_dict['Scoring coefficients list']
+    ss = options_dict['Save states']
+    pH = options_dict['pH']
+    min_eps = options_dict['Minimum eps value (A)']
+    max_eps = options_dict['Maximum eps value (A)']
+    step_eps = options_dict['Step of eps value (A)']
+    min_min_samples = options_dict['Minimum min_samples']
+    max_min_samples = options_dict['Maximum min_samples']
     try:
         os.makedirs(outputDir, exist_ok=True)
     except OSError:

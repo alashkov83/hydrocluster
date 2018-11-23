@@ -18,20 +18,23 @@ from xmlrpc.client import ServerProxy
 import matplotlib.cm as cm
 import numpy as np
 import psutil
+import scipy.ndimage.filters as filters
 from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import axes3d
 from scipy.spatial.distance import cdist
-import scipy.ndimage.filters as filters
-
 
 try:
     from sklearn.cluster import dbscan
     from sklearn.linear_model import LinearRegression, RANSACRegressor
-    from sklearn.metrics import silhouette_score, calinski_harabaz_score
+    from sklearn.metrics import silhouette_score
     from sklearn.metrics.pairwise import euclidean_distances
-    from sklearn.neighbors import NearestNeighbors
 except ImportError:
     raise ImportError
+
+try:
+    from sklearn.metrics import calinski_harabaz_score
+except ImportError:
+    from sklearn.metrics import calinski_harabasz_score as calinski_harabaz_score  # Compat for 0.23 and upper
 
 from .s_dbw import S_Dbw
 
@@ -43,7 +46,10 @@ n_usecpus = psutil.cpu_count()
 if n_usecpus > 2:
     n_usecpus -= 1
 
-def detect_local_exterma(arr: np.ndarray, x: np.ndarray, y: np.ndarray, ext: str='max', bg=0, n: int=5):
+
+def detect_local_extrema(arr: np.ndarray, x: np.ndarray, y: np.ndarray, ext: str = 'max', bg=0, n: int = 5):
+    """
+    """
     epsilon = 0.00000001
     arr = arr.copy()
     shape = arr.shape
@@ -53,7 +59,7 @@ def detect_local_exterma(arr: np.ndarray, x: np.ndarray, y: np.ndarray, ext: str
     i = 1
     j = 1
     while j < n:
-        neighborhood = np.ones((shape[0]//i, shape[1]//i))
+        neighborhood = np.ones((shape[0] // i, shape[1] // i))
         if ext == 'min':
             local_ext_val = filters.minimum_filter(arr_noise, footprint=neighborhood)
         else:
@@ -70,6 +76,7 @@ def detect_local_exterma(arr: np.ndarray, x: np.ndarray, y: np.ndarray, ext: str
     else:
         sols.sort(key=lambda a: a[0], reverse=True)
     return sols
+
 
 def filterXYZandRData(Label, XYZ, Dist):
     """
@@ -115,11 +122,10 @@ def sep_noise_lab(labels):
     return labels
 
 
-def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, sparse_n, weight_array, eps: float, min_samples: int,
-                  metric: str = 'calinski', noise_filter: str = '') -> tuple:
+def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, weight_array, eps: float, min_samples: int,
+                  metric: str = 'calinski', noise_filter: str = 'comb') -> tuple:
     """
 
-    :param sparse_n:
     :param noise_filter:
     :param X:
     :param pdist:
@@ -130,8 +136,9 @@ def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, sparse_n, weight_array, eps:
     :param: noise_filter:
     """
     # TODO: Разделить процедуру кластеризации и процедуру оценки
-    core_sample_indices, labels = dbscan(sparse_n, sample_weight=weight_array,
-                                         eps=eps, min_samples=min_samples, n_jobs=-1, metric='precomputed')
+    core_sample_indices, labels = dbscan(pdist, sample_weight=weight_array,
+                                         eps=eps, min_samples=min_samples,
+                                         algorithm='brute', n_jobs=-1, metric='precomputed')
     # The DBSCAN algorithm considers clusters as areas of high density separated by areas of low density.
     # Due to this rather generic view, clusters found by DBSCAN can be of any shape,
     # as opposed to k-means which assumes that clusters are convex shaped.
@@ -147,6 +154,7 @@ def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, sparse_n, weight_array, eps:
     # Ester, M., H. P. Kriegel, J. Sander, and X. Xu,
     # In Proceedings of the 2nd International Conference on Knowledge Discovery and Data Mining,
     # Portland, OR, AAAI Press, pp. 226–231. 1996
+    # For precomputed metric use only 'brute' algorythm
     core_samples_mask = np.zeros_like(labels, dtype=bool)
     core_samples_mask[core_sample_indices] = True
     n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
@@ -174,14 +182,6 @@ def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, sparse_n, weight_array, eps:
         # Computational and Applied Mathematics 20: 53-65.
         except ValueError:
             score = -1
-    elif metric == 'calinski':
-        try:
-            score = calinski_harabaz_score(filterXYZ, filterLabel)
-            # The score is defined as ratio between the within-cluster dispersion and the between-cluster dispersion.
-            # For more info see:
-            # T.Calinski and J.Harabasz, 1974. “A dendrite method for cluster analysis”.Communications in Statistics
-        except ValueError:
-            score = 0
     elif metric == 'calinski':
         try:
             score = calinski_harabaz_score(filterXYZ, filterLabel)
@@ -335,7 +335,7 @@ def cmass(str_nparray: np.ndarray) -> list:
     return center
 
 
-def create_group(group_table, res_name, xyzm_array, atom_list):
+def create_group(group_table: dict, res_name: str, xyzm_array: np.ndarray, atom_list: list) -> tuple:
     """
 
     :param group_table:
@@ -414,6 +414,7 @@ def notnoise_percent(labels):
     not_noise_n = len([x for x in labflat if x != -1])
     return not_noise_n * 100 / n
 
+
 def notnoise_percent_core(labels, core_mask):
     labflat = labels.copy().flatten()
     coreflat = core_mask.copy().flatten()
@@ -425,18 +426,18 @@ def notnoise_percent_core(labels, core_mask):
 def calculate_scan(states, param, xparm):
     epsilon = 0.00000001
     if xparm == 'eps':
-        x = [state[5] for state in states if abs(state[4]-param) <= epsilon]
-        y = [state[3] for state in states if abs(state[4]-param) <= epsilon]
-        y1 = [state[2] for state in states if abs(state[4]-param) <= epsilon]
-        y2 = [notnoise_percent(state[0]) for state in states if abs(state[4]-param) <= epsilon]
-        y3 = [notnoise_percent_core(state[0], state[1]) for state in states if abs(state[4]-param) <= epsilon]
+        x = [state[5] for state in states if abs(state[4] - param) <= epsilon]
+        y = [state[3] for state in states if abs(state[4] - param) <= epsilon]
+        y1 = [state[2] for state in states if abs(state[4] - param) <= epsilon]
+        y2 = [notnoise_percent(state[0]) for state in states if abs(state[4] - param) <= epsilon]
+        y3 = [notnoise_percent_core(state[0], state[1]) for state in states if abs(state[4] - param) <= epsilon]
     elif xparm == 'min_samples':
         x = [state[4] for state in states if state[5] == param]
         y = [state[3] for state in states if state[5] == param]
         y1 = [state[2] for state in states if state[5] == param]
         y2 = [notnoise_percent(state[0]) for state in states if state[5] == param]
         y3 = [notnoise_percent_core(state[0], state[1]) for state in states if state[5] == param]
-    y4 = list(map(lambda a: a[0]-a[1], zip(y2, y3)))
+    y4 = list(map(lambda a: a[0] - a[1], zip(y2, y3)))
     x, y, y1, y2, y3, y4 = list(zip(*sorted((zip(x, y, y1, y2, y3, y4)), key=lambda tup: tup[0])))
     return x, y, y1, y2, y3, y4
 
@@ -447,15 +448,14 @@ class ClusterPdb:
     """
 
     def __init__(self) -> None:
-        self.metrics_name = {'calinski': 'Calinski-Harabaz score',
+        self.metrics_name = {'calinski': 'Calinski-Harabasz score',
                              'si_score': 'Silhouette score',
                              's_dbw': 'S_Dbw'
                              }
         self.X = None
         self.pdist = None
-        self.sparse_n = None
         self.labels = None
-        self.noise_filter = ''
+        self.noise_filter = 'comb'
         self.core_samples_mask = []
         self.n_clusters = 0
         self.score = 0
@@ -479,7 +479,6 @@ class ClusterPdb:
         """
         self.X = None
         self.pdist = None
-        self.sparse_n = None
         self.labels = None
         self.htable = 'hydropathy'
         self.noise_filter = ''
@@ -511,7 +510,8 @@ class ClusterPdb:
         self.eps = eps
         self.metric = metric
         self.labels, self.n_clusters, self.core_samples_mask, self.score = clusterDBSCAN(
-            self.X, self.pdist, self.sparse_n, self.weight_array, eps, min_samples, metric, self.noise_filter)
+            self.X, self.pdist, self.weight_array, eps=eps, min_samples=min_samples,
+            metric=metric, noise_filter=self.noise_filter)
 
     def clusterThread(self, subParams):
         """
@@ -520,7 +520,8 @@ class ClusterPdb:
         """
         for eps, min_samples in subParams:
             labels, n_clusters, core_samples_mask, score = clusterDBSCAN(
-                self.X, self.pdist, self.sparse_n, self.weight_array, eps, min_samples, self.metric, self.noise_filter)
+                self.X, self.pdist, self.weight_array,
+                eps=eps, min_samples=min_samples, metric=self.metric, noise_filter=self.noise_filter)
             clusterResults = labels, core_samples_mask, n_clusters, score, eps, min_samples
             self.queue.put(clusterResults)
         self.queue.put(None)
@@ -652,26 +653,28 @@ class ClusterPdb:
 
     def get_nsol_ext(self, nsol: int):
         if self.figs:
-            y, x, z =self.figs['colormap'][0], self.figs['colormap'][1], self.figs['colormap'][2]
+            y, x, z = self.figs['colormap'][0], self.figs['colormap'][1], self.figs['colormap'][2]
             if self.auto_params[5] == 'si_score':
                 ext = 'max'
                 bg = -1
+                z_cut = 0
             elif self.auto_params[5] == 's_dbw':
                 ext = 'min'
                 bg = np.inf
+                z_cut = 0
             else:
                 ext = 'max'
                 bg = 0
-            z_min = z.min()
-            z_max = z.max()
-            z_cut = 2*(z_max + z_min)/3
-            ext_sols = detect_local_exterma(z, x, y, ext=ext, bg=bg, n=nsol)
+                z_min = z.min()
+                z_max = z.max()
+                z_cut = (z_max + z_min) / 2
+            ext_sols = detect_local_extrema(z, x, y, ext=ext, bg=bg, n=nsol)
             sols = []
             n_cls = [(state[5], state[4], state[2]) for state in self.states]
             for n, (val, min_samples, eps, xind, yind) in enumerate(ext_sols):
-                if self.auto_params[5] != 's_dbw' and val > z_cut:
+                if val >= z_cut:
                     ncl = 0
-                    for st in  n_cls:
+                    for st in n_cls:
                         if st[0] == min_samples and st[1] == eps:
                             ncl = st[2]
                     sols.append((n, val, ncl, eps, min_samples))
@@ -857,8 +860,7 @@ class ClusterPdb:
                            'ARG': ((('CA',), 0.315),
                                    (('CB',), 0.519),
                                    (('CG',), 0.519),
-                                   (('CD',), 0.519),
-                                   (('CZ',), 0.110)),
+                                   (('CD',), 0.519)),
                            'ASP': ((('CA',), 0.315),
                                    (('CB',), 0.519)),
                            'ASN': ((('CA',), 0.315),
@@ -981,9 +983,12 @@ class ClusterPdb:
         pdist = euclidean_distances(xyz_array)
         parse_results = len(self.aa_list), np.min(pdist[np.nonzero(
             pdist)]), np.max(pdist[np.nonzero(pdist)]), np.mean(pdist[np.nonzero(pdist)])
-        sparse_n = NearestNeighbors(radius=parse_results[2], algorithm='brute', n_jobs=-1,
-                                    ).fit(xyz_array).radius_neighbors_graph(xyz_array, mode='distance')
-        self.X, self.pdist, self.parse_results, self.sparse_n = xyz_array, pdist, parse_results, sparse_n
+        # Attension! This code makes problems and it removed. 1) In this case size of sparse matrix  and size of
+        # pdist matrix are equivalents. 2) In dbscan (scikit-learn) founded bug if input array this precomputed
+        # sparse neighbors graph. See https://github.com/scikit-learn/scikit-learn/pull/12105
+        # sparse_n = NearestNeighbors(radius=parse_results[2], algorithm='brute', n_jobs=-1
+        #                             ).fit(xyz_array).radius_neighbors_graph(xyz_array, mode='distance')
+        self.X, self.pdist, self.parse_results = xyz_array, pdist, parse_results
         return parse_results
 
     def graph(self, grid_state: bool, legend_state: bool) -> tuple:
@@ -1205,7 +1210,7 @@ class ClusterPdb:
                     ("Core" if k[0] else "Uncore"), k[1], "+".join(
                         ['(chain {1:s} and resi {0:d}{2:s})'.format(aac[0], aac[1],
                                                                     ' and name {:s}'.format('+'.join(aac[3])) if (
-                                                                                len(aac) > 3 and aac[3]) else '')
+                                                                            len(aac) > 3 and aac[3]) else '')
                          for aac in aa_list]))
                 s += "cmd.color('{:s}', '{:s}_cluster_{:d}')\n".format(
                     color, ("Core" if k[0] else "Uncore"), k[1])
@@ -1222,7 +1227,6 @@ class ClusterPdb:
         glob_state = {
             'X': self.X,
             'pdist': self.pdist,
-            'sparse_n': self.sparse_n,
             'labels': self.labels,
             'noise_filter': self.noise_filter,
             'core_samples_mask': self.core_samples_mask,
@@ -1253,12 +1257,11 @@ class ClusterPdb:
         self.X = global_state['X']
         self.pdist = global_state['pdist']
         self.labels = global_state['labels']
-        self.sparse_n = global_state['sparse_n']
         noise_filter = global_state['noise_filter']
         if noise_filter is True:  # For 0.1 version saves compatibility
             self.noise_filter = 'filter'
         elif noise_filter is False:
-            self.noise_filter = ''
+            self.noise_filter = 'comb'
         else:
             self.noise_filter = noise_filter
         self.core_samples_mask = global_state['core_samples_mask']

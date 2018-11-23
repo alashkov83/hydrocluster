@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """Created by lashkov on 04.05.18"""
 
+import math
 import os.path
 import sys
 import tkinter as tk
@@ -12,7 +13,9 @@ from tkinter.simpledialog import askstring, askfloat
 from urllib.error import HTTPError
 
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from .. import __version__, __license__, __skversion__
+
+from .. import __version__, __license__, __skversion__, newversioncheck
+
 try:
     from ..core.pdbcluster import ClusterPdb
 except ImportError:
@@ -60,8 +63,6 @@ class FigureTk(tk.Toplevel):
             except ValueError:
                 showerror('Unsupported file format!',
                           'Supported formats: eps, jpeg, jpg, pdf, pgf, png, ps, raw, rgba, svg, svgz, tif, tiff.')
-
-            self.destroy()
 
     def menu(self):
         m = tk.Menu(self)
@@ -137,21 +138,23 @@ class TkGui(tk.Tk):
         l14.grid(row=3, column=0, pady=5, padx=5, sticky="W")
         self.l14 = tk.Label(fra11, text="{0:>5.3f}".format(0), anchor=tk.W)
         self.l14.grid(row=3, column=1, pady=5, padx=5, sticky="W")
-        lab21 = tk.LabelFrame(fra1, text='Metric', labelanchor='n', borderwidth=5)
-        lab21.pack(expand=1, fill=tk.X, pady=5, padx=5)
+        lab4 = tk.LabelFrame(fra1, text="Options", labelanchor='n', borderwidth=5)
+        lab4.pack(expand=1, fill=tk.X, pady=5, padx=5)
+        l41 = tk.Label(lab4, text="Metric: ", anchor=tk.W)
+        l41.grid(row=0, column=0, pady=5, padx=5, sticky="W")
         listbox_items = ['calinski',
                          'si_score',
                          's_dbw',
                          ]
-        self.combox = ttk.Combobox(lab21, height=5, width=15, values=listbox_items, state='readonly')
-        self.combox.pack()
+        self.combox = ttk.Combobox(lab4, height=5, width=10, values=listbox_items, state='readonly')
+        self.combox.grid(row=0, column=1, pady=5, padx=5, sticky="W")
         self.combox.set('calinski')
-        lab4 = tk.LabelFrame(fra1, text="Noise filter(See Readme)", labelanchor='n', borderwidth=5)
-        lab4.pack(expand=1, fill=tk.X, pady=5, padx=5)
-        listbox_items = ['', 'filter', 'sep', 'comb', 'bind']
-        self.combox_n = ttk.Combobox(lab4, height=5, width=15, values=listbox_items, state='readonly')
-        self.combox_n.pack()
-        self.combox_n.set('')
+        l42 = tk.Label(lab4, text="Noise filter: ", anchor=tk.W)
+        l42.grid(row=1, column=0, pady=5, padx=5, sticky="W")
+        listbox_items = ['comb', 'filter', 'sep', 'bind']
+        self.combox_n = ttk.Combobox(lab4, height=5, width=10, values=listbox_items, state='readonly')
+        self.combox_n.grid(row=1, column=1, pady=5, padx=5, sticky="W")
+        self.combox_n.set('comb')
         lab2 = tk.LabelFrame(fra1, text='Auto mode', labelanchor='n', borderwidth=5)
         lab2.pack(expand=1, fill=tk.X, pady=5, padx=5)
         lab3 = tk.LabelFrame(fra1, text='Manual mode', labelanchor='n', borderwidth=5)
@@ -211,7 +214,7 @@ class TkGui(tk.Tk):
         self.fra3.grid(row=0, column=1)
         fra4 = tk.Frame(self)
         fra4.grid(row=1, column=1, pady=10)
-        self.tx = tk.Text(fra4, width=100, height=8, wrap=tk.WORD)
+        self.tx = tk.Text(fra4, width=100, height=9, wrap=tk.WORD)
         scr = tk.Scrollbar(fra4, command=self.tx.yview)
         self.tx.configure(yscrollcommand=scr.set, state='disabled')
         self.tx.pack(side=tk.LEFT)
@@ -259,10 +262,11 @@ class TkGui(tk.Tk):
         """
         showinfo('About', 'Cluster analysis of hydrophobic or charged regions of macromolecules\n\n'
                           'Version: {:s}\n'
+                          'Latest version on PyPi: {:s}\n'
                           'License: {:s}\n\n'
                           'Python version: {:s}\n'
                           'Platform: {:s}\n'
-                          'Scikit-learn version: {:s}'.format(__version__, __license__, sys.version,
+                          'Scikit-learn version: {:s}'.format(__version__, newversioncheck(), __license__, sys.version,
                                                               sys.platform, __skversion__))
 
     @staticmethod
@@ -272,7 +276,7 @@ class TkGui(tk.Tk):
         :return:
         """
         import webbrowser
-        webbrowser.open_new("https://github.com/alashkov83/hydrocluster/blob/master/README.md")
+        webbrowser.open_new('https://alashkov83.github.io/hydrocluster/')
 
     def menu(self) -> None:
         """The method of initialize menu."""
@@ -471,7 +475,8 @@ class TkGui(tk.Tk):
                 self.tx.insert(tk.END, '\n{:s} cluster No. {:d} contains: {:s}'.format(
                     ("Core" if k[0] else "Uncore"), k[1],
                     ", ".join(['{2:s}:{1:s}{0:d}{3:s}'.format(aac[0], aac[1], aac[2],
-                                                              ((':' + '-'.join(aac[3])) if (len(aac) > 3 and aac[3]) else ''))
+                                                              ((':' + '-'.join(aac[3])) if (
+                                                                      len(aac) > 3 and aac[3]) else ''))
                                for aac in aa_list])))
                 self.tx.insert(tk.END, '\n')
         self.tx.configure(state='disabled')
@@ -511,7 +516,7 @@ class TkGui(tk.Tk):
             try:
                 if os.path.splitext(fname)[1].lower() in ('.pdb', '.ent'):
                     self.cls.open_pdb(fname)
-                elif os.path.splitext(fname)[1].lower() in ('.cif', ):
+                elif os.path.splitext(fname)[1].lower() in ('.cif',):
                     self.cls.open_cif(fname)
                 else:
                     showerror('Error', 'Incorrect file extension: {0:s}!'.format(os.path.splitext(fname)[1]))
@@ -641,14 +646,27 @@ class TkGui(tk.Tk):
             else:
                 parse_results = self.cls.parser(htable=htable, selectChains=chains, res=residues)
         except ValueError:
-            showerror('Error!', 'Invalid file format\nor file does not {:s} contain residues\n'.format(
-                'hydrophobic' if htable in ('hydropathy', 'menv', 'nanodroplet', 'fuzzyoildrop')
-                else 'negative' if htable == 'negative' else 'positive'))  # TODO: Добавить другие типы таблиц
+            showerror('Error!', 'Invalid file format\nor file does not {:s} contain {:s}\n'.format(
+                'hydrophobic' if htable in ('hydropathy', 'menv', 'nanodroplet', 'fuzzyoildrop', 'rekkergroup')
+                else 'negative' if htable in ('ngroup', 'negative') else
+                'positive' if htable in ('pgroup', 'positive') else 'aliphatic',
+                'groups' if htable in ('rekkergroup', 'pgroup', 'ngroup') else 'residues'))
             return
         else:
-            showinfo('Info', 'File successfully parsed!\nProperty table: {:s}\n'.format(htable) +
-                     "No. of residues(groups: {:d}\nMinimum distance = {:.3f} \u212B\n"
-                     "Maximum distance = {:.3f} \u212B\nMean distance = {:.3f} \u212B\n".format(*parse_results))
+            showinfo('Info', 'File successfully parsed!\n'
+                             'Property table: {0:s}\n'
+                             "No. of {5:s} {6:s}: {1:d}\n"
+                             "Minimum distance = {2:.3f} \u212B\n"
+                             "Maximum distance = {3:.3f} \u212B\n"
+                             "Mean distance = {4:.3f} \u212B\n".format(htable, parse_results[0], parse_results[1],
+                                                                       parse_results[2], parse_results[3], 'hydrophobic'
+                                                                       if htable in (
+                    'hydropathy', 'menv', 'nanodroplet', 'fuzzyoildrop', 'rekkergroup')
+                                                                       else 'negative' if htable in (
+                    'ngroup', 'negative') else
+                'positive' if htable in ('pgroup', 'positive') else 'aliphatic',
+                                                                       'groups' if htable in ('rekkergroup', 'pgroup',
+                                                                                              'ngroup') else 'residues'))
             self.l11.configure(text="{0:>5d}".format(parse_results[0]))
             self.l12.configure(text="{0:>5.3f}".format(parse_results[1]))
             self.l13.configure(text="{0:>5.3f}".format(parse_results[2]))
@@ -662,12 +680,26 @@ class TkGui(tk.Tk):
         self.fig = None
         self.clean_txt()
         self.tx.configure(state='normal')
-        self.tx.insert(tk.END, 'Property table: {:s}\n'.format(htable) +
-                       "No. of residues(groups): {:d}\nMinimum distance = {:.3f} \u212B\n"
-                       "Maximum distance = {:.3f} \u212B\nMean distance = {:.3f} \u212B\n\n".format(*parse_results))
+        self.tx.insert(tk.END, 'Property table: {0:s}\n'
+                               "No. of {5:s} {6:s}: {1:d}\n"
+                               "Minimum distance = {2:.3f} \u212B\n"
+                               "Maximum distance = {3:.3f} \u212B\n"
+                               "Mean distance = {4:.3f} \u212B\n\n".format(htable, parse_results[0], parse_results[1],
+                                                                           parse_results[2], parse_results[3],
+                                                                           'hydrophobic' if htable in (
+                                                                               'hydropathy', 'menv', 'nanodroplet',
+                                                                               'fuzzyoildrop', 'rekkergroup')
+                                                                           else 'negative' if htable in (
+                                                                               'ngroup', 'negative') else
+                                                                           'positive' if htable in (
+                                                                               'pgroup', 'positive') else 'aliphatic',
+                                                                           'groups' if htable in (
+                                                                               'rekkergroup', 'pgroup',
+                                                                               'ngroup') else 'residues'))
         self.tx.see(tk.END)
         self.tx.configure(state='disabled')
         self.sca1.set(parse_results[1])
+        self.sca2.set(round(math.log(parse_results[0], math.e)))
         self.ent_min_eps.delete(0, tk.END)
         self.ent_min_eps.insert(0, '{:.1f}'.format(parse_results[1]))
 
@@ -948,7 +980,7 @@ class TkGui(tk.Tk):
         if not self.cls.s_array:
             showerror('Error!', 'The structure is not avaible!')
             return
-        name, head, method, res, ncomp, nchain, ec, nres, mmass = self.cls.get_protein_info
+        name, head, method, res, ncomp, nchain, ec, nres, mmass = self.cls.get_protein_info()
         DialogOK(self, "About protein", """Name: {:s}
 HINFO: {:s}
 Method: {:s}

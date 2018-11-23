@@ -61,18 +61,14 @@ class Parser(argparse.ArgumentParser):
                                                      's_dbw'
                                                      ],
                           type=str, default='calinski', help='Score coefficient')
-        self.add_argument('-nf', '--noise_filter', choices=['', 'filter', 'sep', 'comb', 'bind'], type=str, default='',
+        self.add_argument('-nf', '--noise_filter', choices=['filter', 'sep', 'comb', 'bind'], type=str, default='comb',
                           help='Activate and choice filter of noise for scoring function (See README')
         self.add_argument('-na', '--noauto', action='store_const', const=True, default=False,
                           help='No automatic mode. --eps and --min_samples options required')
         self.add_argument('-eps', '--eps', type=float, default=3.0, help='EPS value (A)')
         self.add_argument('-min_samples', '--min_samples', type=int, default=3, help='MIN SAMPLES')
-        self.add_argument('-ss', '--save_state', action='store_const', const=True, default=False,
-                          help='Save states on testlist mode (Required more disk space!)')
-        self.add_argument('-pts', '--ptables', type=str, default='all',
-                          help='Property tables list for testlist, separator - ","')
-        self.add_argument('-scs', '--scores', type=str, default='all',
-                          help='Score coefficients list for testlist, separator - ","')
+        # self.add_argument('-ss', '--save_state', action='store_const', const=True, default=False,
+        #                   help='Save states on testlist mode (Required more disk space!)')
 
 
 def main():

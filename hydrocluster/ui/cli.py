@@ -95,11 +95,11 @@ def noauto(cls: ClusterPdb, log: Log, eps: float, min_samples: int, metric: str)
         log.append('Error! Could not parse file or clustering failed\n')
         sys.exit(-1)
     else:
-        log.append(('\nNumber of clusters = {0:d}\n{4:s} = {1:.3f}\n'
-                    'EPS = {2:.3f} \u212B\nMIN_SAMPLES = {3:d}\n'
-                    'Percent of noise = {5:.2f} %{6:s}\n').format(cls.n_clusters, cls.score, eps, min_samples,
-                                                                  cls.metrics_name[cls.metric], cls.noise_percent(),
-                                                                  ' !!WARNING!!!' if cls.noise_percent() > 30 else ''))
+        log.append('\nNumber of clusters = {0:d}\n{4:s} = {1:.3f}\n'
+                   'EPS = {2:.3f} \u212B\nMIN_SAMPLES = {3:d}\n'
+                   'Percent of noise = {5:.2f} %{6:s}\n'.format(cls.n_clusters, cls.score, eps, min_samples,
+                                                                cls.metrics_name[cls.metric], cls.noise_percent(),
+                                                                ' !!WARNING!!!' if cls.noise_percent() > 30 else ''))
 
 
 def graph(cls: ClusterPdb, log: Log, newdir: str, basefile: str):
@@ -184,7 +184,7 @@ def chainsSelect(cls: ClusterPdb, log: Log, namespace):
         return selectChains
     else:
         log.append("Error! Chain(s): {:s} is not include in structure! Structure included: {:s} chain(s)!\n".format(
-            ', '.join(set(selectChains).difference(set(allChains))), ','.join(allChains)))
+                   ', '.join(set(selectChains).difference(set(allChains))), ','.join(allChains)))
         sys.exit(-1)
 
 
@@ -206,12 +206,26 @@ def parse_pdb(cls: ClusterPdb, log: Log, htable: str, pH: float, chains: list = 
     try:
         parse_results = cls.parser(htable=htable, pH=pH, selectChains=chains, res=res)
     except ValueError:
-        log.append('\nError! Invalid file format\nor file does not contain {:s} residues\n'.format(
-            'hydrophobic' if htable in ('hydropathy', 'nanodroplet', 'menv', 'fuzzyoildrop')
-        else 'negative' if htable in ('negative', 'ngroup') else 'positive'))  # TODO: Добавить другие типы таблиц
+        log.append('\nError! Invalid file format\nor file does not {:s} contain {:s}\n'.format(
+                   'hydrophobic' if htable in ('hydropathy', 'menv', 'nanodroplet', 'fuzzyoildrop', 'rekkergroup')
+                   else 'negative' if htable in ('ngroup', 'negative')
+                   else 'positive' if htable in ('pgroup', 'positive')
+                   else 'aliphatic', 'groups' if htable in ('rekkergroup', 'pgroup', 'ngroup') else 'residues'))
     else:
-        log.append("No. of residues(groups): {:d}\nMinimum distance = {:.3f} \u212B\n"
-                   "Maximum distance = {:.3f} \u212B\nMean distance = {:.3f} \u212B\n".format(*parse_results))
+        log.append('File successfully parsed!\n'
+                   'Property table: {0:s}\n'
+                   "No. of {5:s} {6:s}: {1:d}\n"
+                   "Minimum distance = {2:.3f} \u212B\n"
+                   "Maximum distance = {3:.3f} \u212B\n"
+                   "Mean distance = {4:.3f} \u212B\n".format(htable, parse_results[0], parse_results[1],
+                                                             parse_results[2], parse_results[3], 'hydrophobic'
+                                                             if htable in ('hydropathy', 'menv', 'nanodroplet',
+                                                                           'fuzzyoildrop', 'rekkergroup')
+                                                             else 'negative' if htable in ('ngroup', 'negative')
+                                                             else 'positive' if htable in ('pgroup', 'positive')
+                                                             else 'aliphatic',
+                                                             'groups' if htable in ('rekkergroup', 'pgroup', 'ngroup')
+                                                             else 'residues'))
 
 
 def print_pdb_info(cls: ClusterPdb, log: Log):
@@ -224,7 +238,8 @@ Number of compounds: {:d}
 Number of peptide chains: {:d}
 EC: {:s}
 Total number of residues: {:d}
-Total molecular weight: {:d} Da""".format(name, head, method, res, ncomp, nchain, ec, nres, mmass))
+Total molecular weight: {:d} Da
+""".format(name, head, method, res, ncomp, nchain, ec, nres, mmass))
 
 
 def save_state(cls: ClusterPdb, newdir: str, basefile: str):
@@ -268,7 +283,11 @@ def resi(cls: ClusterPdb, log: Log):
     for k, aa_list in dict_aa.items():
         log.append('\n{:s} cluster No. {:d} contains: {:s}'.format(
             ("Core" if k[0] else "Non-core"), k[1], ", ".join(['{2:s}:{1:s}{0:d}{3:s}'.format(aac[0], aac[1], aac[2],
-            ((':' + '-'.join(aac[3])) if (len(aac) > 3 and aac[3]) else '')) for aac in aa_list])))
+                                                                                              ((':' + '-'.join(
+                                                                                                  aac[3])) if (len(
+                                                                                                  aac) > 3 and aac[
+                                                                                                                   3]) else ''))
+                                                               for aac in aa_list])))
     log.append('\n\n')
 
 
@@ -302,6 +321,7 @@ def print_sols(cls: ClusterPdb, log):
         log.append("{:d}: score: {:.3f}, nclustes: {:d}, eps: {:.2f} \u212B, "
                    "min_samples: {:d}\n".format(sol[0], sol[1], sol[2], sol[3], sol[4]))
 
+
 def print_sols_ext(cls: ClusterPdb, log):
     """
 
@@ -313,6 +333,7 @@ def print_sols_ext(cls: ClusterPdb, log):
     for sol in sols:
         log.append("{:d}: score: {:.3f}, nclustes: {:d}, eps: {:.2f} \u212B, "
                    "min_samples: {:d}\n".format(sol[0], sol[1], sol[2], sol[3], sol[4]))
+
 
 def cli(namespace) -> None:
     """

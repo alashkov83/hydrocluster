@@ -3,6 +3,7 @@
 """Created by lashkov on 04.05.18"""
 
 import bz2
+import gc
 import io
 import pickle
 import random
@@ -10,7 +11,7 @@ import re
 import time
 import warnings
 from collections import OrderedDict
-from multiprocessing import Queue, Process
+from multiprocessing import Queue, Process, Lock
 from subprocess import Popen
 from urllib.error import HTTPError
 from xmlrpc.client import ServerProxy
@@ -513,7 +514,7 @@ class ClusterPdb:
             self.X, self.pdist, self.weight_array, eps=eps, min_samples=min_samples,
             metric=metric, noise_filter=self.noise_filter)
 
-    def clusterThread(self, subParams):
+    def clusterThread_old(self, subParams: list):  # Old process-worker
         """
 
         :param subParams:
@@ -525,8 +526,29 @@ class ClusterPdb:
             clusterResults = labels, core_samples_mask, n_clusters, score, eps, min_samples
             self.queue.put(clusterResults)
         self.queue.put(None)
+        gc.collect(2)
 
-    def init_cycles(self, min_eps: float, max_eps: float, step_eps: float,
+    def clusterThread(self, queue_in: Queue, lock_in: Lock):
+        """
+
+        :param queue_in:
+        :param lock_in
+        """
+        while lock_in.acquire():
+            if queue_in.empty():  # Because of multithreading/multiprocessing semantics, this is not reliable.
+                lock_in.release()  # Additional synchronised primitive was added for safety
+                break
+            eps, min_samples = queue_in.get()
+            lock_in.release()
+            labels, n_clusters, core_samples_mask, score = clusterDBSCAN(
+                self.X, self.pdist, self.weight_array,
+                eps=eps, min_samples=min_samples, metric=self.metric, noise_filter=self.noise_filter)
+            clusterResults = labels, core_samples_mask, n_clusters, score, eps, min_samples
+            self.queue.put(clusterResults)
+        self.queue.put(None)
+        gc.collect(2)
+
+    def init_cycles_old(self, min_eps: float, max_eps: float, step_eps: float,  # Old process manager
                     min_min_samples: int, max_min_samples: int, n_jobs=0, metric: str = 'calinski') -> int:
         """
 
@@ -551,7 +573,42 @@ class ClusterPdb:
         hyperParams = chunkIt(hyperParams, n_jobs)
         self.clusterThreads.clear()
         for subParams in hyperParams:
-            p = Process(target=self.clusterThread, args=(subParams,))
+            p = Process(target=self.clusterThread_old, args=(subParams,))
+            p.start()
+            self.clusterThreads.append(p)
+        self.auto_params = min_eps, max_eps, step_eps, min_min_samples, max_min_samples, metric
+        return n_cycles
+
+    def init_cycles(self, min_eps: float, max_eps: float, step_eps: float,
+                    min_min_samples: int, max_min_samples: int, n_jobs=0, metric: str = 'calinski') -> int:
+        """
+
+        :param n_jobs:
+        :param min_eps:
+        :param max_eps:
+        :param step_eps:
+        :param min_min_samples:
+        :param max_min_samples:
+        :param metric:
+        :return:
+        """
+        # TODO: может сперва находить результаты в прошлом self.states?
+        self.metric = metric
+        hyperParams = []
+        for eps in np.arange(min_eps, max_eps + step_eps, step_eps):
+            for min_samples in range(min_min_samples, max_min_samples + 1):
+                hyperParams.append((eps, min_samples))
+        n_cycles = len(hyperParams)
+        if n_jobs == 0:
+            n_jobs = n_usecpus
+        queue_in = Queue()
+        lock_in = Lock()
+        random.shuffle(hyperParams)
+        for param in hyperParams:
+            queue_in.put(param)
+        self.clusterThreads.clear()
+        for _ in range(n_jobs):
+            p = Process(target=self.clusterThread, args=(queue_in, lock_in))
             p.start()
             self.clusterThreads.append(p)
         self.auto_params = min_eps, max_eps, step_eps, min_min_samples, max_min_samples, metric
@@ -574,6 +631,7 @@ class ClusterPdb:
         for p in self.clusterThreads:
             p.join()
         self.clusterThreads.clear()
+        gc.collect(2)
 
     def auto(self) -> tuple:
         """

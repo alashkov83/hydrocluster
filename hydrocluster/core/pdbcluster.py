@@ -37,6 +37,7 @@ try:
 except ImportError:
     from sklearn.metrics import calinski_harabasz_score as calinski_harabaz_score  # Compat for 0.23 and upper
 
+from .. import __version__
 from .s_dbw import S_Dbw
 
 warnings.filterwarnings("ignore")
@@ -48,8 +49,16 @@ if n_usecpus > 2:
     n_usecpus -= 1
 
 
-def detect_local_extrema(arr: np.ndarray, x: np.ndarray, y: np.ndarray, ext: str = 'max', bg=0, n: int = 5):
+def detect_local_extrema(arr: np.ndarray, x: np.ndarray, y: np.ndarray, ext: str = 'max', bg=0, n: int = 5) -> list:
     """
+
+    :param arr:
+    :param x:
+    :param y:
+    :param ext:
+    :param bg:
+    :param n:
+    :return:
     """
     epsilon = 0.00000001
     arr = arr.copy()
@@ -94,6 +103,12 @@ def filterXYZandRData(Label, XYZ, Dist):
 
 
 def bind_noise_lab(X, labels):
+    """
+
+    :param X:
+    :param labels:
+    :return:
+    """
     labels = labels.copy()
     if -1 not in set(labels):
         return labels
@@ -113,6 +128,11 @@ def bind_noise_lab(X, labels):
 
 
 def sep_noise_lab(labels):
+    """
+
+    :param labels:
+    :return:
+    """
     labels = labels.copy()
     max_label = np.max(labels)
     j = max_label + 1
@@ -136,7 +156,7 @@ def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, weight_array, eps: float, mi
     :param metric:
     :param: noise_filter:
     """
-    # TODO: Разделить процедуру кластеризации и процедуру оценки
+    # TODO: Separate clustering and evaluation functions
     core_sample_indices, labels = dbscan(pdist, sample_weight=weight_array,
                                          eps=eps, min_samples=min_samples,
                                          algorithm='brute', n_jobs=-1, metric='precomputed')
@@ -240,6 +260,12 @@ def calc_abs_charge(res_type: str, pH: float) -> dict:
 
 
 def calc_group_charge(table_type: str, pH: float) -> dict:
+    """
+
+    :param table_type:
+    :param pH:
+    :return:
+    """
     group_dict = {'ARG': (('NE',), ('CZ',), ('NH1',), ('NH2',)),
                   'ASP': (('CG',), ('OD1',), ('OD2',)),
                   'CYS': (('SG',),),
@@ -286,6 +312,7 @@ def ransacRegressor(X: np.ndarray, Y: np.ndarray) -> tuple:
 def regr_cube(x: np.ndarray, y: np.ndarray, z: np.ndarray, z_correct, rev: bool = False):
     """
 
+    :param rev:
     :param z_correct:
     :param x:
     :param y:
@@ -369,8 +396,18 @@ def create_group(group_table: dict, res_name: str, xyzm_array: np.ndarray, atom_
 def draw_scan_param(x, y, y1, y2, y3, y4, htable, metric, xparametr, const_str):
     """
 
+    :param x:
+    :param y:
+    :param y1:
+    :param y2:
+    :param y3:
+    :param y4:
+    :param htable:
+    :param metric:
+    :param xparametr:
+    :param const_str:
+    :return:
     """
-
     fig = Figure(figsize=(8, 8))
     ax1 = fig.add_subplot(311)
     ax1.set_title(metric + ' vs ' + xparametr + '\nhtable: ' + htable + ", " + const_str)
@@ -409,14 +446,25 @@ def draw_scan_param(x, y, y1, y2, y3, y4, htable, metric, xparametr, const_str):
     return fig
 
 
-def notnoise_percent(labels):
+def notnoise_percent(labels: np.ndarray) -> float:
+    """
+
+    :param labels:
+    :return:
+    """
     labflat = labels.copy().flatten()
     n = len(labflat)
     not_noise_n = len([x for x in labflat if x != -1])
     return not_noise_n * 100 / n
 
 
-def notnoise_percent_core(labels, core_mask):
+def notnoise_percent_core(labels: np.ndarray, core_mask: np.ndarray) -> float:
+    """
+
+    :param labels:
+    :param core_mask:
+    :return:
+    """
     labflat = labels.copy().flatten()
     coreflat = core_mask.copy().flatten()
     n = len(labflat)
@@ -424,7 +472,14 @@ def notnoise_percent_core(labels, core_mask):
     return not_noise_core * 100 / n
 
 
-def calculate_scan(states, param, xparm):
+def calculate_scan(states: list, param, xparm: str) -> tuple:
+    """
+
+    :param states:
+    :param param:
+    :param xparm:
+    :return:
+    """
     epsilon = 0.00000001
     if xparm == 'eps':
         x = [state[5] for state in states if abs(state[4] - param) <= epsilon]
@@ -451,7 +506,7 @@ class ClusterPdb:
     def __init__(self) -> None:
         self.metrics_name = {'calinski': 'Calinski-Harabasz score',
                              'si_score': 'Silhouette score',
-                             's_dbw': 'S_Dbw'
+                             's_dbw'   : 'S_Dbw'
                              }
         self.X = None
         self.pdist = None
@@ -549,7 +604,7 @@ class ClusterPdb:
         gc.collect(2)
 
     def init_cycles_old(self, min_eps: float, max_eps: float, step_eps: float,  # Old process manager
-                    min_min_samples: int, max_min_samples: int, n_jobs=0, metric: str = 'calinski') -> int:
+                        min_min_samples: int, max_min_samples: int, n_jobs=0, metric: str = 'calinski') -> int:
         """
 
         :param n_jobs:
@@ -561,7 +616,7 @@ class ClusterPdb:
         :param metric:
         :return:
         """
-        # TODO: может сперва находить результаты в прошлом self.states?
+        # TODO: can find results in self.states first?
         self.metric = metric
         hyperParams = []
         for eps in np.arange(min_eps, max_eps + step_eps, step_eps):
@@ -592,7 +647,7 @@ class ClusterPdb:
         :param metric:
         :return:
         """
-        # TODO: может сперва находить результаты в прошлом self.states?
+        # TODO: can find results in self.states first?
         self.metric = metric
         hyperParams = []
         for eps in np.arange(min_eps, max_eps + step_eps, step_eps):
@@ -616,6 +671,7 @@ class ClusterPdb:
 
     def auto_yield(self) -> iter:
         """
+
         """
         n = 1
         self.states.clear()
@@ -699,7 +755,12 @@ class ClusterPdb:
             cr, r2r = self.figs['ransac'][1], self.figs['ransac'][3]
         return cl, cr, r2l, r2r
 
-    def get_nsol(self, nsol: int):
+    def get_nsol(self, nsol: int) -> list:
+        """
+
+        :param nsol:
+        :return:
+        """
         if self.states and len(self.states) >= nsol:
             sols = []
             for n in range(nsol):
@@ -709,7 +770,12 @@ class ClusterPdb:
             sols = None
         return sols
 
-    def get_nsol_ext(self, nsol: int):
+    def get_nsol_ext(self, nsol: int) -> list:
+        """
+
+        :param nsol:
+        :return:
+        """
         if self.figs:
             y, x, z = self.figs['colormap'][0], self.figs['colormap'][1], self.figs['colormap'][2]
             if self.auto_params[5] == 'si_score':
@@ -740,7 +806,7 @@ class ClusterPdb:
             sols = None
         return sols
 
-    def noise_percent(self):
+    def noise_percent(self) -> float:
         """
 
         :return:
@@ -767,7 +833,7 @@ class ClusterPdb:
     def open_url(self, url: str) -> None:
         """
 
-        :return:
+        :param url:
         """
         try:
             import Bio.PDB as PDB
@@ -813,6 +879,10 @@ class ClusterPdb:
                 self.s_array = f.readlines()
 
     def get_protein_info(self):
+        """
+
+        :return:
+        """
         try:
             from Bio.PDB import PDBParser, PDBList
             from Bio.PDB.Polypeptide import PPBuilder
@@ -1142,7 +1212,12 @@ class ClusterPdb:
         fig.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
         return fig
 
-    def colormap3d(self, grid_state=True):
+    def colormap3d(self, grid_state: bool = True):
+        """
+
+        :param grid_state:
+        :return:
+        """
         if not self.states:
             raise ValueError
         if self.figs is not None:
@@ -1162,6 +1237,12 @@ class ClusterPdb:
         return ax, fig
 
     def fig_scan_param(self, mode: str, value):
+        """
+
+        :param mode:
+        :param value:
+        :return:
+        """
         if not self.states:
             raise ValueError
         states = self.states
@@ -1283,24 +1364,25 @@ class ClusterPdb:
         :param file:
         """
         glob_state = {
-            'X': self.X,
-            'pdist': self.pdist,
-            'labels': self.labels,
-            'noise_filter': self.noise_filter,
+            'X'                : self.X,
+            'pdist'            : self.pdist,
+            'labels'           : self.labels,
+            'noise_filter'     : self.noise_filter,
             'core_samples_mask': self.core_samples_mask,
-            'n_clusters': self.n_clusters,
-            'score': self.score,
-            'eps': self.eps,
-            'min_samples': self.min_samples,
-            'metric': self.metric,
-            'weight_array': self.weight_array,
-            'aa_list': self.aa_list,
-            's_array': self.s_array,
-            'htable': self.htable,
-            'parse_results': self.parse_results,
-            'auto_params': self.auto_params,
-            'states': self.states,
-            'figs': self.figs}
+            'n_clusters'       : self.n_clusters,
+            'score'            : self.score,
+            'eps'              : self.eps,
+            'min_samples'      : self.min_samples,
+            'metric'           : self.metric,
+            'weight_array'     : self.weight_array,
+            'aa_list'          : self.aa_list,
+            's_array'          : self.s_array,
+            'htable'           : self.htable,
+            'parse_results'    : self.parse_results,
+            'auto_params'      : self.auto_params,
+            'states'           : self.states,
+            'figs'             : self.figs,
+            'version'          : __version__}
         with bz2.open(file, 'wb') as f:
             pickle.dump(glob_state, f, protocol=4)
 
@@ -1336,3 +1418,4 @@ class ClusterPdb:
         self.aa_list = global_state['aa_list']
         self.states = global_state['states']
         self.figs = global_state['figs']
+        return global_state.get('version', '0.2.0d50')

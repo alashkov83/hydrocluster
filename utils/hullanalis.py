@@ -5,6 +5,7 @@ import argparse
 import bz2
 import pickle
 import sys
+
 from scipy.spatial import ConvexHull
 
 
@@ -22,6 +23,7 @@ class Parser(argparse.ArgumentParser):
 
         """
         self.add_argument('-i', '--input', type=str, default='', help='Input file name (.dat)')
+
 
 def loadstate(file: str):
     """
@@ -63,7 +65,7 @@ def convexhull(points, ncl=1):
         ch = ConvexHull(points)
         v = ch.volume
         n = len(points)
-        c = n/v
+        c = n / v
         return v, c, n
     elif ncl > 1:
         from sklearn.cluster import k_means
@@ -82,8 +84,9 @@ def convexhull(points, ncl=1):
                 break
         v = sum(vs)
         n = len(points)
-        c = n/v
+        c = n / v
         return v, c, n
+
 
 def main():
     parser = Parser()
@@ -103,10 +106,10 @@ def main():
         Vcores.append(Vcore)
         Ncores.append(Ncore)
         print("For cluster No.{:d}: V= {:.2f} \u212B\u00B3, C= {:.4f} \u212B\u207B\u00B3, "
-              "Vcore= {:.2f} \u212B\u00B3, Ccore = {:.3f} \u212B\u207B\u00B3".format(i+1, V, C, Vcore, Ccore))
+              "Vcore= {:.2f} \u212B\u00B3, Ccore = {:.3f} \u212B\u207B\u00B3".format(i + 1, V, C, Vcore, Ccore))
     V, C, _ = convexhull(X)
     print("For all hydrophobic residues: V= {:.2f} \u212B\u00B3, C= {:.4f} \u212B\u207B\u00B3".format(V, C))
-    print("Mean for core hydrophobic C= {:.4f} \u212B\u207B\u00B3".format(sum(Ncores)/sum(Vcores)))
+    print("Mean for core hydrophobic C= {:.4f} \u212B\u207B\u00B3".format(sum(Ncores) / sum(Vcores)))
 
 
 if __name__ == '__main__':

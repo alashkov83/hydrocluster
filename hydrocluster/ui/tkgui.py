@@ -14,7 +14,7 @@ from urllib.error import HTTPError
 
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-from .. import __version__, __license__, __skversion__, newversioncheck
+from .. import __version__, __license__, __skversion__, newversioncheck, tohexversion
 
 try:
     from ..core.pdbcluster import ClusterPdb
@@ -47,11 +47,11 @@ class FigureTk(tk.Toplevel):
     def save_graph(self):
         """
         """
-        opt = {'parent': self,
-               'filetypes': [('All supported formats', ('.eps', '.jpeg', '.jpg', '.pdf', '.pgf', '.png', '.ps',
-                                                        '.raw', '.rgba', '.svg', '.svgz', '.tif', '.tiff')), ],
+        opt = {'parent'     : self,
+               'filetypes'  : [('All supported formats', ('.eps', '.jpeg', '.jpg', '.pdf', '.pgf', '.png', '.ps',
+                                                          '.raw', '.rgba', '.svg', '.svgz', '.tif', '.tiff')), ],
                'initialfile': 'myfile.png',
-               'title': 'Save plot'}
+               'title'      : 'Save plot'}
         sa = asksaveasfilename(**opt)
         if sa:
             try:
@@ -262,12 +262,16 @@ class TkGui(tk.Tk):
         """
         showinfo('About', 'Cluster analysis of hydrophobic or charged regions of macromolecules\n\n'
                           'Version: {:s}\n'
-                          'Latest version on PyPi: {:s}\n'
+                          'HexVersion: {:#010X}\n'
+                          'Latest version on PyPi: {:s}{:s}\n'
                           'License: {:s}\n\n'
                           'Python version: {:s}\n'
                           'Platform: {:s}\n'
-                          'Scikit-learn version: {:s}'.format(__version__, newversioncheck(), __license__, sys.version,
-                                                              sys.platform, __skversion__))
+                          'Scikit-learn version: {:s}'.format(__version__, tohexversion(__version__), newversioncheck(),
+                                                              " NEW!!!" if tohexversion(
+                                                                  newversioncheck()) > tohexversion(
+                                                                  __version__) else "",
+                                                              __license__, sys.version, sys.platform, __skversion__))
 
     @staticmethod
     def readme():
@@ -724,13 +728,15 @@ class TkGui(tk.Tk):
         state = askopenfilename(**opt)
         if state:
             try:
-                self.cls.loadstate(state)
+                version = self.cls.loadstate(state)
             except (FileNotFoundError, TypeError):
                 return
             except (ValueError, OSError):
                 showerror("Error!", "Invalid file format!")
                 return
             else:
+                if tohexversion(version) < tohexversion(__version__):
+                    showwarning("Version check", "The save version is lower than the current version!")
                 htable = self.cls.htable
                 self.combox_p.set(htable)
                 nor, mind, maxd, meand = self.cls.parse_results
@@ -765,8 +771,9 @@ class TkGui(tk.Tk):
         if self.run_flag:
             showerror('Error!', 'The calculation is still running!')
             return
-        opt = {'filetypes': [('Data file', ('.dat', '.DAT')), ('All files', '.*')], 'initialfile': 'myfile.dat',
-               'title': 'Save state'}
+        opt = {'filetypes'  : [('Data file', ('.dat', '.DAT')), ('All files', '.*')],
+               'initialfile': 'myfile.dat',
+               'title'      : 'Save state'}
         state = asksaveasfilename(**opt)
         if state:
             try:
@@ -782,8 +789,9 @@ class TkGui(tk.Tk):
         if self.run_flag:
             showerror('Error!', 'The calculation is still running!')
             return
-        opt = {'filetypes': [('PyMOL script', ('.py',)), ('All files', '.*')], 'initialfile': 'myfile.py',
-               'title': 'Save PyMOL script'}
+        opt = {'filetypes'  : [('PyMOL script', ('.py',)), ('All files', '.*')],
+               'initialfile': 'myfile.py',
+               'title'      : 'Save PyMOL script'}
         pmlf = asksaveasfilename(**opt)
         if pmlf:
             try:
@@ -797,7 +805,10 @@ class TkGui(tk.Tk):
         """
 
         """
-        opt = {'parent': self, 'filetypes': [('LOG', '.log'), ], 'initialfile': 'myfile.log', 'title': 'Save LOG'}
+        opt = {'parent'     : self,
+               'filetypes'  : [('LOG', '.log'), ],
+               'initialfile': 'myfile.log',
+               'title'      : 'Save LOG'}
         sa = asksaveasfilename(**opt)
         if sa:
             letter = self.tx.get(1.0, tk.END)
@@ -818,11 +829,11 @@ class TkGui(tk.Tk):
         if self.fig is None:
             showerror('Error!', 'Failed to plot!')
             return
-        opt = {'parent': self,
-               'filetypes': [('All supported formats', ('.eps', '.jpeg', '.jpg', '.pdf', '.pgf', '.png', '.ps',
-                                                        '.raw', '.rgba', '.svg', '.svgz', '.tif', '.tiff')), ],
+        opt = {'parent'     : self,
+               'filetypes'  : [('All supported formats', ('.eps', '.jpeg', '.jpg', '.pdf', '.pgf', '.png', '.ps',
+                                                          '.raw', '.rgba', '.svg', '.svgz', '.tif', '.tiff')), ],
                'initialfile': 'myfile.png',
-               'title': 'Save plot'}
+               'title'      : 'Save plot'}
         sa = asksaveasfilename(**opt)
         if sa:
             try:
@@ -882,6 +893,10 @@ class TkGui(tk.Tk):
         FigureTk(self, '3DColormap', fig, ax)
 
     def scan_param(self):
+        """
+
+        :return:
+        """
         if self.run_flag:
             showerror('Error!', 'The calculation is still running!')
             return
@@ -936,9 +951,10 @@ class TkGui(tk.Tk):
         except FileNotFoundError:
             showerror("Erros!", "PyMol not found!")
 
-    def select_sol(self, ext=False):
+    def select_sol(self, ext: bool = False):
         """
 
+        :param ext:
         :return:
         """
         if self.run_flag:
@@ -969,7 +985,13 @@ class TkGui(tk.Tk):
             CheckBox.flash()
             CheckBox.pack(expand=1, fill=tk.X, pady=2, padx=5)
 
-    def set_sol(self, win, eps, min_samples):
+    def set_sol(self, win, eps: float, min_samples: int):
+        """
+
+        :param win:
+        :param eps:
+        :param min_samples:
+        """
         if win:
             win.destroy()
         self.run(eps=eps, min_samples=min_samples)
@@ -977,6 +999,10 @@ class TkGui(tk.Tk):
         self.sca2.set(self.cls.min_samples)
 
     def about_protein(self):
+        """
+
+        :return:
+        """
         if not self.cls.s_array:
             showerror('Error!', 'The structure is not avaible!')
             return

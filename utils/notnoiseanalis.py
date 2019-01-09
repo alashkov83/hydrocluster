@@ -4,12 +4,12 @@
 
 import argparse
 import bz2
-import numpy as np
-import sys
 import pickle
+import sys
 
-from matplotlib.figure import Figure
+import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib.figure import Figure
 
 
 class Parser(argparse.ArgumentParser):
@@ -30,12 +30,11 @@ class Parser(argparse.ArgumentParser):
         self.add_argument('-min_samples', '--min_samples', type=str, default=None, help='MIN SAMPLES list')
 
 
-
 def notnoise_percent(labels):
     labflat = labels.flatten()
     n = len(labflat)
     noise_n = len([x for x in labflat if x == -1])
-    return 100-(noise_n * 100 / n)
+    return 100 - (noise_n * 100 / n)
 
 
 def loadstate(file: str):
@@ -79,8 +78,8 @@ def plot_iso(states, sa, min_samples, htable):
             x, y = list(zip(*sorted((zip(x, y)), key=lambda tup: tup[0])))
             x_max.append(x[y.index(max(y))])
             x_min.append(x[len(x) - list(reversed(y)).index(min(y))])
-            dy = np.diff(y)/np.diff(x)
-            x0 = (np.diff(x))/2+np.array(x[:-1])
+            dy = np.diff(y) / np.diff(x)
+            x0 = (np.diff(x)) / 2 + np.array(x[:-1])
             xmax = x0[dy == np.max(dy)]
             ax1.plot(x, y, label='min_samples: {:d}'.format(ms))
             ax2.plot(x0, dy, label='min_samples: {:d}, EPS: {:.2f}'.format(ms, float(xmax)))
@@ -111,4 +110,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

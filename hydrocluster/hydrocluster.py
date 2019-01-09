@@ -5,7 +5,7 @@
 @author: lashkov
 """
 
-# TODO: Добавить другие алгоритмы кластеризации (OPTICS)
+# TODO: Add other clustering algorithms (OPTICS)
 
 
 import argparse

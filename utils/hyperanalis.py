@@ -3,15 +3,16 @@
 """Created by lashkov on 16.10.18"""
 import argparse
 import bz2
-import sys
 import pickle
+import sys
 
-from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib.figure import Figure
 
 metrics_name = {'calinski': 'Calinski-Harabaz score', 'si_score': 'Silhouette score', 'dbcv': 'DBCV score'}
 
 epsilon = 0.00000001
+
 
 class Parser(argparse.ArgumentParser):
     """
@@ -30,6 +31,7 @@ class Parser(argparse.ArgumentParser):
         self.add_argument('-o', '--output', type=str, default='hiper.png', help='Output figure (.png)')
         self.add_argument('-eps', '--eps', type=float, default=None, help='EPS value (A)')
         self.add_argument('-min_samples', '--min_samples', type=int, default=None, help='MIN SAMPLES')
+
 
 def loadstate(file: str):
     """
@@ -73,7 +75,7 @@ def colormap(x, y, htable, metric, xparametr, sa: str, const_str):
     try:
         fig = Figure(figsize=(12, 6))
         ax1 = fig.add_subplot(111)
-        ax1.set_title(metrics_name[metric]+' vs '+xparametr+'\nhtable: '+htable+", "+const_str)
+        ax1.set_title(metrics_name[metric] + ' vs ' + xparametr + '\nhtable: ' + htable + ", " + const_str)
         ax1.set_xlabel(xparametr)
         ax1.set_ylabel(metrics_name[metric])
         ax1.grid(True)
@@ -87,10 +89,11 @@ def colormap(x, y, htable, metric, xparametr, sa: str, const_str):
         print('Error! Failed to plot!!', e)
         sys.exit(-1)
 
+
 def calculate_xy(states, param, xparm):
     if xparm == 'eps':
-        x = [state[5] for state in states if abs(state[4]-param) <= epsilon]
-        y = [state[3] for state in states if abs(state[4]-param) <= epsilon]
+        x = [state[5] for state in states if abs(state[4] - param) <= epsilon]
+        y = [state[3] for state in states if abs(state[4] - param) <= epsilon]
     elif xparm == 'min_samples':
         x = [state[4] for state in states if state[5] == param]
         y = [state[3] for state in states if state[5] == param]
@@ -123,6 +126,7 @@ def main():
         print('Only one parameter (eps or min_samples) will bee given!')
         sys.exit(-1)
     colormap(x, y, htable, metric, xparametr, output_fn, const_str)
+
 
 if __name__ == '__main__':
     main()

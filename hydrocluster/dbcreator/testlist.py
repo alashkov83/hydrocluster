@@ -6,6 +6,8 @@ import os.path
 import sqlite3
 import sys
 import warnings
+from queue import Queue
+from threading import Lock, Thread
 
 import hjson
 from Bio.PDB import PDBParser, PDBList
@@ -53,7 +55,7 @@ def read_config(input_fn: str):
     if 'Input file name' not in options_dict:
         raise ValueError('Filename of ID PDBs list is not defined!')
     if not os.path.exists(options_dict['Input file name']):
-        raise ValueError('File {:s} contains ID PDBs list is unavailable!')
+        raise ValueError('File {:s} contains ID PDBs list is unavailable!'.format(options_dict['Input file name']))
     if 'Project name' not in options_dict or not options_dict['Project name']:
         pname = os.path.splitext(os.path.basename(options_dict['Input file name']))[0]
         print('Project name is not defined! Set to {:s}'.format(pname))
@@ -171,7 +173,7 @@ FOREIGN KEY(IDPDB) REFERENCES Structures(IDPDB))""")
     return cursor, conn
 
 
-def download(filelist: list, q, lock, cursor: sqlite3.Cursor, conn: sqlite3.Connection, dir_name):
+def download(filelist: list, q: Queue, lock: Lock, cursor: sqlite3.Cursor, conn: sqlite3.Connection, dir_name):
     """
 
     :param filelist:
@@ -340,14 +342,15 @@ MIN_SAMPLES, N_CLUSTERS, P_NOISE, CL, CR, R2L, R2R) VALUES ("{:s}", "{:s}", {:d}
         lock.release()
 
 
-def clusterThread(file: str, dir_name: str, cursor: sqlite3.Cursor, conn: sqlite3.Connection, lock,
+def clusterThread(file: str, dir_name: str, cursor: sqlite3.Cursor, conn: sqlite3.Connection, lock: Lock,
                   min_eps: float, max_eps: float, step_eps: float, min_min_samples: int, max_min_samples: int,
-                  htables, metrics, pH, ss, n_jobs: int = 1):
+                  htables: list, metrics: list, pH: float, ss: bool):
     """
 
+    :param ss:
+    :param pH:
     :param metrics:
     :param htables:
-    :param n_jobs:
     :param file:
     :param dir_name:
     :param cursor:
@@ -366,9 +369,11 @@ def clusterThread(file: str, dir_name: str, cursor: sqlite3.Cursor, conn: sqlite
         try:
             ntres, mind, maxd, meand = cls.parser(htable=htable, pH=pH)
         except ValueError:
-            print('Error! Invalid file format\nor file does not contain {:s} residues\n'.format(
-                'hydrophobic' if htable in ('hydropathy', 'nanodroplet')
-                else 'negative' if htable == 'negative' else 'positive'))
+            print('\nError! Invalid file format\nor file does not {:s} contain {:s}\n'.format(
+                'hydrophobic' if htable in ('hydropathy', 'menv', 'nanodroplet', 'fuzzyoildrop', 'rekkergroup')
+                else 'negative' if htable in ('ngroup', 'negative')
+                else 'positive' if htable in ('pgroup', 'positive')
+                else 'aliphatic', 'groups' if htable in ('rekkergroup', 'pgroup', 'ngroup') else 'residues'))
             return
         dir_ptable = os.path.join(dir_name, file, htable)
         try:
@@ -378,19 +383,20 @@ def clusterThread(file: str, dir_name: str, cursor: sqlite3.Cursor, conn: sqlite
             continue
         for metric in metrics:
             try:
-                cls.init_cycles(min_eps, max_eps, step_eps, min_min_samples, max_min_samples,
-                                n_jobs=n_jobs, metric=metric)
+                cls.init_cycles_old(min_eps, max_eps, step_eps, min_min_samples, max_min_samples, metric=metric)
                 for _ in cls.auto_yield():
                     pass
                 eps, min_samples = cls.auto()
-            except ValueError:
-                print('Error! Could not parse file or clustering failed\n')
+            except ValueError as e:
+                print('Error! Could not parse file or clustering failed for ID_PDB: {:s}, ptable: {:s}, metric: {:s}'
+                      '\nError: {:s}'
+                      .format(file, htable, metric, str(e)))
                 continue
             else:
-                cl, cr, r2l, r2r = cls.get_conc()
-                print("Job completed for ID_PDB: {:s}, ptable: {:s}, metric: {:s}".format(file, htable, metric))
-                db_save(conn, cursor, lock, file, htable, ntres, mind, maxd, meand, metric,
-                        cls.score, eps, min_samples, cls.n_clusters, cls.noise_percent(), cl, cr, r2l, r2r)
+                cl, cr, r2l, r2r = cls.get_conc
+                print("Subjob completed for ID_PDB: {:s}, ptable: {:s}, metric: {:s}".format(file, htable, metric))
+                db_save(conn, cursor, lock, file, htable, ntres, mind, maxd, meand, metric, cls.score, eps, min_samples,
+                        cls.n_clusters, cls.noise_percent(), cl, cr, r2l, r2r)
                 dir_metric = os.path.join(dir_ptable, metric)
                 try:
                     os.makedirs(dir_metric, exist_ok=True)
@@ -405,97 +411,6 @@ def clusterThread(file: str, dir_name: str, cursor: sqlite3.Cursor, conn: sqlite
                         save_state(cls, dir_metric, file)
                 except ValueError as err:
                     print(err)
-
-
-def db_main_posix(output, filelist, outputDir,
-                  min_eps, max_eps, step_eps, min_min_samples, max_min_samples,
-                  htables, metrics, pH, ss):
-    """
-
-    :param output:
-    :param filelist:
-    :param outputDir:
-    :param min_eps:
-    :param max_eps:
-    :param step_eps:
-    :param min_min_samples:
-    :param max_min_samples:
-    :param htables:
-    :param metrics:
-    :param pH:
-    :param ss:
-    """
-    from multiprocessing import Queue, Process, Lock
-    q = Queue()
-    lock = Lock()
-    cursor, conn = opendb(output)
-    dTask = Process(target=download, args=(filelist, q, lock, cursor, conn, outputDir))
-    dTask.start()
-    TaskDone = False
-    clusterTasks = []
-    n = 1
-    tmp_dict = {}
-    while not TaskDone:
-        while len(clusterTasks) < n_usecpus:
-            item = q.get()
-            if item is None:
-                TaskDone = True
-                break
-            p = Process(target=clusterThread, args=(item, outputDir, cursor, conn, lock,
-                                                    min_eps, max_eps, step_eps,
-                                                    min_min_samples, max_min_samples,
-                                                    htables, metrics, pH, ss))
-            p.start()
-            tmp_dict[p.pid] = item
-            clusterTasks.append(p)
-        for process in clusterTasks:
-            if not process.is_alive():
-                clusterTasks.remove(process)
-                print("All tasks completed for {:s} ({:d}/{:d})".format(tmp_dict[process.pid], n, len(filelist)))
-                del tmp_dict[process.pid]
-                n += 1
-    for p in clusterTasks:
-        p.join()
-    dTask.join()
-    conn.close()
-
-
-def db_main_win(output, filelist, outputDir,
-                min_eps, max_eps, step_eps, min_min_samples, max_min_samples,
-                htables: tuple, metrics: tuple, pH: float, ss: bool):
-    """
-
-    :param output:
-    :param filelist:
-    :param outputDir:
-    :param min_eps:
-    :param max_eps:
-    :param step_eps:
-    :param min_min_samples:
-    :param max_min_samples:
-    :param htables:
-    :param metrics:
-    :param pH:
-    :param ss:
-    """
-    from queue import Queue
-    from threading import Lock, Thread
-    q = Queue()
-    lock = Lock()
-    cursor, conn = opendb(output)
-    dTask = Thread(target=download, args=(filelist, q, lock, cursor, conn, outputDir))
-    dTask.start()
-    n = 1
-    while True:
-        item = q.get()
-        if item is None:
-            break
-        clusterThread(item, outputDir, cursor, conn, lock, min_eps, max_eps,
-                      step_eps, min_min_samples, max_min_samples, htables, metrics, pH, ss, n_jobs=0)
-        print("All tasks completed for {:s} ({:d}/{:d})".format(item, n, len(filelist)))
-        n += 1
-    dTask.join()
-    conn.close()
 
 
 def db_main(namespace):
@@ -537,11 +452,19 @@ def db_main(namespace):
     except (OSError, FileNotFoundError):
         print("File {:s} is unavailable!".format(inp))
         sys.exit()
-    if sys.platform == 'win32':
-        db_main_win(output, filelist, outputDir,
-                    min_eps, max_eps, step_eps, min_min_samples, max_min_samples,
-                    htables, metrics, pH, ss)
-    else:
-        db_main_posix(output, filelist, outputDir,
-                      min_eps, max_eps, step_eps, min_min_samples, max_min_samples,
+    q = Queue()
+    lock = Lock()
+    cursor, conn = opendb(output)
+    dTask = Thread(target=download, args=(filelist, q, lock, cursor, conn, outputDir))
+    dTask.start()
+    n = 1
+    while True:
+        item = q.get()
+        if item is None:
+            break
+        clusterThread(item, outputDir, cursor, conn, lock, min_eps, max_eps, step_eps, min_min_samples, max_min_samples,
                       htables, metrics, pH, ss)
+        print("All tasks completed for {:s} ({:d}/{:d})".format(item, n, len(filelist)))
+        n += 1
+    dTask.join()
+    conn.close()

@@ -5,8 +5,8 @@ import math
 
 import numpy as np
 from scipy.spatial.distance import cdist
-from sklearn.utils import check_X_y
 from sklearn.preprocessing import LabelEncoder
+from sklearn.utils import check_X_y
 
 
 def calc_nearest_points(X, labels, k, centroids, metric):

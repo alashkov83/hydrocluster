@@ -24,7 +24,7 @@ except ImportError:
 warnings.filterwarnings("ignore")
 
 
-def read_config(input_fn: str):
+def read_config(input_fn: str) -> dict:
     """
     :param input_fn:
     :return:
@@ -173,9 +173,8 @@ FOREIGN KEY(IDPDB) REFERENCES Structures(IDPDB))""")
     return cursor, conn
 
 
-def download(filelist: list, q: Queue, lock: Lock, cursor: sqlite3.Cursor, conn: sqlite3.Connection, dir_name):
+def download(filelist: list, q: Queue, lock: Lock, cursor: sqlite3.Cursor, conn: sqlite3.Connection, dir_name: str):
     """
-
     :param filelist:
     :param q:
     :param lock:
@@ -300,9 +299,9 @@ def save_pymol(cls: ClusterPdb, newdir: str, basefile: str):
         return
 
 
-def db_save(con: sqlite3.Connection, curr: sqlite3.Cursor, lock, file: str, htable: str, ntres: int,
-            mind: float, maxd: float, meand, metric: str, score: float, eps: float, min_samples: int, n_clusters: int,
-            p_noise: float, cl: float, cr: float, r2l: float, r2r: float):
+def db_save(con: sqlite3.Connection, curr: sqlite3.Cursor, lock: Lock, file: str, htable: str, ntres: int,
+            mind: float, maxd: float, meand: float, metric: str, score: float, eps: float, min_samples: int,
+            n_clusters: int, p_noise: float, cl: float, cr: float, r2l: float, r2r: float):
     """
 
     :param r2r:

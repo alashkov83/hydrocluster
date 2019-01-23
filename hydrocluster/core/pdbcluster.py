@@ -28,7 +28,7 @@ try:
     from sklearn.cluster import dbscan
     from sklearn.linear_model import LinearRegression, RANSACRegressor
     from sklearn.metrics import silhouette_score
-    from sklearn.metrics.pairwise import euclidean_distances
+    from sklearn.metrics.pairwise import pairwise_distances
 except ImportError:
     raise ImportError
 
@@ -49,7 +49,8 @@ if n_usecpus > 2:
     n_usecpus -= 1
 
 
-def detect_local_extrema(arr: np.ndarray, x: np.ndarray, y: np.ndarray, ext: str = 'max', bg=0, n: int = 5) -> list:
+def detect_local_extrema(arr: np.ndarray, x: np.ndarray, y: np.ndarray,
+                         ext: str = 'max', bg: float = 0, n: int = 5) -> list:
     """
 
     :param arr:
@@ -88,7 +89,7 @@ def detect_local_extrema(arr: np.ndarray, x: np.ndarray, y: np.ndarray, ext: str
     return sols
 
 
-def filterXYZandRData(Label, XYZ, Dist):
+def filterXYZandRData(Label: np.ndarray, XYZ: np.ndarray, Dist: np.ndarray) -> tuple:
     """
 
     :param Label:
@@ -102,7 +103,7 @@ def filterXYZandRData(Label, XYZ, Dist):
     return filterLabel, filterXYZ, filterR
 
 
-def bind_noise_lab(X, labels):
+def bind_noise_lab(X: np.ndarray, labels: np.ndarray) -> np.ndarray:
     """
 
     :param X:
@@ -127,7 +128,7 @@ def bind_noise_lab(X, labels):
     return labels
 
 
-def sep_noise_lab(labels):
+def sep_noise_lab(labels: np.ndarray) -> np.ndarray:
     """
 
     :param labels:
@@ -143,7 +144,8 @@ def sep_noise_lab(labels):
     return labels
 
 
-def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, weight_array, eps: float, min_samples: int,
+def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, weight_array: list,
+                  eps: float, min_samples: int,
                   metric: str = 'calinski', noise_filter: str = 'comb') -> tuple:
     """
 
@@ -190,34 +192,38 @@ def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, weight_array, eps: float, mi
     else:
         filterLabel, filterXYZ, filterR = labels, X, pdist
     if metric == 'si_score':
-        try:
+        if len(filterLabel) > len(set(filterLabel)) > 1:
             score = silhouette_score(filterR, filterLabel, metric='precomputed')
-        # The Silhouette Coefficient is calculated using the mean intra-cluster distance (a)
-        # and the mean nearest-cluster distance (b) for each sample.
-        # The Silhouette Coefficient for a sample is (b - a) / max(a, b).
-        # To clarify, b is the distance between a sample and a nearest neighbor cluster (not containing this sample).
-        # Note that Silhouette Coefficient is only defined if number of labels is 2 <= n_labels <= n_samples - 1.
-        # For more info see:
-        # Peter J. Rousseeuw (1987).
-        # “Silhouettes: a Graphical Aid to the Interpretation and Validation of Cluster Analysis”.
-        # Computational and Applied Mathematics 20: 53-65.
-        except ValueError:
+            # The Silhouette Coefficient is calculated using the mean intra-cluster distance (a)
+            # and the mean nearest-cluster distance (b) for each sample.
+            # The Silhouette Coefficient for a sample is (b - a) / max(a, b).
+            # To clarify, b is the distance between a sample and a nearest neighbor cluster (not containing this sample)
+            # Note that Silhouette Coefficient is only defined if number of labels is 2 <= n_labels <= n_samples - 1.
+            # For more info see:
+            # Peter J. Rousseeuw (1987).
+            # “Silhouettes: a Graphical Aid to the Interpretation and Validation of Cluster Analysis”.
+            # Computational and Applied Mathematics 20: 53-65.
+        else:
+            score = -1
+    if metric == 'si_score_c':
+        if len(filterLabel) > len(set(filterLabel)) > 1:
+            score = silhouette_score(filterXYZ, filterLabel)
+        else:
             score = -1
     elif metric == 'calinski':
-        try:
+        if len(filterLabel) > len(set(filterLabel)) > 1:
             score = calinski_harabaz_score(filterXYZ, filterLabel)
             # The score is defined as ratio between the within-cluster dispersion and the between-cluster dispersion.
             # For more info see:
             # T.Calinski and J.Harabasz, 1974. “A dendrite method for cluster analysis”.Communications in Statistics
-        except ValueError:
+        else:
             score = 0
     elif metric == 's_dbw':
-        # M. Halkidi and M. Vazirgiannis, “Clustering validity assess-
-        # ment: Finding the optimal partitioning of a data set,” in
-        # ICDM, Washington, DC, USA, 2001, pp. 187–194.
-        try:
+        if len(filterLabel) > len(set(filterLabel)) > 1:
             score = S_Dbw(filterXYZ, filterLabel)
-        except ValueError:
+            # M. Halkidi and M. Vazirgiannis, “Clustering validity assessment: Finding the optimal partitioning
+            # of a data set,” in ICDM, Washington, DC, USA, 2001, pp. 187–194.
+        else:
             score = np.inf
     return labels, n_clusters, core_samples_mask, score
 
@@ -309,7 +315,7 @@ def ransacRegressor(X: np.ndarray, Y: np.ndarray) -> tuple:
             modelRAMSAC.score(X[modelRAMSAC.inlier_mask_], Y[modelRAMSAC.inlier_mask_]))
 
 
-def regr_cube(x: np.ndarray, y: np.ndarray, z: np.ndarray, z_correct, rev: bool = False):
+def regr_cube(x: np.ndarray, y: np.ndarray, z: np.ndarray, z_correct, rev: bool = False) -> tuple:
     """
 
     :param rev:
@@ -333,7 +339,7 @@ def regr_cube(x: np.ndarray, y: np.ndarray, z: np.ndarray, z_correct, rev: bool 
     return X, Y
 
 
-def regr_cube_alt(x: np.ndarray, y: np.ndarray, z: np.ndarray, z_correct, rev: bool = False):
+def regr_cube_alt(x: np.ndarray, y: np.ndarray, z: np.ndarray, z_correct, rev: bool = False) -> tuple:
     """
 
     :param rev:
@@ -393,7 +399,8 @@ def create_group(group_table: dict, res_name: str, xyzm_array: np.ndarray, atom_
         return groups_xyz_array, weights, real_groups
 
 
-def draw_scan_param(x, y, y1, y2, y3, y4, htable, metric, xparametr, const_str):
+def draw_scan_param(x: np.ndarray, y: np.ndarray, y1: np.ndarray, y2: np.ndarray, y3: np.ndarray, y4: np.ndarray,
+                    htable: str, metric: str, xparametr: str, const_str: str) -> Figure:
     """
 
     :param x:
@@ -504,14 +511,16 @@ class ClusterPdb:
     """
 
     def __init__(self) -> None:
-        self.metrics_name = {'calinski': 'Calinski-Harabasz score',
-                             'si_score': 'Silhouette score',
-                             's_dbw'   : 'S_Dbw'
+        self.metrics_name = {'calinski'  : 'Calinski-Harabasz score',
+                             'si_score'  : 'Silhouette score',
+                             'si_score_c': 'Silhouette score',
+                             's_dbw'     : 'S_Dbw'
                              }
         self.X = None
         self.pdist = None
         self.labels = None
         self.noise_filter = 'comb'
+        self.modifed_dist = False
         self.core_samples_mask = []
         self.n_clusters = 0
         self.score = 0
@@ -537,7 +546,8 @@ class ClusterPdb:
         self.pdist = None
         self.labels = None
         self.htable = 'hydropathy'
-        self.noise_filter = ''
+        self.noise_filter = 'comb'
+        self.modifed_dist = False
         self.parse_results = (0, 0.0, 0.0, 0.0)
         self.auto_params = (0.0, 0.0, 0.0, 0, 0, 'calinski')
         self.core_samples_mask = []
@@ -553,7 +563,7 @@ class ClusterPdb:
         self.clusterThreads.clear()
         self.queue = Queue()
 
-    def cluster(self, eps: float, min_samples: int, metric):
+    def cluster(self, eps: float, min_samples: int, metric: str):
         """
 
         :param metric:
@@ -603,8 +613,11 @@ class ClusterPdb:
         self.queue.put(None)
         gc.collect(2)
 
-    def init_cycles_old(self, min_eps: float, max_eps: float, step_eps: float,  # Old process manager
-                        min_min_samples: int, max_min_samples: int, n_jobs=0, metric: str = 'calinski') -> int:
+    def init_cycles_old(self,  # Old process manager
+                        min_eps: float, max_eps: float, step_eps: float,
+                        min_min_samples: int, max_min_samples: int,
+                        n_jobs: int = 0,
+                        metric: str = 'calinski') -> int:
         """
 
         :param n_jobs:
@@ -634,8 +647,11 @@ class ClusterPdb:
         self.auto_params = min_eps, max_eps, step_eps, min_min_samples, max_min_samples, metric
         return n_cycles
 
-    def init_cycles(self, min_eps: float, max_eps: float, step_eps: float,
-                    min_min_samples: int, max_min_samples: int, n_jobs=0, metric: str = 'calinski') -> int:
+    def init_cycles(self,
+                    min_eps: float, max_eps: float, step_eps: float,
+                    min_min_samples: int, max_min_samples: int,
+                    n_jobs: int = 0,
+                    metric: str = 'calinski') -> int:
         """
 
         :param n_jobs:
@@ -878,7 +894,7 @@ class ClusterPdb:
                 f.seek(0, 0)
                 self.s_array = f.readlines()
 
-    def get_protein_info(self):
+    def get_protein_info(self) -> tuple:
         """
 
         :return:
@@ -924,8 +940,14 @@ class ClusterPdb:
         """
         return list(sorted(set((s[21] for s in self.s_array if s[0:6] == 'ATOM  '))))
 
-    def parser(self, selectChains: list = None, htable: str = 'hydropathy', pH: float = 7.0, res: str = '') -> tuple:
+    def parser(self,
+               selectChains: list = None,
+               htable: str = 'hydropathy',
+               pH: float = 7.0,
+               res: str = '',
+               mod_dist: bool = False) -> tuple:
         """
+        :param mod_dist:
         :param res:
         :param selectChains:
         :param htable:
@@ -934,6 +956,8 @@ class ClusterPdb:
         """
         self.clean()
         self.htable = htable
+        self.modifed_dist = mod_dist
+        weight_array = []
         xyz_array = []
         # www.pnas.org/cgi/doi/10.1073/pnas.1616138113 # 1.0 - -9.58 kj/mol (ALA) A; residues with delta mu < 0
         nanodroplet = {'ALA': 1.0, 'VAL': 0.862, 'PRO': 0.788, 'LEU': 0.904, 'ILE': 1.016, 'PHE': 0.963, 'MET': 0.799,
@@ -1090,11 +1114,11 @@ class ClusterPdb:
                                                                               atom_list)
                         for group in real_groups:
                             self.aa_list.append((current_resn, current_chainn, current_resname, group))
-                        self.weight_array.extend(weights)
+                        weight_array.extend(weights)
                         xyz_array = np.concatenate((xyz_array, groups_xyz_array))
                 else:
                     self.aa_list.append((current_resn, current_chainn, current_resname, ()))
-                    self.weight_array.append(hydrfob[current_resname])
+                    weight_array.append(hydrfob[current_resname])
                     xyz_array = np.concatenate((xyz_array, cmass(xyzm_array)))
                 xyzm_array = []
                 atom_list.clear()
@@ -1108,18 +1132,25 @@ class ClusterPdb:
             xyz_array.shape = (-1, 3)
         except AttributeError:
             raise ValueError
-        pdist = euclidean_distances(xyz_array)
-        parse_results = len(self.aa_list), np.min(pdist[np.nonzero(
-            pdist)]), np.max(pdist[np.nonzero(pdist)]), np.mean(pdist[np.nonzero(pdist)])
+        pdist_mx = pairwise_distances(xyz_array)
+        parse_results = len(self.aa_list), np.min(pdist_mx[np.nonzero(
+            pdist_mx)]), np.max(pdist_mx[np.nonzero(pdist_mx)]), np.mean(pdist_mx[np.nonzero(pdist_mx)])
         # Attension! This code makes problems and it removed. 1) In this case size of sparse matrix  and size of
         # pdist matrix are equivalents. 2) In dbscan (scikit-learn) founded bug if input array this precomputed
         # sparse neighbors graph. See https://github.com/scikit-learn/scikit-learn/pull/12105
         # sparse_n = NearestNeighbors(radius=parse_results[2], algorithm='brute', n_jobs=-1
         #                             ).fit(xyz_array).radius_neighbors_graph(xyz_array, mode='distance')
-        self.X, self.pdist, self.parse_results = xyz_array, pdist, parse_results
+        # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+        if mod_dist:
+            weight_matrix = np.array(weight_array)
+            weight_matrix.shape = len(weight_matrix), 1
+            weight_matrix2d = pairwise_distances(weight_matrix, metric=lambda u, v: ((u + v) / 2).sum())
+            pdist_mx = pdist_mx.copy() / weight_matrix2d
+            weight_array = [1] * len(weight_array)
+        self.X, self.weight_array, self.pdist, self.parse_results = xyz_array, weight_array, pdist_mx, parse_results
         return parse_results
 
-    def graph(self, grid_state: bool, legend_state: bool) -> tuple:
+    def graph(self, grid_state: bool, legend_state: bool) -> Figure:
         """
 
         :return:
@@ -1166,9 +1197,9 @@ class ClusterPdb:
         ax.set_zlim(mid_z - max_range, mid_z + max_range)
         if legend_state:
             ax.legend(loc='best', frameon=False)
-        return fig, ax
+        return fig
 
-    def colormap(self, grid_state: bool) -> object:
+    def colormap(self, grid_state: bool) -> Figure:
         """
 
         :return:
@@ -1212,7 +1243,7 @@ class ClusterPdb:
         fig.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
         return fig
 
-    def colormap3d(self, grid_state: bool = True):
+    def colormap3d(self, grid_state: bool = True) -> Figure:
         """
 
         :param grid_state:
@@ -1234,9 +1265,9 @@ class ClusterPdb:
         ax.set_zlabel(self.metrics_name[self.metric])
         ax.grid(grid_state)
         fig.colorbar(surf, shrink=0.5, aspect=5)
-        return ax, fig
+        return fig
 
-    def fig_scan_param(self, mode: str, value):
+    def fig_scan_param(self, mode: str, value) -> Figure:
         """
 
         :param mode:
@@ -1259,7 +1290,7 @@ class ClusterPdb:
         fig = draw_scan_param(x, y, y1, y2, y3, y4, htable, metric, xparametr, const_str)
         return fig
 
-    def get_dict_aa(self):
+    def get_dict_aa(self) -> OrderedDict:
         """
 
         :return:
@@ -1330,7 +1361,7 @@ class ClusterPdb:
                 pymol.show_as('spheres', '{:s}_cluster_{:d}'.format(("Core" if k[0] else "Uncore"), k[1]))
         pymol.deselect()
 
-    def save_pymol_script(self, filename):
+    def save_pymol_script(self, filename: str):
         """
 
         :param filename:
@@ -1367,6 +1398,7 @@ class ClusterPdb:
             'X'                : self.X,
             'pdist'            : self.pdist,
             'labels'           : self.labels,
+            'modifed_dist'     : self.modifed_dist,
             'noise_filter'     : self.noise_filter,
             'core_samples_mask': self.core_samples_mask,
             'n_clusters'       : self.n_clusters,
@@ -1386,7 +1418,7 @@ class ClusterPdb:
         with bz2.open(file, 'wb') as f:
             pickle.dump(glob_state, f, protocol=4)
 
-    def loadstate(self, file: str):
+    def loadstate(self, file: str) -> str:
         """
 
         :param file:
@@ -1397,6 +1429,7 @@ class ClusterPdb:
         self.X = global_state['X']
         self.pdist = global_state['pdist']
         self.labels = global_state['labels']
+        self.modifed_dist = global_state.get('modifed_dist', False)
         noise_filter = global_state['noise_filter']
         if noise_filter is True:  # For 0.1 version saves compatibility
             self.noise_filter = 'filter'

@@ -16,7 +16,7 @@ try:
 except ImportError:
     print('Error! Scikit-learn not installed!')
     sys.exit()
-import progressbar as progressbar
+import progressbar
 
 
 class Log:
@@ -27,7 +27,7 @@ class Log:
     def __init__(self, log_name):
         self.log_name = log_name
 
-    def append(self, line: str, ascitime=False):
+    def append(self, line: str, ascitime: bool = False):
         """
     
         :param ascitime:
@@ -114,7 +114,7 @@ def graph(cls: ClusterPdb, log: Log, newdir: str, basefile: str):
     grid, legend = True, True
     sa = os.path.join(newdir, '{:s}'.format(basefile + '.png'))
     try:
-        fig, ax = cls.graph(grid, legend)
+        fig = cls.graph(grid, legend)
         canvas = FigureCanvasAgg(fig)
         canvas.print_png(sa)
     except AttributeError:
@@ -184,13 +184,15 @@ def chainsSelect(cls: ClusterPdb, log: Log, namespace):
         return selectChains
     else:
         log.append("Error! Chain(s): {:s} is not include in structure! Structure included: {:s} chain(s)!\n".format(
-                   ', '.join(set(selectChains).difference(set(allChains))), ','.join(allChains)))
+            ', '.join(set(selectChains).difference(set(allChains))), ','.join(allChains)))
         sys.exit(-1)
 
 
-def parse_pdb(cls: ClusterPdb, log: Log, htable: str, pH: float, chains: list = None, res=''):
+def parse_pdb(cls: ClusterPdb, log: Log, htable: str, pH: float,
+              chains: list = None, res: str = '', mod_dist: bool = False):
     """
 
+    :param mod_dist:
     :param log:
     :param cls:
     :param res:
@@ -204,13 +206,13 @@ def parse_pdb(cls: ClusterPdb, log: Log, htable: str, pH: float, chains: list = 
             print("pH value range is 0-14")
             sys.exit(-1)
     try:
-        parse_results = cls.parser(htable=htable, pH=pH, selectChains=chains, res=res)
+        parse_results = cls.parser(htable=htable, pH=pH, selectChains=chains, res=res, mod_dist=mod_dist)
     except ValueError:
         log.append('\nError! Invalid file format\nor file does not {:s} contain {:s}\n'.format(
-                   'hydrophobic' if htable in ('hydropathy', 'menv', 'nanodroplet', 'fuzzyoildrop', 'rekkergroup')
-                   else 'negative' if htable in ('ngroup', 'negative')
-                   else 'positive' if htable in ('pgroup', 'positive')
-                   else 'aliphatic', 'groups' if htable in ('rekkergroup', 'pgroup', 'ngroup') else 'residues'))
+            'hydrophobic' if htable in ('hydropathy', 'menv', 'nanodroplet', 'fuzzyoildrop', 'rekkergroup')
+            else 'negative' if htable in ('ngroup', 'negative')
+            else 'positive' if htable in ('pgroup', 'positive')
+            else 'aliphatic', 'groups' if htable in ('rekkergroup', 'pgroup', 'ngroup') else 'residues'))
     else:
         log.append('File successfully parsed!\n'
                    'Property table: {0:s}\n'
@@ -222,13 +224,18 @@ def parse_pdb(cls: ClusterPdb, log: Log, htable: str, pH: float, chains: list = 
                                                              if htable in ('hydropathy', 'menv', 'nanodroplet',
                                                                            'fuzzyoildrop', 'rekkergroup')
                                                              else 'negative' if htable in ('ngroup', 'negative')
-                                                             else 'positive' if htable in ('pgroup', 'positive')
-                                                             else 'aliphatic',
+            else 'positive' if htable in ('pgroup', 'positive')
+            else 'aliphatic',
                                                              'groups' if htable in ('rekkergroup', 'pgroup', 'ngroup')
                                                              else 'residues'))
 
 
 def print_pdb_info(cls: ClusterPdb, log: Log):
+    """
+
+    :param cls:
+    :param log:
+    """
     name, head, method, res, ncomp, nchain, ec, nres, mmass = cls.get_protein_info()
     log.append("""Name: {:s}
 HINFO: {:s}
@@ -309,7 +316,7 @@ def colormap(cls: ClusterPdb, log: Log, newdir: str, basefile: str):
         log.append('Error! Failed to plot!!\n')
 
 
-def print_sols(cls: ClusterPdb, log):
+def print_sols(cls: ClusterPdb, log: Log):
     """
 
     :param cls:
@@ -322,7 +329,7 @@ def print_sols(cls: ClusterPdb, log):
                    "min_samples: {:d}\n".format(sol[0], sol[1], sol[2], sol[3], sol[4]))
 
 
-def print_sols_ext(cls: ClusterPdb, log):
+def print_sols_ext(cls: ClusterPdb, log: Log):
     """
 
     :param cls:
@@ -357,7 +364,8 @@ def cli(namespace) -> None:
     cls = ClusterPdb()
     open_file(cls, log, namespace.input)
     print_pdb_info(cls, log)
-    parse_pdb(cls, log, namespace.ptable, namespace.pH, chainsSelect(cls, log, namespace), namespace.reslist)
+    parse_pdb(cls, log, namespace.ptable, namespace.pH,
+              chainsSelect(cls, log, namespace), namespace.reslist, namespace.moddist)
     cls.noise_filter = namespace.noise_filter
     if namespace.noauto:
         noauto(cls, log, namespace.eps, namespace.min_samples, namespace.score)

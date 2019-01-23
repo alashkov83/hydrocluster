@@ -24,7 +24,11 @@ except ImportError:
 
 
 class FigureTk(tk.Toplevel):
-    def __init__(self, master, title, fig, ax=None, modal=True):
+    """
+
+    """
+
+    def __init__(self, master, title: str, fig, gtype: str = '2d', modal: bool = True):
         super().__init__(master=master)
         self.title(title)
         self.fig = fig
@@ -34,8 +38,8 @@ class FigureTk(tk.Toplevel):
         fra1 = ttk.Frame(self)
         fra1.grid(row=0, column=0)
         canvas = FigureCanvasTkAgg(fig, master=fra1)
-        if ax:
-            ax.mouse_init()
+        if gtype == '3d':
+            fig.get_axes()[0].mouse_init()
         canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
         self.wm_geometry("+{:d}+{:d}".format(x, y))
         self.resizable(False, False)
@@ -74,6 +78,10 @@ class FigureTk(tk.Toplevel):
 
 
 class DialogOK(tk.Toplevel):
+    """
+
+    """
+
     def __init__(self, master, title, message):
         super().__init__(master=master)
         self.title(title)
@@ -118,32 +126,36 @@ class TkGui(tk.Tk):
         self.combox_p = ttk.Combobox(lab11, height=5, width=15, values=listbox_items, state='readonly')
         self.combox_p.pack()
         self.combox_p.set('hydropathy')
-        but3 = tk.Button(lab1, text='Start', command=self.parse_pdb)
-        but3.grid(row=1, column=0, pady=2)
         fra11 = tk.Frame(lab1)
         fra11.grid(row=2, column=0, pady=2, padx=5)
+        self.dmodvar = tk.BooleanVar()
+        distmod = tk.Checkbutton(fra11, text="Dmod (Experimental)", anchor=tk.W, variable=self.dmodvar)
+        distmod.grid(row=0, column=0, pady=2)
+        but3 = tk.Button(fra11, text='Start', command=self.parse_pdb, anchor=tk.W)
+        but3.grid(row=0, column=1, pady=2)
         l11 = tk.Label(fra11, text="No. of res.(groups):", anchor=tk.W)
-        l11.grid(row=0, column=0, pady=2, padx=5, sticky="W")
+        l11.grid(row=1, column=0, pady=2, padx=5, sticky="W")
         self.l11 = tk.Label(fra11, text="{0:<5d}".format(0), anchor=tk.W)
-        self.l11.grid(row=0, column=1, pady=2, padx=5, sticky="W")
+        self.l11.grid(row=1, column=1, pady=2, padx=5, sticky="W")
         l12 = tk.Label(fra11, text="Min distance (\u212B): ", anchor=tk.W)
-        l12.grid(row=1, column=0, pady=2, padx=5, sticky="W")
+        l12.grid(row=2, column=0, pady=2, padx=5, sticky="W")
         self.l12 = tk.Label(fra11, text="{0:>5.3f}".format(0), anchor=tk.W)
-        self.l12.grid(row=1, column=1, pady=2, padx=5, sticky="W")
+        self.l12.grid(row=2, column=1, pady=2, padx=5, sticky="W")
         l13 = tk.Label(fra11, text="Max distance (\u212B): ", anchor=tk.W)
-        l13.grid(row=2, column=0, pady=2, padx=5, sticky="W")
+        l13.grid(row=3, column=0, pady=2, padx=5, sticky="W")
         self.l13 = tk.Label(fra11, text="{0:>5.3f}".format(0), anchor=tk.W)
-        self.l13.grid(row=2, column=1, pady=2, padx=5, sticky="W")
+        self.l13.grid(row=3, column=1, pady=2, padx=5, sticky="W")
         l14 = tk.Label(fra11, text="Mean distance (\u212B): ", anchor=tk.W)
-        l14.grid(row=3, column=0, pady=2, padx=5, sticky="W")
+        l14.grid(row=4, column=0, pady=2, padx=5, sticky="W")
         self.l14 = tk.Label(fra11, text="{0:>5.3f}".format(0), anchor=tk.W)
-        self.l14.grid(row=3, column=1, pady=2, padx=5, sticky="W")
+        self.l14.grid(row=4, column=1, pady=2, padx=5, sticky="W")
         lab4 = tk.LabelFrame(fra1, text="Options", labelanchor='n', borderwidth=5)
         lab4.pack(expand=1, fill=tk.X, pady=2, padx=5)
         l41 = tk.Label(lab4, text="Metric: ", anchor=tk.W)
         l41.grid(row=0, column=0, pady=2, padx=5, sticky="W")
         listbox_items = ['calinski',
                          'si_score',
+                         'si_score_c',
                          's_dbw',
                          ]
         self.combox = ttk.Combobox(lab4, height=5, width=10, values=listbox_items, state='readonly')
@@ -337,7 +349,7 @@ class TkGui(tk.Tk):
         if askyesno('Quit', 'Are your sure?'):
             self.destroy()
 
-    def run(self, auto: bool = False, load_state: bool = False, eps=None, min_samples=None) -> None:
+    def run(self, auto: bool = False, load_state: bool = False, eps: float = None, min_samples: int = None) -> None:
         """The main algorithm of the program."""
         if self.run_flag:
             showerror('Error!', 'The calculation is still running!')
@@ -499,11 +511,11 @@ class TkGui(tk.Tk):
             pass
         grid, legend = self.grid.get(), self.legend.get()
         try:
-            self.fig, ax = self.cls.graph(grid, legend)
+            self.fig = self.cls.graph(grid, legend)
         except AttributeError:
             return
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.fra3)
-        ax.mouse_init()
+        self.fig.get_axes()[0].mouse_init()
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
     def open_file(self):
@@ -632,7 +644,7 @@ class TkGui(tk.Tk):
         butCancel = tk.Button(fra2, text='Cancel', command=lambda: self.parse_pdb_main(win=win))
         butCancel.grid(row=0, column=1, pady=2)
 
-    def parse_pdb_main(self, chains=None, win=None, residues=None):
+    def parse_pdb_main(self, chains: list = None, win: tk.Toplevel = None, residues: str = None):
         """
 
         :param residues:
@@ -643,12 +655,13 @@ class TkGui(tk.Tk):
         if win:
             win.destroy()
         htable = self.combox_p.get()
+        dmod = self.dmodvar.get()
+        if htable in ('positive', 'negative', 'pgroup', 'ngroup'):
+            pH = askfloat('Your pH', 'pH value:', initialvalue=7.0, minvalue=0.0, maxvalue=14.0)
+        else:
+            pH = 7.0
         try:
-            if htable in ('positive', 'negative', 'pgroup', 'ngroup'):
-                pH = askfloat('Your pH', 'pH value:', initialvalue=7.0, minvalue=0.0, maxvalue=14.0)
-                parse_results = self.cls.parser(htable=htable, pH=pH, selectChains=chains, res=residues)
-            else:
-                parse_results = self.cls.parser(htable=htable, selectChains=chains, res=residues)
+            parse_results = self.cls.parser(htable=htable, pH=pH, selectChains=chains, res=residues, mod_dist=dmod)
         except ValueError:
             showerror('Error!', 'Invalid file format\nor file does not {:s} contain {:s}\n'.format(
                 'hydrophobic' if htable in ('hydropathy', 'menv', 'nanodroplet', 'fuzzyoildrop', 'rekkergroup')
@@ -739,6 +752,7 @@ class TkGui(tk.Tk):
                     showwarning("Version check", "The save version is lower than the current version!")
                 htable = self.cls.htable
                 self.combox_p.set(htable)
+                self.dmodvar.set(self.cls.modifed_dist)
                 nor, mind, maxd, meand = self.cls.parse_results
                 self.l11.configure(text="{0:>5d}".format(nor))
                 self.l12.configure(text="{0:>5.3f}".format(mind))
@@ -886,11 +900,11 @@ class TkGui(tk.Tk):
             return
         try:
             grid = self.grid.get()
-            ax, fig = self.cls.colormap3d(grid)
+            fig = self.cls.colormap3d(grid)
         except ValueError:
             showinfo('Information', 'Data unavailable')
             return
-        FigureTk(self, '3DColormap', fig, ax)
+        FigureTk(self, '3DColormap', fig, gtype='3d')
 
     def scan_param(self):
         """
@@ -985,7 +999,7 @@ class TkGui(tk.Tk):
             CheckBox.flash()
             CheckBox.pack(expand=1, fill=tk.X, pady=2, padx=5)
 
-    def set_sol(self, win, eps: float, min_samples: int):
+    def set_sol(self, win: tk.Toplevel, eps: float, min_samples: int):
         """
 
         :param win:

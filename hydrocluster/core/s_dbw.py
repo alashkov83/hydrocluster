@@ -9,7 +9,16 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.utils import check_X_y
 
 
-def calc_nearest_points(X, labels, k, centroids, metric):
+def calc_nearest_points(X: np.ndarray, labels: np.ndarray, k: int, centroids: np.ndarray, metric: str) -> np.ndarray:
+    """
+
+    :param X:
+    :param labels:
+    :param k:
+    :param centroids:
+    :param metric:
+    :return:
+    """
     centroids_p = []
     for i in range(k):
         dist = cdist(X[labels == i], np.array(centroids[i], ndmin=2), metric=metric)
@@ -17,17 +26,26 @@ def calc_nearest_points(X, labels, k, centroids, metric):
     return np.array(centroids_p)
 
 
-def calc_centroids(X, k, labels, centr):
+def calc_centroids(X: np.ndarray, k: int, labels: np.ndarray, centr: str) -> np.ndarray:
+    """
+
+    :param X:
+    :param k:
+    :param labels:
+    :param centr:
+    :return:
+    """
     centers = []
     for i in range(k):
         if centr == "mean":
-            centers.append(np.average(X[labels == i], axis=0))
+            centers.append(np.mean(X[labels == i], axis=0))
         elif centr == "median":
-            centers.append(np.average(X[labels == i], axis=0))
+            centers.append(np.median(X[labels == i], axis=0))
     return np.array(centers)
 
 
-def density(X, centroids, labels, stdev, clusters_list, method, density_list=None, lambd=0.7):
+def density(X: np.ndarray, centroids: np.ndarray, labels: np.ndarray,
+            stdev: float, clusters_list: list, method: str, density_list: list = None, lambd: float = 0.7) -> float:
     """
     Compute the density of one or two cluster(depend on cluster_list)
 
@@ -110,7 +128,7 @@ def density(X, centroids, labels, stdev, clusters_list, method, density_list=Non
     return density
 
 
-def Dens_bw(X, centroids, labels, k, method='Halkidi'):
+def Dens_bw(X: np.ndarray, centroids: np.ndarray, labels: np.ndarray, k: int, method: str = 'Halkidi') -> float:
     """
     Compute Inter-cluster Density (ID) - It evaluates the average density in the region among clusters in relation
     with the density of the clusters. The goal is the density among clusters to be significant low in comparison with
@@ -168,7 +186,7 @@ def Dens_bw(X, centroids, labels, k, method='Halkidi'):
     return result / (k * (k - 1))
 
 
-def Scat(X, k, labels, method):
+def Scat(X: np.ndarray, k: int, labels: np.ndarray, method: str) -> float:
     """
     Calculate intra-cluster variance (Average scattering for clusters).
     Lower value -> better clustering.
@@ -221,7 +239,8 @@ def Scat(X, k, labels, method):
     return result
 
 
-def S_Dbw(X, labels, method='Tong', centr='mean', metric='euclidean'):
+def S_Dbw(X: np.ndarray, labels: np.ndarray,
+          method: str = 'Tong', centr: str = 'mean', metric: str = 'euclidean') -> float:
     """
     Compute the S_Dbw validity index
     S_Dbw validity index is defined by equation:
@@ -241,6 +260,8 @@ def S_Dbw(X, labels, method='Tong', centr='mean', metric='euclidean'):
         'Halkidi' - original paper [1]
         'Kim' - see [2]
         'Tong' - see [3]
+    centr : str,
+        cluster center calculation method (mean (default) or median)
     metric : str,
         The distance metric, can be ‘braycurtis’, ‘canberra’, ‘chebyshev’, ‘cityblock’, ‘correlation’,
         ‘cosine’, ‘dice’, ‘euclidean’, ‘hamming’, ‘jaccard’, ‘kulsinski’, ‘mahalanobis’, ‘matching’, ‘minkowski’,

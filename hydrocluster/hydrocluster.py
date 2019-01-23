@@ -65,6 +65,9 @@ class Parser(argparse.ArgumentParser):
                           help='Activate and choice filter of noise for scoring function (See README')
         self.add_argument('-na', '--noauto', action='store_const', const=True, default=False,
                           help='No automatic mode. --eps and --min_samples options required')
+        self.add_argument('-m', '--moddist', action='store_const', const=True, default=False,
+                          help='Modification interpoint distances, instead clusterization points weights. '
+                               'moddist(u, w) = dist(u, w)/(w+u)/2)), where w and u - weighting coefficients of points')
         self.add_argument('-eps', '--eps', type=float, default=3.0, help='EPS value (A)')
         self.add_argument('-min_samples', '--min_samples', type=int, default=3, help='MIN SAMPLES')
         # self.add_argument('-ss', '--save_state', action='store_const', const=True, default=False,

@@ -34,7 +34,7 @@ def read_config(input_fn: str) -> dict:
                   'Scoring coefficients list', 'Save states')
     ptables = ('hydropathy', 'nanodroplet', 'menv', 'rekkergroup', 'fuzzyoildrop', 'aliphatic_core', 'hydrophilic',
                'positive', 'negative', 'ngroup', 'pgroup')
-    scores = ('si_score', 'calinski', 's_dbw', 'cdbw')
+    scores = ('si_score', 'calinski', 's_dbw')
     if not input_fn:
         raise ValueError("Input file name is not defined!")
     if not os.path.exists(input_fn):

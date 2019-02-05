@@ -39,7 +39,6 @@ except ImportError:
 
 from .. import __version__
 from .s_dbw import S_Dbw
-from .cdbw import CDbw
 
 warnings.filterwarnings("ignore")
 
@@ -159,7 +158,6 @@ def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, moddist: np.array, weight_ar
     :param metric:
     :param: noise_filter:
     """
-    # TODO: Separate clustering and evaluation functions
     core_sample_indices, labels = dbscan(moddist, sample_weight=weight_array,
                                          eps=eps, min_samples=min_samples,
                                          algorithm='brute', n_jobs=-1, metric='precomputed')
@@ -221,13 +219,6 @@ def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, moddist: np.array, weight_ar
             # of a data set,” in ICDM, Washington, DC, USA, 2001, pp. 187–194.
         else:
             score = np.inf
-    elif metric == 'cdbw':
-        if len(filterLabel) > len(set(filterLabel)) > 1:
-            score = CDbw(filterXYZ, filterLabel)
-            # M. Halkidi and M. Vazirgiannis, “Clustering validity assessment: Finding the optimal partitioning
-            # of a data set,” in ICDM, Washington, DC, USA, 2001, pp. 187–194.
-        else:
-            score = 0
     return labels, n_clusters, core_samples_mask, score
 
 
@@ -517,7 +508,6 @@ class ClusterPdb:
         self.metrics_name = {'calinski': 'Calinski-Harabasz score',
                              'si_score': 'Silhouette score',
                              's_dbw'   : 'S_Dbw',
-                             'cdbw'    : 'CDbw',
                              }
         self.X = None
         self.pdist = None
@@ -634,7 +624,6 @@ class ClusterPdb:
         :param metric:
         :return:
         """
-        # TODO: can find results in self.states first?
         self.metric = metric
         hyperParams = []
         for eps in np.arange(min_eps, max_eps + step_eps, step_eps):
@@ -668,7 +657,6 @@ class ClusterPdb:
         :param metric:
         :return:
         """
-        # TODO: can find results in self.states first?
         self.metric = metric
         hyperParams = []
         for eps in np.arange(min_eps, max_eps + step_eps, step_eps):
@@ -732,7 +720,7 @@ class ClusterPdb:
         y = np.array(sorted(list({data[1] for data in colormap_data})), ndmin=1)
         z = np.array([data[2] for data in colormap_data])
         z.shape = (y.size, x.size)
-        if self.metric == 'si_score' or self.metric == 'si_score_c':
+        if self.metric == 'si_score':
             try:
                 z_min = min([x for x in z.flat if x > -1.0])
             except ValueError:
@@ -806,10 +794,6 @@ class ClusterPdb:
             elif self.auto_params[5] == 's_dbw':
                 ext = 'min'
                 bg = np.inf
-                z_cut = 0
-            elif self.auto_params[5] == 'cdbw':
-                ext = 'max'
-                bg = 0
                 z_cut = 0
             else:
                 ext = 'max'
@@ -1144,12 +1128,6 @@ class ClusterPdb:
         pdist_mx = pairwise_distances(xyz_array)
         parse_results = len(self.aa_list), np.min(pdist_mx[np.nonzero(
             pdist_mx)]), np.max(pdist_mx[np.nonzero(pdist_mx)]), np.mean(pdist_mx[np.nonzero(pdist_mx)])
-        # Attension! This code makes problems and it removed. 1) In this case size of sparse matrix  and size of
-        # pdist matrix are equivalents. 2) In dbscan (scikit-learn) founded bug if input array this precomputed
-        # sparse neighbors graph. See https://github.com/scikit-learn/scikit-learn/pull/12105
-        # sparse_n = NearestNeighbors(radius=parse_results[2], algorithm='brute', n_jobs=-1
-        #                             ).fit(xyz_array).radius_neighbors_graph(xyz_array, mode='distance')
-        # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
         if mod_dist:
             weight_matrix = np.array(weight_array)
             weight_matrix.shape = len(weight_matrix), 1

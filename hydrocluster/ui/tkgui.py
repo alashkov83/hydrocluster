@@ -152,7 +152,6 @@ class TkGui(tk.Tk):
         listbox_items = ['calinski',
                          'si_score',
                          's_dbw',
-                         'cdbw'
                          ]
         self.combox = ttk.Combobox(lab4, height=5, width=10, values=listbox_items, state='readonly')
         self.combox.grid(row=0, column=1, pady=2, padx=5, sticky="W")
@@ -238,7 +237,6 @@ class TkGui(tk.Tk):
         self.eval('tk::PlaceWindow {:s} center'.format(self.winfo_pathname(self.winfo_id())))  # Center on screen
         self.tk.eval('::msgcat::mclocale en')  # Set the English language for standard tkinter dialog
         self.cls = ClusterPdb()
-
 
     def _bound_to_mousewheel(self, event, tx: tk.Text):
         _ = event
@@ -362,7 +360,7 @@ class TkGui(tk.Tk):
         self.pb.update()
         noise_filter = self.combox_n.get()
         metric = self.combox.get()
-        if metric == 's_dbw' or metric == 'cdbw':
+        if metric == 's_dbw':
             if not askyesno('Warning!', "Very slow function!\nA you sure?"):
                 self.run_flag = False
                 return

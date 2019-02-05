@@ -5,9 +5,6 @@
 @author: lashkov
 """
 
-# TODO: Add other clustering algorithms (OPTICS)
-
-
 import argparse
 import sys
 
@@ -59,7 +56,6 @@ class Parser(argparse.ArgumentParser):
         self.add_argument('-sc', '--score', choices=['si_score',
                                                      'calinski',
                                                      's_dbw',
-                                                     'cdbw'
                                                      ],
                           type=str, default='calinski', help='Score coefficient')
         self.add_argument('-nf', '--noise_filter', choices=['filter', 'sep', 'comb', 'bind'], type=str, default='comb',

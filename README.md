@@ -172,6 +172,7 @@ Open PyMol - opens PyMol for further data display
 About Protein - displays information about protein  
 Plot settings -> Plot grid - makes coordinate grid in the Cluster analysis window  
 Plot settings -> Plot legend - displays the brief description of the picture    
+Dmod (experimental, checkbox) - modification interpoint distances, instead clusterization points weights. moddist(u, w) = dist(u, w)/(w u)/2)), where w and u - weighting coefficients of points  
 Clear log - clears log information in the appropriate window  
 
 **Help-&gt;**  

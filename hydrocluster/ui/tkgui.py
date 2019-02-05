@@ -114,7 +114,6 @@ class TkGui(tk.Tk):
         self.legend = tk.BooleanVar()
         self.grid.set(False)
         self.legend.set(False)
-        self.menu()
         fra1 = tk.Frame(self)
         fra1.grid(row=0, rowspan=2, column=0)
         lab1 = tk.LabelFrame(fra1, text='Parsing', labelanchor='n', borderwidth=5)
@@ -128,11 +127,8 @@ class TkGui(tk.Tk):
         self.combox_p.set('hydropathy')
         fra11 = tk.Frame(lab1)
         fra11.grid(row=2, column=0, pady=2, padx=5)
-        self.dmodvar = tk.BooleanVar()
-        distmod = tk.Checkbutton(fra11, text="Dmod (Experimental)", anchor=tk.W, variable=self.dmodvar)
-        distmod.grid(row=0, column=0, pady=2)
         but3 = tk.Button(fra11, text='Start', command=self.parse_pdb, anchor=tk.W)
-        but3.grid(row=0, column=1, pady=2)
+        but3.grid(row=0, column=0, columnspan=2, pady=2)
         l11 = tk.Label(fra11, text="No. of res.(groups):", anchor=tk.W)
         l11.grid(row=1, column=0, pady=2, padx=5, sticky="W")
         self.l11 = tk.Label(fra11, text="{0:<5d}".format(0), anchor=tk.W)
@@ -237,9 +233,12 @@ class TkGui(tk.Tk):
         self.fig = None
         self.canvas = None
         self.toolbar = None
-        self.cls = ClusterPdb()
+        self.dmodvar = tk.BooleanVar()
+        self.menu()
         self.eval('tk::PlaceWindow {:s} center'.format(self.winfo_pathname(self.winfo_id())))  # Center on screen
         self.tk.eval('::msgcat::mclocale en')  # Set the English language for standard tkinter dialog
+        self.cls = ClusterPdb()
+
 
     def _bound_to_mousewheel(self, event, tx: tk.Text):
         _ = event
@@ -338,6 +337,8 @@ class TkGui(tk.Tk):
                             variable=self.grid, command=self.plot_set)
         omg.add_checkbutton(label='Plot legend', onvalue=True, offvalue=False,
                             variable=self.legend, command=self.plot_set)
+        om.add_checkbutton(label="Dmod (Experimental)", onvalue=True, offvalue=False,
+                           variable=self.dmodvar)
         om.add_command(label='Clear LOG', command=self.clean_txt)
         hm = tk.Menu(m)
         m.add_cascade(label='Help', menu=hm)

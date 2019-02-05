@@ -5,6 +5,7 @@ Ver. 0.2.0
 * Removed dbcv scoring function and added s_dbw index
 * Added choice for solutions for cluster analysis on GUI based on index values and index extrema
 * Added display other solutions for cluster analysis in console
+* Added setting - modification interpoint distances, instead clusterization points weights. moddist(u, w) = dist(u, w)/(w u)/2)), where w and u - weighting coefficients of points
 * Command line interface of 'testis' has been changed to options on hjson based config file
 * Added display information about protein in console and GUI
 * Added property tables based on negative or positive charged groups

@@ -9,7 +9,10 @@ import sys
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
 
-metrics_name = {'calinski': 'Calinski-Harabaz score', 'si_score': 'Silhouette score', 'dbcv': 'DBCV score'}
+metrics_name = {'calinski'  : 'Calinski-Harabasz score',
+                'si_score'  : 'Silhouette score',
+                'si_score_c': 'Silhouette score',
+                's_dbw'     : 'S_Dbw'}
 
 epsilon = 0.00000001
 
@@ -33,45 +36,31 @@ class Parser(argparse.ArgumentParser):
         self.add_argument('-min_samples', '--min_samples', type=int, default=None, help='MIN SAMPLES')
 
 
-def loadstate(file: str):
+def loadstate(file: str) -> tuple:
     """
 
     :param file:
+    :return:
     """
     with bz2.open(file) as f:
         global_state = pickle.load(f)
-    # X = global_state['X']
-    # pdist = global_state['pdist']
-    # labels = global_state['labels']
-    # sparse_n = global_state['sparse_n']
-    # noise_filter = global_state['noise_filter']
-    # core_samples_mask = global_state['core_samples_mask']
-    # n_clusters = global_state['n_clusters']
-    # s_array = global_state['s_array']
     htable = global_state['htable']
-    # parse_results = global_state['parse_results']
-    # auto_params = global_state['auto_params']
-    # score = global_state['score']
-    # eps = global_state['eps']
-    # min_samples = global_state['min_samples']
     metric = global_state['auto_params'][-1]
-    # weight_array = global_state['weight_array']
-    # aa_list = global_state['aa_list']
     states = global_state['states']
-    # figs = global_state['figs']
     return htable, metric, states
 
 
-def colormap(x, y, htable, metric, xparametr, sa: str, const_str):
+def colormap(x, y, htable: str, metric: str, xparametr: str, sa: str, const_str: str):
     """
 
-    :param log:
-    :param cls:
-    :param newdir:
-    :param basefile:
-    :return:
+    :param x:
+    :param y:
+    :param htable:
+    :param metric:
+    :param xparametr:
+    :param sa:
+    :param const_str:
     """
-
     try:
         fig = Figure(figsize=(12, 6))
         ax1 = fig.add_subplot(111)
@@ -90,7 +79,14 @@ def colormap(x, y, htable, metric, xparametr, sa: str, const_str):
         sys.exit(-1)
 
 
-def calculate_xy(states, param, xparm):
+def calculate_xy(states: list, param, xparm: str) -> tuple:
+    """
+
+    :param states:
+    :param param:
+    :param xparm:
+    :return:
+    """
     if xparm == 'eps':
         x = [state[5] for state in states if abs(state[4] - param) <= epsilon]
         y = [state[3] for state in states if abs(state[4] - param) <= epsilon]

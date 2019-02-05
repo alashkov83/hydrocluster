@@ -58,7 +58,8 @@ class Parser(argparse.ArgumentParser):
                           help='pH value for calculation of net charges (positive or negative)')
         self.add_argument('-sc', '--score', choices=['si_score',
                                                      'calinski',
-                                                     's_dbw'
+                                                     's_dbw',
+                                                     'cdbw'
                                                      ],
                           type=str, default='calinski', help='Score coefficient')
         self.add_argument('-nf', '--noise_filter', choices=['filter', 'sep', 'comb', 'bind'], type=str, default='comb',

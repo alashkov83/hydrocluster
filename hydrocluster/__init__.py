@@ -10,7 +10,7 @@ import json
 import re
 from urllib import error, request
 
-__version__ = '0.2.0d51'
+__version__ = '0.2.0d56'
 __license__ = 'GPLv3'
 try:
     from sklearn import __version__ as __skversion__
@@ -28,7 +28,7 @@ def newversioncheck() -> str:
 
 def tohexversion(ver: str) -> hex:
     """
-    :param ver: Version in string format: a.b.cde, where a - integer number of the major version (0-255),
+    :param ver:: Version in string format: a.b.cde, where a - integer number of the major version (0-255),
     b - integer number of the minor version (0-255),
     c - integer number of the revision (0-255),
     d - char of the developer status (d - developer, a -alpha, b - beta) for release version this field is missing,

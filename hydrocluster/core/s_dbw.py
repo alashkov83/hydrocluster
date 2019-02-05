@@ -11,13 +11,31 @@ from sklearn.utils import check_X_y
 
 def calc_nearest_points(X: np.ndarray, labels: np.ndarray, k: int, centroids: np.ndarray, metric: str) -> np.ndarray:
     """
+    Calculation of coordinates of clusters points closest to their geometric centers
 
-    :param X:
-    :param labels:
-    :param k:
-    :param centroids:
-    :param metric:
-    :return:
+    Parameters
+    ----------
+    X : array-like, shape (n_samples, n_features)
+        List of n_features-dimensional data points. Each row corresponds
+        to a single data point.
+    labels : array-like, shape (n_samples,)
+        Predicted labels for each sample.
+    k : int,
+        No. of clusters (k > 0)
+    centroids : array-like, shape (n_clusters, n_features)
+        List of n_features-dimensional data points. Each row corresponds
+        to a single centroid.
+    metric : str,
+        The distance metric, can be ‘braycurtis’, ‘canberra’, ‘chebyshev’, ‘cityblock’, ‘correlation’,
+        ‘cosine’, ‘dice’, ‘euclidean’, ‘hamming’, ‘jaccard’, ‘kulsinski’, ‘mahalanobis’, ‘matching’, ‘minkowski’,
+        ‘rogerstanimoto’, ‘russellrao’, ‘seuclidean’, ‘sokalmichener’, ‘sokalsneath’, ‘sqeuclidean’, ‘wminkowski’,
+        ‘yule’. Default is ‘euclidean’.
+
+    Returns
+    -------
+    centroids : array-like, shape (n_clusters, n_features)
+        List of n_features-dimensional points. Each row corresponds
+        to a single centroid.
     """
     centroids_p = []
     for i in range(k):
@@ -28,12 +46,25 @@ def calc_nearest_points(X: np.ndarray, labels: np.ndarray, k: int, centroids: np
 
 def calc_centroids(X: np.ndarray, k: int, labels: np.ndarray, centr: str) -> np.ndarray:
     """
+    Calculation of coordinates of centroids
 
-    :param X:
-    :param k:
-    :param labels:
-    :param centr:
-    :return:
+    Parameters
+    ----------
+    X : array-like, shape (n_samples, n_features)
+        List of n_features-dimensional data points. Each row corresponds
+        to a single data point.
+    k : int,
+        No. of clusters (k > 0)
+    labels : array-like, shape (n_samples,)
+        Predicted labels for each sample.
+    centr : str,
+        Cluster center calculation method (mean (default) or median)
+
+    Returns
+    -------
+    centroids : array-like, shape (n_samples', n_features)
+         List of n_features-dimensional data points. Each row corresponds
+         to a single data point - center if a cluster.
     """
     centers = []
     for i in range(k):
@@ -51,7 +82,7 @@ def density(X: np.ndarray, centroids: np.ndarray, labels: np.ndarray,
 
     Parameters
     ----------
-    X : array-like, shape (n_samples', n_features)
+    X : array-like, shape (n_samples, n_features)
         List of n_features-dimensional data points. Each row corresponds
         to a single data point.
     centroids : array-like, shape (n_samples', n_features)
@@ -136,7 +167,7 @@ def Dens_bw(X: np.ndarray, centroids: np.ndarray, labels: np.ndarray, k: int, me
 
     Parameters
     ----------
-    X : array-like, shape (n_samples', n_features)
+    X : array-like, shape (n_samples, n_features)
         List of n_features-dimensional data points. Each row corresponds
         to a single data point.
     centroids : array-like, shape (n_samples', n_features)

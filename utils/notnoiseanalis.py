@@ -30,14 +30,14 @@ class Parser(argparse.ArgumentParser):
         self.add_argument('-min_samples', '--min_samples', type=str, default=None, help='MIN SAMPLES list')
 
 
-def notnoise_percent(labels):
+def notnoise_percent(labels: np.ndarray) -> float:
     labflat = labels.flatten()
     n = len(labflat)
     noise_n = len([x for x in labflat if x == -1])
     return 100 - (noise_n * 100 / n)
 
 
-def loadstate(file: str):
+def loadstate(file: str) -> tuple:
     """
 
     :param file:

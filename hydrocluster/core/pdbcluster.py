@@ -39,6 +39,7 @@ except ImportError:
 
 from .. import __version__
 from .s_dbw import S_Dbw
+from .cdbw import CDbw
 
 warnings.filterwarnings("ignore")
 
@@ -144,7 +145,7 @@ def sep_noise_lab(labels: np.ndarray) -> np.ndarray:
     return labels
 
 
-def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, weight_array: list,
+def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, moddist: np.array, weight_array: list,
                   eps: float, min_samples: int,
                   metric: str = 'calinski', noise_filter: str = 'comb') -> tuple:
     """
@@ -159,7 +160,7 @@ def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, weight_array: list,
     :param: noise_filter:
     """
     # TODO: Separate clustering and evaluation functions
-    core_sample_indices, labels = dbscan(pdist, sample_weight=weight_array,
+    core_sample_indices, labels = dbscan(moddist, sample_weight=weight_array,
                                          eps=eps, min_samples=min_samples,
                                          algorithm='brute', n_jobs=-1, metric='precomputed')
     # The DBSCAN algorithm considers clusters as areas of high density separated by areas of low density.
@@ -205,11 +206,6 @@ def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, weight_array: list,
             # Computational and Applied Mathematics 20: 53-65.
         else:
             score = -1
-    if metric == 'si_score_c':
-        if len(filterLabel) > len(set(filterLabel)) > 1:
-            score = silhouette_score(filterXYZ, filterLabel)
-        else:
-            score = -1
     elif metric == 'calinski':
         if len(filterLabel) > len(set(filterLabel)) > 1:
             score = calinski_harabaz_score(filterXYZ, filterLabel)
@@ -225,6 +221,13 @@ def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, weight_array: list,
             # of a data set,” in ICDM, Washington, DC, USA, 2001, pp. 187–194.
         else:
             score = np.inf
+    elif metric == 'cdbw':
+        if len(filterLabel) > len(set(filterLabel)) > 1:
+            score = CDbw(filterXYZ, filterLabel)
+            # M. Halkidi and M. Vazirgiannis, “Clustering validity assessment: Finding the optimal partitioning
+            # of a data set,” in ICDM, Washington, DC, USA, 2001, pp. 187–194.
+        else:
+            score = 0
     return labels, n_clusters, core_samples_mask, score
 
 
@@ -511,13 +514,14 @@ class ClusterPdb:
     """
 
     def __init__(self) -> None:
-        self.metrics_name = {'calinski'  : 'Calinski-Harabasz score',
-                             'si_score'  : 'Silhouette score',
-                             'si_score_c': 'Silhouette score',
-                             's_dbw'     : 'S_Dbw'
+        self.metrics_name = {'calinski': 'Calinski-Harabasz score',
+                             'si_score': 'Silhouette score',
+                             's_dbw'   : 'S_Dbw',
+                             'cdbw'    : 'CDbw',
                              }
         self.X = None
         self.pdist = None
+        self.moddist = None
         self.labels = None
         self.noise_filter = 'comb'
         self.modifed_dist = False
@@ -544,6 +548,7 @@ class ClusterPdb:
         """
         self.X = None
         self.pdist = None
+        self.moddist = None
         self.labels = None
         self.htable = 'hydropathy'
         self.noise_filter = 'comb'
@@ -576,7 +581,7 @@ class ClusterPdb:
         self.eps = eps
         self.metric = metric
         self.labels, self.n_clusters, self.core_samples_mask, self.score = clusterDBSCAN(
-            self.X, self.pdist, self.weight_array, eps=eps, min_samples=min_samples,
+            self.X, self.pdist, self.moddist, self.weight_array, eps=eps, min_samples=min_samples,
             metric=metric, noise_filter=self.noise_filter)
 
     def clusterThread_old(self, subParams: list):  # Old process-worker
@@ -586,7 +591,7 @@ class ClusterPdb:
         """
         for eps, min_samples in subParams:
             labels, n_clusters, core_samples_mask, score = clusterDBSCAN(
-                self.X, self.pdist, self.weight_array,
+                self.X, self.pdist, self.moddist, self.weight_array,
                 eps=eps, min_samples=min_samples, metric=self.metric, noise_filter=self.noise_filter)
             clusterResults = labels, core_samples_mask, n_clusters, score, eps, min_samples
             self.queue.put(clusterResults)
@@ -606,7 +611,7 @@ class ClusterPdb:
             eps, min_samples = queue_in.get()
             lock_in.release()
             labels, n_clusters, core_samples_mask, score = clusterDBSCAN(
-                self.X, self.pdist, self.weight_array,
+                self.X, self.pdist, self.moddist, self.weight_array,
                 eps=eps, min_samples=min_samples, metric=self.metric, noise_filter=self.noise_filter)
             clusterResults = labels, core_samples_mask, n_clusters, score, eps, min_samples
             self.queue.put(clusterResults)
@@ -727,13 +732,13 @@ class ClusterPdb:
         y = np.array(sorted(list({data[1] for data in colormap_data})), ndmin=1)
         z = np.array([data[2] for data in colormap_data])
         z.shape = (y.size, x.size)
-        if self.metric == 'si_score':
+        if self.metric == 'si_score' or self.metric == 'si_score_c':
             try:
                 z_min = min([x for x in z.flat if x > -1.0])
             except ValueError:
                 z_min = -1.0
         else:
-            z_min = _min = min(z.flat)
+            z_min = min(z.flat)
         z_max = max([x for x in z.flat if x < np.inf])
         self.figs['colormap'] = (y, x, z.copy().T, z_min, z_max)
         z_correct = np.array([(True if (len(set(data[3]))) > 1 else False) for data in colormap_data], dtype=bool)
@@ -801,6 +806,10 @@ class ClusterPdb:
             elif self.auto_params[5] == 's_dbw':
                 ext = 'min'
                 bg = np.inf
+                z_cut = 0
+            elif self.auto_params[5] == 'cdbw':
+                ext = 'max'
+                bg = 0
                 z_cut = 0
             else:
                 ext = 'max'
@@ -1145,9 +1154,13 @@ class ClusterPdb:
             weight_matrix = np.array(weight_array)
             weight_matrix.shape = len(weight_matrix), 1
             weight_matrix2d = pairwise_distances(weight_matrix, metric=lambda u, v: ((u + v) / 2).sum())
-            pdist_mx = pdist_mx.copy() / weight_matrix2d
+            pdist_mod = pdist_mx.copy() / weight_matrix2d
             weight_array = [1] * len(weight_array)
-        self.X, self.weight_array, self.pdist, self.parse_results = xyz_array, weight_array, pdist_mx, parse_results
+            self.X, self.weight_array, self.pdist, self.moddist, self.parse_results = xyz_array, weight_array, \
+                                                                                      pdist_mx, pdist_mod, parse_results
+        else:
+            self.X, self.weight_array, self.pdist, self.moddist, self.parse_results = xyz_array, weight_array, \
+                                                                                      pdist_mx, pdist_mx, parse_results
         return parse_results
 
     def graph(self, grid_state: bool, legend_state: bool) -> Figure:
@@ -1394,9 +1407,14 @@ class ClusterPdb:
 
         :param file:
         """
+        if self.modifed_dist:
+            moddist = self.moddist
+        else:
+            moddist = None
         glob_state = {
             'X'                : self.X,
             'pdist'            : self.pdist,
+            'moddist'          : moddist,
             'labels'           : self.labels,
             'modifed_dist'     : self.modifed_dist,
             'noise_filter'     : self.noise_filter,
@@ -1430,6 +1448,10 @@ class ClusterPdb:
         self.pdist = global_state['pdist']
         self.labels = global_state['labels']
         self.modifed_dist = global_state.get('modifed_dist', False)
+        if self.modifed_dist:
+            self.moddist = global_state['moddist']
+        else:
+            self.moddist = self.pdist
         noise_filter = global_state['noise_filter']
         if noise_filter is True:  # For 0.1 version saves compatibility
             self.noise_filter = 'filter'

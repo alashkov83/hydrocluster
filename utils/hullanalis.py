@@ -25,7 +25,7 @@ class Parser(argparse.ArgumentParser):
         self.add_argument('-i', '--input', type=str, default='', help='Input file name (.dat)')
 
 
-def loadstate(file: str):
+def loadstate(file: str) -> tuple:
     """
 
     :param file:
@@ -33,30 +33,16 @@ def loadstate(file: str):
     with bz2.open(file) as f:
         global_state = pickle.load(f)
     X = global_state['X']
-    # pdist = global_state['pdist']
     labels = global_state['labels']
-    # sparse_n = global_state['sparse_n']
-    # noise_filter = global_state['noise_filter']
     core_samples_mask = global_state['core_samples_mask']
     n_clusters = global_state['n_clusters']
-    # s_array = global_state['s_array']
-    # htable = global_state['htable']
-    # parse_results = global_state['parse_results']
-    # auto_params = global_state['auto_params']
-    # score = global_state['score']
-    # eps = global_state['eps']
-    # min_samples = global_state['min_samples']
-    # metric = global_state['auto_params'][-1]
-    # weight_array = global_state['weight_array']
-    # aa_list = global_state['aa_list']
-    # states = global_state['states']
-    # figs = global_state['figs']
     return X, labels, core_samples_mask, n_clusters
 
 
-def convexhull(points, ncl=1):
+def convexhull(points, ncl: int = 1) -> tuple:
     """
 
+    :param ncl:
     :param points:
     :return:
     """

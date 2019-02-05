@@ -155,8 +155,8 @@ class TkGui(tk.Tk):
         l41.grid(row=0, column=0, pady=2, padx=5, sticky="W")
         listbox_items = ['calinski',
                          'si_score',
-                         'si_score_c',
                          's_dbw',
+                         'cdbw'
                          ]
         self.combox = ttk.Combobox(lab4, height=5, width=10, values=listbox_items, state='readonly')
         self.combox.grid(row=0, column=1, pady=2, padx=5, sticky="W")
@@ -361,7 +361,7 @@ class TkGui(tk.Tk):
         self.pb.update()
         noise_filter = self.combox_n.get()
         metric = self.combox.get()
-        if metric == 's_dbw':
+        if metric == 's_dbw' or metric == 'cdbw':
             if not askyesno('Warning!', "Very slow function!\nA you sure?"):
                 self.run_flag = False
                 return

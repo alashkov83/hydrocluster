@@ -199,9 +199,10 @@ the literature are used (see Table1 or Table2). Separately, for clustering
 electrically charged amino acid residues, the function of calculating
 weighting coefficients as modules of partial charges of side groups
 according to the formulas, which are derived from the
-Henderson-Hasselbach equation, is implemented \[8]. As
-hyperparameters DBSCAN uses the epsilon neighborhood radius (eps) and
-the minimum number of neighbors (min\_samples). Eps is defined as the
+Henderson-Hasselbach equation, is implemented \[8]. Alternative: modification interpoint distances, 
+instead clusterization points weights. moddist(u, w) = dist(u, w)/(w u)/2)), 
+where w and u - weighting coefficients of points. As hyperparameters DBSCAN uses t
+he epsilon neighborhood radius (eps) and the minimum number of neighbors (min\_samples). Eps is defined as the
 maximum distance (in Angstrom (Å)) between the centers of mass of
 hydrophobic a.r. (or chemical groups) which are adjacent in one cluster. The
 min\_samples/eps³ ratio is proportional to the maximum distribution

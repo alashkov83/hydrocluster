@@ -13,7 +13,7 @@ with open('requirements.txt') as f:
 
 setup(
     name='hydrocluster',
-    version='0.2.0d55',
+    version='0.2.0',
     python_requires='>=3.4',
     packages=['hydrocluster', 'hydrocluster.ui', 'hydrocluster.core', 'hydrocluster.dbcreator'],
     url='https://github.com/alashkov83/hydrocluster',

@@ -252,7 +252,7 @@ def art_rep(X, n_clusters, rep_dic, n_rep, mean_arr, s):
     return a_rep_shell
 
 
-def compactness(X, labels, n_clusters, stdev, a_rep_shell, n_rep, n_points_in_cl, distvec, s, ms):
+def compactness(X, labels, n_clusters, stdev, a_rep_shell, n_rep, n_points_in_cl, distvec, s):
     """
     Clusters compactness and cohesion evaluation
 

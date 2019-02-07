@@ -362,6 +362,9 @@ class TkGui(tk.Tk):
         self.pb.update()
         noise_filter = self.combox_n.get()
         metric = self.combox.get()
+        if metric == "cdbw" and noise_filter == 'sep':
+            showerror("Not supported!", "Noise filter 'sep' option is not compatible with CDbw validity index!")
+            return
         if metric == 's_dbw' or metric == 'cdbw':
             if not askyesno('Warning!', "Very slow function!\nA you sure?"):
                 self.run_flag = False

@@ -223,7 +223,7 @@ def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, moddist: np.array, weight_ar
             score = np.inf
     elif metric == 'cdbw':
         if len(filterLabel) > len(set(filterLabel)) > 1:
-            score = CDbw(filterXYZ, filterLabel)
+            score = CDbw(filterXYZ, filterLabel, eps=eps)
             # M. Halkidi and M. Vazirgiannis, “Clustering validity assessment: Finding the optimal partitioning
             # of a data set,” in ICDM, Washington, DC, USA, 2001, pp. 187–194.
         else:
@@ -715,6 +715,7 @@ class ClusterPdb:
 
         :return:
         """
+
         if self.auto_params[5] == 's_dbw':
             self.states.sort(key=lambda l: l[3])
         else:
@@ -732,7 +733,7 @@ class ClusterPdb:
         y = np.array(sorted(list({data[1] for data in colormap_data})), ndmin=1)
         z = np.array([data[2] for data in colormap_data])
         z.shape = (y.size, x.size)
-        if self.metric == 'si_score' or self.metric == 'si_score_c':
+        if self.metric == 'si_score':
             try:
                 z_min = min([x for x in z.flat if x > -1.0])
             except ValueError:

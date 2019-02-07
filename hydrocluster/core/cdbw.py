@@ -56,10 +56,11 @@ def prep(X, labels):
     """
     dimension = X.shape[1]
     n_clusters = labels.max() + 1
-    stdev = np.zeros(shape=(n_clusters,), dtype=float)
+    stdev = 0
     for i in range(n_clusters):
-        stdev_x = np.std(X[labels == i], axis=0)
-        stdev[i] = math.sqrt(np.dot(stdev_x, stdev_x.T))
+        std_matrix_i = np.std(X[labels == i], axis=0)
+        stdev += math.sqrt(np.dot(std_matrix_i.T, std_matrix_i))
+    stdev = math.sqrt(stdev) / n_clusters
     return n_clusters, stdev, dimension
 
 
@@ -79,6 +80,7 @@ def rep(X, labels, n_clusters, dimension):
         Number of clusters.
     dimension : int,
         Dimension of Data Set.
+
 
     Returns
     -------
@@ -214,7 +216,7 @@ def closest_rep(X, n_clusters, rep_dic, n_rep, metric, distvec):
     return middle_point, dist_min, n_cl_rep
 
 
-def art_rep(X, n_clusters, rep_dic, mean_arr, s, n_rep):
+def art_rep(X, n_clusters, rep_dic, n_rep, mean_arr, s):
     """
     Calculate of the art representative points
 
@@ -227,6 +229,8 @@ def art_rep(X, n_clusters, rep_dic, mean_arr, s, n_rep):
         Number of clusters.
     rep_dic : dict {i: indexes}
         Indexes of representative points for each clusters, i - No. of cluster, indexes - array of indexes.
+    n_rep : array_like shape (n_clusters,)
+        Number of representative points in each cluster.
     mean_arr : array_like shape (n_clusters, dimension)
         Coordinates of the centroid of each cluster.
     s : int,
@@ -248,7 +252,7 @@ def art_rep(X, n_clusters, rep_dic, mean_arr, s, n_rep):
     return a_rep_shell
 
 
-def compactness(X, labels, n_clusters, stdev, a_rep_shell, n_rep, n_points_in_cl, distvec, s):
+def compactness(X, labels, n_clusters, stdev, a_rep_shell, n_rep, n_points_in_cl, distvec, s, ms):
     """
     Clusters compactness and cohesion evaluation
 
@@ -293,16 +297,16 @@ def compactness(X, labels, n_clusters, stdev, a_rep_shell, n_rep, n_points_in_cl
                 a_rep_shell1[i, k] = np.array(a_rep_shell[i, k])
                 for p in a_rep_shell1[i, k]:
                     dist = distvec(x, p)
-                    if dist < stdev[i]:
+                    if dist < stdev:
                         card[i, k] += 1
     for i in range(n_clusters):
         for k in range(s):
-            intra_dens_shell[i, k] = card[i, k] / (n_rep[i] * n_points_in_cl[i] * stdev[i])
-    intra_dens = np.sum(intra_dens_shell, axis=0) / n_clusters
+            intra_dens_shell[i, k] = card[i, k] / (n_rep[i] * n_points_in_cl[i])
+    intra_dens = np.sum(intra_dens_shell, axis=0) / (stdev * n_clusters)
     compact = np.sum(intra_dens) / s
     intra_change = 0
     for l in range(s - 1):
-        intra_change += np.sum(abs(intra_dens[l + 1] - intra_dens[l])) / (s - 1)
+        intra_change += abs(intra_dens[l + 1] - intra_dens[l]) / (s - 1)
     cohesion = compact / (1 + intra_change)
     return compact, cohesion
 
@@ -353,24 +357,24 @@ def separation(X, labels, n_clusters, stdev, middle_point, dist_min, n_cl_rep, n
                     for x in np.array(middle_point[(i, j)][s]):
                         for p in np.array(np.vstack([X[labels == i], X[labels == j]])):
                             dist1 = distvec(x, p)
-                            if dist1 < (stdev[i] + stdev[j]) / 2:
+                            if dist1 < stdev:
                                 card1[i, j][s] += 1
     for i in range(n_clusters):
         for j in range(n_clusters):
             if i > j:
-                dens_mean[i, j] = np.mean(np.array(dist_min[(i, j)]) * np.array(card1[(i, j)]))
-                dist_mm[i, j] = np.mean(dist_min[(i, j)])
+                dens_mean[i, j] = np.mean(np.array(dist_min[i, j]) * np.array(card1[i, j]))
+                dist_mm[i, j] = np.mean(dist_min[i, j])
             elif i < j:
-                dens_mean[i, j] = np.mean(np.array(dist_min[(j, i)]) * np.array(card1[(j, i)]))
-                dist_mm[i, j] = np.mean(dist_min[(j, i)])
-            dens_mean /= ((n_points_in_cl[i] + n_points_in_cl[j]) * ((stdev[i] + stdev[j]) / 2))
-    inter_dens = np.sum(np.max(dens_mean, axis=0)) / (2 * n_clusters)
+                dens_mean[i, j] = np.mean(np.array(dist_min[j, i]) * np.array(card1[j, i]))
+                dist_mm[i, j] = np.mean(dist_min[j, i])
+            dens_mean[i, j] /= (n_points_in_cl[i] + n_points_in_cl[j])
+    inter_dens = np.sum(np.max(dens_mean, axis=0)) / (2 * n_clusters * stdev)
     dist_m = np.sum(np.min(dist_mm, axis=0)) / n_clusters
     sep = dist_m / (1 + inter_dens)
     return sep
 
 
-def CDbw(X, labels, metric="euclidean", s=3):
+def CDbw(X, labels, metric="euclidean", s=3, eps=None):
     """
     Calculate CDbw-index for cluster validation, as defined in [1]
 
@@ -390,9 +394,6 @@ def CDbw(X, labels, metric="euclidean", s=3):
         ‘yule’.
     s : int,
         Number of art representative points. (>2)
-    multipliers : bool,
-        Format of output. False (default) - only CDbw index, True - tuple (compactness, cohesion, separation, CDbw)
-
     Returns
     -------
     cdbw : float,
@@ -413,10 +414,12 @@ def CDbw(X, labels, metric="euclidean", s=3):
     labels = le.fit_transform(labels)
     distvec = gen_dist_func(metric)
     n_clusters, stdev, dimension = prep(X, labels)
+    if eps is not None:
+        stdev = eps
     rep_dic, mean_arr, n_rep, n_points_in_cl = rep(X, labels, n_clusters, dimension)
     middle_point, dist_min, n_cl_rep = closest_rep(X, n_clusters, rep_dic, n_rep, metric, distvec)
     try:
-        a_rep_shell = art_rep(X, n_clusters, rep_dic, mean_arr, s, n_rep)
+        a_rep_shell = art_rep(X, n_clusters, rep_dic, n_rep, mean_arr, s)
     except ValueError:
         return 0
     compact, cohesion = compactness(X, labels, n_clusters, stdev, a_rep_shell, n_rep, n_points_in_cl, distvec, s)
@@ -425,9 +428,3 @@ def CDbw(X, labels, metric="euclidean", s=3):
     sep = separation(X, labels, n_clusters, stdev, middle_point, dist_min, n_cl_rep, n_points_in_cl, distvec)
     cdbw = compact * cohesion * sep
     return cdbw
-
-
-if __name__ == '__main__':
-    X = np.load('xyz.npy')
-    labels = np.load('labels.npy')
-    print(CDbw(X, labels))

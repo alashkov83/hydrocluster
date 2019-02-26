@@ -374,7 +374,7 @@ def separation(X, labels, n_clusters, stdev, middle_point, dist_min, n_cl_rep, n
     return sep
 
 
-def CDbw(X, labels, metric="euclidean", s=3, eps=None):
+def CDbw(X, labels, metric="euclidean", s=3):
     """
     Calculate CDbw-index for cluster validation, as defined in [1]
 
@@ -414,8 +414,6 @@ def CDbw(X, labels, metric="euclidean", s=3, eps=None):
     labels = le.fit_transform(labels)
     distvec = gen_dist_func(metric)
     n_clusters, stdev, dimension = prep(X, labels)
-    if eps is not None:
-        stdev = eps
     rep_dic, mean_arr, n_rep, n_points_in_cl = rep(X, labels, n_clusters, dimension)
     middle_point, dist_min, n_cl_rep = closest_rep(X, n_clusters, rep_dic, n_rep, metric, distvec)
     try:

@@ -22,10 +22,11 @@ import psutil
 import scipy.ndimage.filters as filters
 from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import axes3d
+from scipy.spatial import ConvexHull
 from scipy.spatial.distance import cdist
 
 try:
-    from sklearn.cluster import dbscan
+    from sklearn.cluster import dbscan, k_means
     from sklearn.linear_model import LinearRegression, RANSACRegressor
     from sklearn.metrics import silhouette_score
     from sklearn.metrics.pairwise import pairwise_distances
@@ -88,6 +89,38 @@ def detect_local_extrema(arr: np.ndarray, x: np.ndarray, y: np.ndarray,
     else:
         sols.sort(key=lambda a: a[0], reverse=True)
     return sols
+
+
+def convexhull(points, ncl: int = 1) -> tuple:
+    """
+
+    :param ncl:
+    :param points:
+    :return:
+    """
+
+    if ncl == 1:
+        ch = ConvexHull(points)
+        v = ch.volume
+    elif ncl > 1:
+        vs = []
+        while ncl > 1:
+            try:
+                centroid, labels, inetrtia = k_means(points, ncl)
+                for i in set(labels):
+                    ch = ConvexHull(points[labels == i])
+                    v = ch.volume
+                    vs.append(v)
+            except Exception:
+                ncl -= 1
+                vs.clear()
+            else:
+                break
+        v = sum(vs)
+    n = len(points)
+    c = n / v
+    r = (v / n) ** (1 / 3)
+    return v, c, r
 
 
 def filterXYZandRData(Label: np.ndarray, XYZ: np.ndarray, Dist: np.ndarray) -> tuple:
@@ -223,7 +256,7 @@ def clusterDBSCAN(X: np.ndarray, pdist: np.ndarray, moddist: np.array, weight_ar
             score = np.inf
     elif metric == 'cdbw':
         if len(filterLabel) > len(set(filterLabel)) > 1:
-            score = CDbw(filterXYZ, filterLabel, eps=eps)
+            score = CDbw(filterXYZ, filterLabel)
             # M. Halkidi and M. Vazirgiannis, “Clustering validity assessment: Finding the optimal partitioning
             # of a data set,” in ICDM, Washington, DC, USA, 2001, pp. 187–194.
         else:
@@ -1163,6 +1196,10 @@ class ClusterPdb:
             self.X, self.weight_array, self.pdist, self.moddist, self.parse_results = xyz_array, weight_array, \
                                                                                       pdist_mx, pdist_mx, parse_results
         return parse_results
+
+    def get_ro(self):
+        if self.X is not None:
+            return convexhull(self.X)
 
     def graph(self, grid_state: bool, legend_state: bool) -> Figure:
         """

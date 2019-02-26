@@ -239,7 +239,6 @@ class TkGui(tk.Tk):
         self.tk.eval('::msgcat::mclocale en')  # Set the English language for standard tkinter dialog
         self.cls = ClusterPdb()
 
-
     def _bound_to_mousewheel(self, event, tx: tk.Text):
         _ = event
         self.bind_all('<MouseWheel>', lambda e: self._on_mousewheel(e, tx))
@@ -329,6 +328,7 @@ class TkGui(tk.Tk):
         om.add_separator()
         om.add_command(label='Open PyMol', command=self.open_pymol)
         om.add_command(label='About Protein', command=self.about_protein)
+        om.add_command(label='Volume and concetration', command=self.volume_and_conc)
         om.add_separator()
         omg = tk.Menu(m)
         # item is located on the main menu (m)
@@ -1015,6 +1015,14 @@ class TkGui(tk.Tk):
         self.run(eps=eps, min_samples=min_samples)
         self.sca1.set(self.cls.eps)
         self.sca2.set(self.cls.min_samples)
+
+    def volume_and_conc(self):
+        _ = self.cls.get_ro()
+        print(_)
+        if _ is not None:
+            V, C, R = _
+            DialogOK(self, "Volume and concentration", """For all hydrophobic residues:
+V= {:.2f} \u212B\u00B3, C= {:.4f} \u212B\u207B\u00B3, R= {:.2f}\u212B""".format(V, C, R))
 
     def about_protein(self):
         """

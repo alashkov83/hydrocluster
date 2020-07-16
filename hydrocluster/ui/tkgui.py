@@ -366,7 +366,7 @@ class TkGui(tk.Tk):
             showerror("Not supported!", "Noise filter 'sep' option is not compatible with CDbw validity index!")
             return
         if metric == 's_dbw' or metric == 'cdbw':
-            if not askyesno('Warning!', "Very slow function!\nA you sure?"):
+            if not askyesno('Warning!', "Slow function!\nA you sure?"):
                 self.run_flag = False
                 return
         if auto and not load_state:
@@ -443,7 +443,7 @@ class TkGui(tk.Tk):
                 try:
                     for n, j, i, n_clusters, score in self.cls.auto_yield():
                         self.tx.insert(tk.END, 'Step No {0:d}: EPS = {1:.2f} \u212B, min_s = {2:d}, '
-                                               'No cls = {3:d}, {4:s} = {5:.3f}\n'
+                                               'No cls = {3:d}, {4:s} = {5:.3e}\n'
                                        .format(n, j, i, n_clusters,
                                                self.cls.metrics_name[self.cls.metric], score))
                         self.tx.see(tk.END)
@@ -1017,8 +1017,10 @@ class TkGui(tk.Tk):
         self.sca2.set(self.cls.min_samples)
 
     def volume_and_conc(self):
+        """
+
+        """
         _ = self.cls.get_ro()
-        print(_)
         if _ is not None:
             V, C, R = _
             DialogOK(self, "Volume and concentration", """For all hydrophobic residues:

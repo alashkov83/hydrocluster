@@ -57,7 +57,7 @@ def run(cls: ClusterPdb, log: Log, namespace) -> None:
     try:
         for n, j, i, n_clusters, score in cls.auto_yield():
             log.append(('Step No. {0:d}: EPS = {1:.2f} \u212B, min_samples = {2:d}, No. of clusters = {3:d}, '
-                        '{4:s} = {5:.3f}\n').format(
+                        '{4:s} = {5:.3e}\n').format(
                 n, j, i, n_clusters, cls.metrics_name[cls.metric], score))
             bar1.update(n)
         eps, min_samples = cls.auto()
